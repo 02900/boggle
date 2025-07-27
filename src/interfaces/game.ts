@@ -5,11 +5,20 @@ export interface Player {
   wordsFound: string[];
 }
 
+export interface DiceRoll {
+  diceNumber: number;
+  position: { row: number; col: number };
+  faces: string[];
+  rolledFace: number;
+  letter: string;
+}
+
 export interface GameState {
   board: string[][];
   players: Player[];
   gameState: 'waiting' | 'playing' | 'finished';
   timeLeft: number;
+  diceRolls?: DiceRoll[];
 }
 
 export interface WordResult {
@@ -22,6 +31,7 @@ export interface WordResult {
 export interface GameEvents {
   'game-state': (state: GameState) => void;
   'game-started': (state: GameState) => void;
+  'dice-rolling': (diceRolls: DiceRoll[]) => void;
   'timer-update': (timeLeft: number) => void;
   'game-ended': (state: GameState) => void;
   'word-result': (result: WordResult) => void;
