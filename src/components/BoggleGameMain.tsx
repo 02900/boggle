@@ -28,6 +28,9 @@ export const BoggleGameMain: React.FC = () => {
     addFoundWord,
     setMessage,
     resetFoundWords,
+    handleKeyboardInput,
+    handleKeyboardSubmit,
+    handleKeyboardBackspace
   } = useGameLogic();
 
   const [gameState, setGameState] = useState<GameState>({
@@ -178,6 +181,9 @@ export const BoggleGameMain: React.FC = () => {
               onMouseUp={handleMouseUpWrapper}
               onMouseLeave={handleMouseLeave}
               isCellSelected={isCellSelected}
+              onKeyboardInput={(letter) => handleKeyboardInput(letter, gameState.board)}
+              onKeyboardSubmit={() => handleKeyboardSubmit(submitWord)}
+              onKeyboardBackspace={handleKeyboardBackspace}
             />
           </div>
 
