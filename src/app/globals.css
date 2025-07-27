@@ -32,3 +32,29 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Prevenir scroll en móviles y optimizar para juego */
+@media (max-width: 768px) {
+  html, body {
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+  
+  /* Prevenir zoom en inputs en iOS */
+  input[type="text"], input[type="email"], input[type="password"], textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Mejorar el drag en móviles */
+  .mobile-drag-area {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}

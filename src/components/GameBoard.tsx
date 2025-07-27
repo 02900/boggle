@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GameState } from '@/interfaces/game';
 
 interface GameBoardProps {
@@ -30,12 +30,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 }) => {
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
-  // Enfocar el input invisible cuando el componente se monta y el juego está activo
+  // Detectar si es móvil
+  const [isMobile, setIsMobile] = useState(false);
+  
   useEffect(() => {
-    if (gameState.gameState === 'playing' && hiddenInputRef.current) {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Enfocar el input invisible cuando el componente se monta y el juego está activo (solo en desktop)
+  useEffect(() => {
+    if (!isMobile && gameState.gameState === 'playing' && hiddenInputRef.current) {
       hiddenInputRef.current.focus();
     }
-  }, [gameState.gameState]);
+  }, [gameState.gameState, isMobile]);
 
   // Manejar entrada del teclado
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -54,42 +68,79 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }
   };
 
-  // Mantener el foco en el input invisible
+  // Mantener el foco en el input invisible (solo desktop)
   const handleInputBlur = () => {
-    if (gameState.gameState === 'playing' && hiddenInputRef.current) {
+    if (!isMobile && gameState.gameState === 'playing' && hiddenInputRef.current) {
       setTimeout(() => {
         hiddenInputRef.current?.focus();
       }, 0);
     }
   };
 
+  // Eventos táctiles para móviles
+  const handleTouchStart = (e: React.TouchEvent, row: number, col: number) => {
+    if (isMobile) {
+      e.preventDefault();
+      onCellMouseDown(row, col);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isMobile) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const element = document.elementFromPoint(touch.clientX, touch.clientY);
+      const cellElement = element?.closest('[data-cell]');
+      
+      if (cellElement) {
+        const row = parseInt(cellElement.getAttribute('data-row') || '0');
+        const col = parseInt(cellElement.getAttribute('data-col') || '0');
+        onCellMouseEnter(row, col);
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (isMobile) {
+      e.preventDefault();
+      onMouseUp();
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6" onClick={() => hiddenInputRef.current?.focus()}>
-      {/* Input invisible para capturar teclas del teclado */}
-      <input
-        ref={hiddenInputRef}
-        type="text"
-        className="absolute opacity-0 pointer-events-none -z-10"
-        onKeyDown={handleKeyDown}
-        onBlur={handleInputBlur}
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-      />
+    <div className="bg-white rounded-lg shadow-md p-6" onClick={() => !isMobile && hiddenInputRef.current?.focus()}>
+      {/* Input invisible para capturar teclas del teclado (solo desktop) */}
+      {!isMobile && (
+        <input
+          ref={hiddenInputRef}
+          type="text"
+          className="absolute opacity-0 pointer-events-none -z-10"
+          onKeyDown={handleKeyDown}
+          onBlur={handleInputBlur}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+      )}
       
       <h2 className="text-2xl font-bold mb-4 text-center">Tablero de Juego</h2>
       
       {gameState.board.length > 0 ? (
         <div 
-          className="grid grid-cols-4 gap-2 max-w-md mx-auto select-none"
+          className="grid grid-cols-4 gap-2 max-w-md mx-auto select-none mobile-drag-area"
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {gameState.board.map((row, rowIndex) =>
             row.map((letter, colIndex) => (
               <div
                 key={`${rowIndex}-${colIndex}`}
+                data-cell="true"
+                data-row={rowIndex}
+                data-col={colIndex}
                 className={`
                   w-16 h-16 flex items-center justify-center text-xl font-bold rounded-lg cursor-pointer transition-all
                   ${isCellSelected(rowIndex, colIndex) 
@@ -99,6 +150,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 `}
                 onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
                 onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
+                onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
               >
                 {letter}
               </div>
