@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { GameState } from '@/interfaces/game';
 
 interface GameBoardProps {
@@ -10,6 +10,9 @@ interface GameBoardProps {
   onMouseUp: () => void;
   onMouseLeave: () => void;
   isCellSelected: (row: number, col: number) => boolean;
+  onKeyboardInput: (letter: string) => void;
+  onKeyboardSubmit: () => void;
+  onKeyboardBackspace: () => void;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -21,9 +24,60 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onMouseUp,
   onMouseLeave,
   isCellSelected,
+  onKeyboardInput,
+  onKeyboardSubmit,
+  onKeyboardBackspace,
 }) => {
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
+
+  // Enfocar el input invisible cuando el componente se monta y el juego está activo
+  useEffect(() => {
+    if (gameState.gameState === 'playing' && hiddenInputRef.current) {
+      hiddenInputRef.current.focus();
+    }
+  }, [gameState.gameState]);
+
+  // Manejar entrada del teclado
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    
+    if (gameState.gameState !== 'playing') return;
+
+    const key = e.key.toLowerCase();
+    
+    if (key === 'enter') {
+      onKeyboardSubmit();
+    } else if (key === 'backspace') {
+      onKeyboardBackspace();
+    } else if (/^[a-záéíóúñü]$/.test(key)) {
+      onKeyboardInput(key.toUpperCase());
+    }
+  };
+
+  // Mantener el foco en el input invisible
+  const handleInputBlur = () => {
+    if (gameState.gameState === 'playing' && hiddenInputRef.current) {
+      setTimeout(() => {
+        hiddenInputRef.current?.focus();
+      }, 0);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-md p-6" onClick={() => hiddenInputRef.current?.focus()}>
+      {/* Input invisible para capturar teclas del teclado */}
+      <input
+        ref={hiddenInputRef}
+        type="text"
+        className="absolute opacity-0 pointer-events-none -z-10"
+        onKeyDown={handleKeyDown}
+        onBlur={handleInputBlur}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+      />
+      
       <h2 className="text-2xl font-bold mb-4 text-center">Tablero de Juego</h2>
       
       {gameState.board.length > 0 ? (
