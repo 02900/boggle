@@ -36,23 +36,63 @@ class BoggleGame {
     this.words = new Set(commonWords);
   }
 
+  // Configuración de los 16 dados de Boggle
+  getDiceConfiguration() {
+    return [
+      ['A', 'E', 'O', 'S', 'N', 'R'],
+      ['A', 'E', 'I', 'O', 'U', 'L'],
+      ['D', 'E', 'R', 'L', 'A', 'S'],
+      ['N', 'C', 'I', 'O', 'E', 'T'],
+      ['B', 'U', 'M', 'A', 'R', 'O'],
+      ['QU', 'E', 'I', 'T', 'A', 'S'],
+      ['G', 'L', 'E', 'A', 'N', 'O'],
+      ['CH', 'A', 'R', 'E', 'I', 'S'],
+      ['P', 'O', 'L', 'A', 'S', 'U'],
+      ['V', 'E', 'R', 'A', 'I', 'D'],
+      ['M', 'E', 'N', 'T', 'O', 'A'],
+      ['Z', 'A', 'QU', 'U', 'E', 'N'],
+      ['H', 'O', 'S', 'T', 'I', 'A'],
+      ['F', 'A', 'L', 'D', 'E', 'I'],
+      ['LL', 'A', 'O', 'R', 'I', 'S'],
+      ['Ñ', 'C', 'E', 'A', 'N', 'O']
+    ];
+  }
+
+  // Lanzar los dados y generar el tablero
   generateBoard() {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const vowels = 'AEIOU';
+    const dice = this.getDiceConfiguration();
+    const diceRolls = [];
+    
+    // Mezclar los dados para posiciones aleatorias
+    const shuffledDice = [...dice].sort(() => Math.random() - 0.5);
+    
     this.board = [];
+    let diceIndex = 0;
     
     for (let i = 0; i < 4; i++) {
       const row = [];
       for (let j = 0; j < 4; j++) {
-        // Asegurar algunas vocales para mejor formación de palabras
-        if (Math.random() < 0.3) {
-          row.push(vowels[Math.floor(Math.random() * vowels.length)]);
-        } else {
-          row.push(letters[Math.floor(Math.random() * letters.length)]);
-        }
+        const currentDie = shuffledDice[diceIndex];
+        const rolledFace = Math.floor(Math.random() * 6);
+        const letter = currentDie[rolledFace];
+        
+        row.push(letter);
+        diceRolls.push({
+          diceNumber: diceIndex + 1,
+          position: { row: i, col: j },
+          faces: currentDie,
+          rolledFace: rolledFace,
+          letter: letter
+        });
+        
+        diceIndex++;
       }
       this.board.push(row);
     }
+    
+    // Guardar información del lanzamiento para enviar a los clientes
+    this.lastDiceRolls = diceRolls;
+    return diceRolls;
   }
 
   addPlayer(playerId, playerName) {
@@ -71,7 +111,7 @@ class BoggleGame {
   startGame() {
     if (this.players.size < 1) return false;
     
-    this.generateBoard();
+    const diceRolls = this.generateBoard();
     this.gameState = 'playing';
     this.timeLeft = 180;
     
@@ -82,7 +122,7 @@ class BoggleGame {
       }
     }, 1000);
     
-    return true;
+    return { success: true, diceRolls };
   }
 
   endGame() {
@@ -178,7 +218,8 @@ class BoggleGame {
       board: this.board,
       players: Array.from(this.players.values()),
       gameState: this.gameState,
-      timeLeft: this.timeLeft
+      timeLeft: this.timeLeft,
+      diceRolls: this.lastDiceRolls || []
     };
   }
 
@@ -218,8 +259,15 @@ app.prepare().then(() => {
     });
 
     socket.on('start-game', () => {
-      if (game.startGame()) {
-        io.emit('game-started', game.getGameState());
+      const result = game.startGame();
+      if (result.success) {
+        // Primero enviar la información de los dados para la animación
+        io.emit('dice-rolling', result.diceRolls);
+        
+        // Después de un breve delay, enviar el estado del juego iniciado
+        setTimeout(() => {
+          io.emit('game-started', game.getGameState());
+        }, 3000); // 3 segundos para la animación de dados
         
         // Send timer updates
         const timerInterval = setInterval(() => {

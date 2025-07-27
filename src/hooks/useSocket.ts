@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { GameState, WordResult, ClientEvents, GameEvents } from '@/interfaces/game';
+import { GameState, WordResult, ClientEvents, GameEvents, DiceRoll } from '@/interfaces/game';
 
 interface UseSocketReturn {
   socket: Socket | null;
@@ -9,11 +9,14 @@ interface UseSocketReturn {
   startGame: () => void;
   submitWord: (word: string, path: [number, number][]) => void;
   resetGame: () => void;
+  diceRolling: DiceRoll[] | null;
+  clearDiceRolling: () => void;
 }
 
 export const useSocket = (): UseSocketReturn => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [diceRolling, setDiceRolling] = useState<DiceRoll[] | null>(null);
 
   useEffect(() => {
     const newSocket = io();
@@ -25,6 +28,10 @@ export const useSocket = (): UseSocketReturn => {
 
     newSocket.on('disconnect', () => {
       setIsConnected(false);
+    });
+
+    newSocket.on('dice-rolling', (diceRolls: DiceRoll[]) => {
+      setDiceRolling(diceRolls);
     });
 
     return () => {
@@ -63,5 +70,7 @@ export const useSocket = (): UseSocketReturn => {
     startGame,
     submitWord,
     resetGame,
+    diceRolling,
+    clearDiceRolling: () => setDiceRolling(null),
   };
 };

@@ -10,9 +10,10 @@ import { FoundWords } from './FoundWords';
 import { GameControls } from './GameControls';
 import { GameInstructions } from './GameInstructions';
 import { JoinGameForm } from './JoinGameForm';
+import { DiceRollingAnimation } from './DiceRollingAnimation';
 
 export const BoggleGameMain: React.FC = () => {
-  const { socket, isConnected, joinGame, startGame, submitWord, resetGame } = useSocket();
+  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, diceRolling, clearDiceRolling } = useSocket();
   const {
     currentWord,
     selectedPath,
@@ -142,6 +143,14 @@ export const BoggleGameMain: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      {/* Animación de lanzamiento de dados */}
+      {diceRolling && (
+        <DiceRollingAnimation 
+          diceRolls={diceRolling} 
+          onAnimationComplete={clearDiceRolling}
+        />
+      )}
+      
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center space-x-2">
           <span>🎯</span>
