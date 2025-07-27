@@ -11,7 +11,7 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
     <div className="bg-white rounded-lg shadow-md p-4">
       <h3 className="text-xl font-bold mb-3 flex items-center">
         <span className="mr-2">👥</span>
-        Players ({players.length})
+        Jugadores ({players.length})
       </h3>
       
       {players.length > 0 ? (
@@ -38,11 +38,11 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
                     <span className="font-medium text-gray-800">
                       {player.name}
                       {player.id === currentPlayerId && (
-                        <span className="text-xs text-blue-600 ml-1">(You)</span>
+                        <span className="text-xs text-blue-600 ml-1">(Tú)</span>
                       )}
                     </span>
                     <div className="text-xs text-gray-500">
-                      {player.wordsFound.length} words found
+                      {player.wordsFound.length} palabras encontradas
                     </div>
                   </div>
                 </div>
@@ -51,7 +51,7 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
                   <div className="text-lg font-bold text-blue-600">
                     {player.score}
                   </div>
-                  <div className="text-xs text-gray-500">points</div>
+                  <div className="text-xs text-gray-500">puntos</div>
                 </div>
               </div>
             ))}
@@ -59,7 +59,7 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
       ) : (
         <div className="text-center text-gray-500 py-4">
           <div className="text-4xl mb-2">🤷‍♂️</div>
-          <div>No players yet</div>
+          <div>Aún no hay jugadores</div>
         </div>
       )}
     </div>
