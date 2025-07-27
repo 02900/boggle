@@ -35,6 +35,19 @@ export const GameControls: React.FC<GameControlsProps> = ({
     }
   };
 
+  const getStatusText = (status: GameStatus): string => {
+    switch (status) {
+      case 'waiting':
+        return 'esperando';
+      case 'playing':
+        return 'jugando';
+      case 'finished':
+        return 'terminado';
+      default:
+        return 'desconocido';
+    }
+  };
+
   const getStatusIcon = (status: GameStatus): string => {
     switch (status) {
       case 'waiting':
@@ -51,25 +64,25 @@ export const GameControls: React.FC<GameControlsProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mb-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        {/* Connection Status */}
+        {/* Estado de Conexión */}
         <div className="flex items-center space-x-2">
           <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
           <span className="text-sm text-gray-600">
-            {isConnected ? 'Connected' : 'Disconnected'}
+            {isConnected ? 'Conectado' : 'Desconectado'}
           </span>
         </div>
 
-        {/* Game Status */}
+        {/* Estado del Juego */}
         <div className="flex items-center space-x-2">
           <span className="text-lg">{getStatusIcon(gameState)}</span>
           <div className="text-lg font-semibold">
-            Status: <span className={`capitalize ${getStatusColor(gameState)}`}>
-              {gameState}
+            Estado: <span className={`capitalize ${getStatusColor(gameState)}`}>
+              {getStatusText(gameState)}
             </span>
           </div>
         </div>
 
-        {/* Timer */}
+        {/* Temporizador */}
         {gameState === 'playing' && (
           <div className="flex items-center space-x-2">
             <span className="text-lg">⏰</span>
@@ -79,7 +92,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           </div>
         )}
 
-        {/* Controls */}
+        {/* Controles */}
         <div className="flex space-x-2">
           {gameState === 'waiting' && (
             <button
@@ -88,7 +101,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
               className="bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
             >
               <span>🚀</span>
-              <span>Start Game</span>
+              <span>Iniciar Juego</span>
             </button>
           )}
           
@@ -98,12 +111,12 @@ export const GameControls: React.FC<GameControlsProps> = ({
             className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
           >
             <span>🔄</span>
-            <span>Reset</span>
+            <span>Reiniciar</span>
           </button>
         </div>
       </div>
 
-      {/* Game Progress Bar */}
+      {/* Barra de Progreso del Juego */}
       {gameState === 'playing' && (
         <div className="mt-4">
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -115,7 +128,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
             ></div>
           </div>
           <div className="text-xs text-gray-500 mt-1 text-center">
-            Game Progress
+            Progreso del Juego
           </div>
         </div>
       )}

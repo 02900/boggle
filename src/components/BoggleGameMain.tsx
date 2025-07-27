@@ -52,7 +52,7 @@ export const BoggleGameMain: React.FC = () => {
 
     socket.on('game-started', (state: GameState) => {
       setGameState(state);
-      setMessage('Game started! Find words on the board.');
+      setMessage('¡Juego iniciado! Encuentra palabras en el tablero.');
       resetFoundWords();
       resetSelection();
     });
@@ -63,31 +63,31 @@ export const BoggleGameMain: React.FC = () => {
 
     socket.on('game-ended', (state: GameState) => {
       setGameState(state);
-      setMessage('Game ended! Check the final scores.');
+      setMessage('¡Juego terminado! Revisa las puntuaciones finales.');
       resetSelection();
     });
 
     socket.on('word-result', (result: WordResult) => {
       if (result.valid && result.word) {
         addFoundWord(result.word);
-        setMessage(`Great! "${result.word}" is worth ${result.points} points!`);
+        setMessage(`¡Excelente! "${result.word}" vale ${result.points} puntos!`);
       } else {
-        setMessage(`"${currentWord}" - ${result.reason || 'Invalid word'}`);
+        setMessage(`"${currentWord}" - ${result.reason || 'Palabra inválida'}`);
       }
       resetSelection();
     });
 
     socket.on('player-joined', ({ playerName }) => {
-      setMessage(`${playerName} joined the game!`);
+      setMessage(`¡${playerName} se unió al juego!`);
     });
 
     socket.on('player-left', () => {
-      setMessage('A player left the game.');
+      setMessage('Un jugador abandonó el juego.');
     });
 
     socket.on('player-scored', ({ playerId, word, points }) => {
       if (playerId !== socket.id) {
-        setMessage(`Another player found "${word}" for ${points} points!`);
+        setMessage(`¡Otro jugador encontró "${word}" por ${points} puntos!`);
       }
     });
 
@@ -95,7 +95,7 @@ export const BoggleGameMain: React.FC = () => {
       setGameState(state);
       resetFoundWords();
       resetSelection();
-      setMessage('Game has been reset!');
+      setMessage('¡El juego ha sido reiniciado!');
     });
 
     return () => {
@@ -145,7 +145,7 @@ export const BoggleGameMain: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center space-x-2">
           <span>🎯</span>
-          <span>Boggle Game</span>
+          <span>Juego de Boggle</span>
         </h1>
         
         {/* Game Controls */}

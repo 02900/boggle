@@ -24,7 +24,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-4 text-center">Game Board</h2>
+      <h2 className="text-2xl font-bold mb-4 text-center">Tablero de Juego</h2>
       
       {gameState.board.length > 0 ? (
         <div 
@@ -55,21 +55,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         <div className="text-center text-gray-500 py-8">
           <div className="animate-pulse">
             <div className="text-lg mb-2">⏳</div>
-            <div>Waiting for game to start...</div>
+            <div>Esperando que comience el juego...</div>
           </div>
         </div>
       )}
       
-      {/* Current Word Display */}
+      {/* Mostrar Palabra Actual */}
       {currentWord && (
         <div className="mt-6 text-center">
           <div className="text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg inline-block">
-            Current Word: <span className="font-mono">{currentWord}</span>
+            Palabra Actual: <span className="font-mono">{currentWord}</span>
           </div>
         </div>
       )}
       
-      {/* Message Display */}
+      {/* Mostrar Mensaje */}
       {message && (
         <div className="mt-4 text-center">
           <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border-l-4 border-blue-400">

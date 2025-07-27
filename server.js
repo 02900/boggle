@@ -10,28 +10,28 @@ const port = process.env.PORT || 3000;
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-// Boggle game logic
+// Lógica del juego de Boggle
 class BoggleGame {
   constructor() {
     this.board = [];
     this.players = new Map();
-    this.gameState = 'waiting'; // waiting, playing, finished
-    this.timeLeft = 180; // 3 minutes
+    this.gameState = 'waiting'; // esperando, jugando, terminado
+    this.timeLeft = 180; // 3 minutos
     this.timer = null;
-    this.words = new Set(); // Valid dictionary words (simplified for demo)
+    this.words = new Set(); // Palabras válidas del diccionario (simplificado para demo)
     this.initializeDictionary();
   }
 
   initializeDictionary() {
-    // Simplified word list for demo - in production, use a proper dictionary
+    // Lista de palabras simplificada para demo - en producción, usar un diccionario apropiado
     const commonWords = [
-      'cat', 'dog', 'run', 'jump', 'play', 'game', 'word', 'find', 'look', 'see',
-      'big', 'small', 'fast', 'slow', 'good', 'bad', 'new', 'old', 'hot', 'cold',
-      'red', 'blue', 'green', 'yellow', 'black', 'white', 'brown', 'pink',
-      'house', 'tree', 'book', 'car', 'bike', 'phone', 'computer', 'table',
-      'chair', 'door', 'window', 'light', 'water', 'fire', 'earth', 'air',
-      'love', 'hate', 'happy', 'sad', 'angry', 'calm', 'peace', 'war',
-      'time', 'space', 'place', 'thing', 'person', 'animal', 'plant', 'food'
+      'gato', 'perro', 'correr', 'saltar', 'jugar', 'juego', 'palabra', 'buscar', 'mirar', 'ver',
+      'grande', 'pequeño', 'rápido', 'lento', 'bueno', 'malo', 'nuevo', 'viejo', 'caliente', 'frío',
+      'rojo', 'azul', 'verde', 'amarillo', 'negro', 'blanco', 'marrón', 'rosa',
+      'casa', 'árbol', 'libro', 'coche', 'bici', 'teléfono', 'computadora', 'mesa',
+      'silla', 'puerta', 'ventana', 'luz', 'agua', 'fuego', 'tierra', 'aire',
+      'amor', 'odio', 'feliz', 'triste', 'enojado', 'calma', 'paz', 'guerra',
+      'tiempo', 'espacio', 'lugar', 'cosa', 'persona', 'animal', 'planta', 'comida'
     ];
     this.words = new Set(commonWords);
   }
@@ -44,7 +44,7 @@ class BoggleGame {
     for (let i = 0; i < 4; i++) {
       const row = [];
       for (let j = 0; j < 4; j++) {
-        // Ensure some vowels for better word formation
+        // Asegurar algunas vocales para mejor formación de palabras
         if (Math.random() < 0.3) {
           row.push(vowels[Math.floor(Math.random() * vowels.length)]);
         } else {
@@ -94,34 +94,34 @@ class BoggleGame {
   }
 
   submitWord(playerId, word, path) {
-    if (this.gameState !== 'playing') return { valid: false, reason: 'Game not active' };
+    if (this.gameState !== 'playing') return { valid: false, reason: 'Juego no activo' };
     
     const player = this.players.get(playerId);
-    if (!player) return { valid: false, reason: 'Player not found' };
+    if (!player) return { valid: false, reason: 'Jugador no encontrado' };
     
     word = word.toLowerCase();
     
-    // Check if word already found by this player
+    // Verificar si la palabra ya fue encontrada por este jugador
     if (player.wordsFound.includes(word)) {
-      return { valid: false, reason: 'Word already found' };
+      return { valid: false, reason: 'Palabra ya encontrada' };
     }
     
-    // Check minimum length
+    // Verificar longitud mínima
     if (word.length < 3) {
-      return { valid: false, reason: 'Word too short' };
+      return { valid: false, reason: 'Palabra muy corta' };
     }
     
-    // Check if word is in dictionary
+    // Verificar si la palabra está en el diccionario
     if (!this.words.has(word)) {
-      return { valid: false, reason: 'Word not in dictionary' };
+      return { valid: false, reason: 'Palabra no está en el diccionario' };
     }
     
-    // Validate path on board
+    // Validar ruta en el tablero
     if (!this.isValidPath(path, word)) {
-      return { valid: false, reason: 'Invalid path on board' };
+      return { valid: false, reason: 'Ruta inválida en el tablero' };
     }
     
-    // Add word and calculate score
+    // Agregar palabra y calcular puntuación
     player.wordsFound.push(word);
     const points = this.calculatePoints(word);
     player.score += points;

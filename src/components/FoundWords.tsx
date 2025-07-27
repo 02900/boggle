@@ -12,7 +12,7 @@ export const FoundWords: React.FC<FoundWordsProps> = ({ foundWords, playerName }
     if (length === 5) return 2;
     if (length === 6) return 3;
     if (length === 7) return 5;
-    return 11; // 8+ letters
+    return 11; // 8+ letras
   };
 
   const totalScore = foundWords.reduce((sum, word) => sum + getWordScore(word), 0);
@@ -22,7 +22,7 @@ export const FoundWords: React.FC<FoundWordsProps> = ({ foundWords, playerName }
       <h3 className="text-xl font-bold mb-3 flex items-center justify-between">
         <span className="flex items-center">
           <span className="mr-2">📝</span>
-          {playerName ? `${playerName}'s Words` : 'Your Words'}
+          {playerName ? `Palabras de ${playerName}` : 'Tus Palabras'}
         </span>
         <span className="text-sm font-normal text-gray-600">
           ({foundWords.length})
@@ -32,7 +32,7 @@ export const FoundWords: React.FC<FoundWordsProps> = ({ foundWords, playerName }
       {totalScore > 0 && (
         <div className="mb-3 p-2 bg-green-50 rounded-lg border border-green-200">
           <div className="text-sm text-green-700 font-medium">
-            Total Score: <span className="text-lg font-bold">{totalScore}</span> points
+            Puntuación Total: <span className="text-lg font-bold">{totalScore}</span> puntos
           </div>
         </div>
       )}
@@ -58,9 +58,9 @@ export const FoundWords: React.FC<FoundWordsProps> = ({ foundWords, playerName }
         ) : (
           <div className="text-center text-gray-500 py-8">
             <div className="text-4xl mb-2">🔍</div>
-            <div className="text-sm">No words found yet</div>
+            <div className="text-sm">Aún no has encontrado palabras</div>
             <div className="text-xs text-gray-400 mt-1">
-              Start finding words on the board!
+              ¡Comienza a buscar palabras en el tablero!
             </div>
           </div>
         )}
