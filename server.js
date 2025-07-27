@@ -2,6 +2,8 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
+const fs = require('fs');
+const path = require('path');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -23,17 +25,31 @@ class BoggleGame {
   }
 
   initializeDictionary() {
-    // Lista de palabras simplificada para demo - en producción, usar un diccionario apropiado
-    const commonWords = [
-      'gato', 'perro', 'correr', 'saltar', 'jugar', 'juego', 'palabra', 'buscar', 'mirar', 'ver',
-      'grande', 'pequeño', 'rápido', 'lento', 'bueno', 'malo', 'nuevo', 'viejo', 'caliente', 'frío',
-      'rojo', 'azul', 'verde', 'amarillo', 'negro', 'blanco', 'marrón', 'rosa',
-      'casa', 'árbol', 'libro', 'coche', 'bici', 'teléfono', 'computadora', 'mesa',
-      'silla', 'puerta', 'ventana', 'luz', 'agua', 'fuego', 'tierra', 'aire',
-      'amor', 'odio', 'feliz', 'triste', 'enojado', 'calma', 'paz', 'guerra',
-      'tiempo', 'espacio', 'lugar', 'cosa', 'persona', 'animal', 'planta', 'comida'
-    ];
-    this.words = new Set(commonWords);
+    try {
+      // Leer el archivo de palabras completo en español
+      const dictionaryPath = path.join(__dirname, 'file-2017.txt');
+      const fileContent = fs.readFileSync(dictionaryPath, 'utf8');
+      
+      // Dividir por líneas y filtrar palabras válidas
+      const allWords = fileContent
+        .split('\n')
+        .map(word => word.trim().toLowerCase())
+        .filter(word => {
+          // Filtrar palabras de 3 o más caracteres para Boggle
+          return word.length >= 3 && word.length <= 16 && /^[a-záéíóúñü]+$/.test(word);
+        });
+      
+      this.words = new Set(allWords);
+      console.log(`Diccionario cargado: ${this.words.size} palabras válidas`);
+    } catch (error) {
+      console.error('Error al cargar el diccionario:', error);
+      // Fallback a diccionario básico si hay error
+      const basicWords = [
+        'gato', 'perro', 'casa', 'mesa', 'silla', 'agua', 'fuego', 'tierra', 'aire',
+        'amor', 'tiempo', 'lugar', 'cosa', 'persona', 'animal', 'planta', 'comida'
+      ];
+      this.words = new Set(basicWords);
+    }
   }
 
   // Configuración de los 16 dados de Boggle
