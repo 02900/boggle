@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSocket } from '@/hooks/useSocket';
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { GameState, WordResult } from '@/interfaces/game';
@@ -39,6 +39,20 @@ export const BoggleGameMain: React.FC = () => {
     gameState: 'waiting',
     timeLeft: 180
   });
+  
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Detectar si es móvil
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const [isJoined, setIsJoined] = useState(false);
   const [currentPlayerId, setCurrentPlayerId] = useState<string>('');
 
@@ -144,6 +158,117 @@ export const BoggleGameMain: React.FC = () => {
     return <JoinGameForm onJoinGame={handleJoinGame} isConnected={isConnected} />;
   }
 
+  // Layout móvil optimizado
+  if (isMobile) {
+    return (
+      <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col overflow-hidden">
+        {/* Animación de lanzamiento de dados */}
+        {diceRolling && (
+          <DiceRollingAnimation 
+            diceRolls={diceRolling} 
+            onAnimationComplete={clearDiceRolling}
+          />
+        )}
+        
+        {/* Header compacto con tiempo y puntos */}
+        <div className="flex-shrink-0 bg-white shadow-sm p-3">
+          <div className="flex justify-between items-center">
+            <div className="text-lg font-bold text-gray-800">
+              🎲 Boggle
+            </div>
+            
+            {/* Tiempo restante */}
+            <div className="flex items-center space-x-4">
+              {gameState.gameState === 'playing' && (
+                <div className="text-lg font-bold text-blue-600">
+                  ⏱️ {Math.floor(gameState.timeLeft / 60)}:{(gameState.timeLeft % 60).toString().padStart(2, '0')}
+                </div>
+              )}
+              
+              {/* Puntos del jugador actual */}
+              {gameState.players.find(p => p.id === currentPlayerId) && (
+                <div className="text-lg font-bold text-green-600">
+                  🏆 {gameState.players.find(p => p.id === currentPlayerId)?.score || 0}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Controles de juego compactos */}
+          {gameState.gameState === 'waiting' && (
+            <div className="mt-2 text-center">
+              <button
+                onClick={startGame}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
+              >
+                ▶️ Iniciar Juego
+              </button>
+            </div>
+          )}
+          
+          {gameState.gameState === 'finished' && (
+            <div className="mt-2 text-center">
+              <button
+                onClick={resetGame}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
+              >
+                🔄 Nuevo Juego
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Tablero de juego - ocupa el resto del espacio */}
+        <div className="flex-1 p-3 mobile-drag-area">
+          <GameBoard
+            gameState={gameState}
+            currentWord={currentWord}
+            message={message}
+            onCellMouseDown={handleCellMouseDownWrapper}
+            onCellMouseEnter={handleCellMouseEnterWrapper}
+            onMouseUp={handleMouseUpWrapper}
+            onMouseLeave={handleMouseLeave}
+            isCellSelected={isCellSelected}
+            onKeyboardInput={(letter) => handleKeyboardInput(letter, gameState.board)}
+            onKeyboardSubmit={() => handleKeyboardSubmit(submitWord)}
+            onKeyboardBackspace={handleKeyboardBackspace}
+          />
+        </div>
+        
+        {/* Footer con palabra actual y últimas palabras encontradas */}
+        {gameState.gameState === 'playing' && (
+          <div className="flex-shrink-0 bg-white shadow-sm p-3 border-t">
+            {currentWord && (
+              <div className="text-center mb-2">
+                <span className="text-lg font-bold text-blue-600">
+                  {currentWord}
+                </span>
+              </div>
+            )}
+            
+            {foundWords.length > 0 && (
+              <div className="text-center">
+                <div className="text-xs text-gray-500 mb-1">Últimas palabras:</div>
+                <div className="text-sm text-green-600 font-medium">
+                  {foundWords.slice(-3).join(' • ')}
+                </div>
+              </div>
+            )}
+            
+            {message && (
+              <div className="text-center mt-2">
+                <div className="text-xs text-red-500">
+                  {message}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  // Layout desktop normal
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       {/* Animación de lanzamiento de dados */}
