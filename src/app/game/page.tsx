@@ -1,5 +1,5 @@
 import { BoggleGameMain } from '@/components/BoggleGameMain';
 
-export default function Home() {
+export default function GamePage() {
   return <BoggleGameMain />;
 }
