@@ -688,6 +688,10 @@ export const BoggleGameMain: React.FC = () => {
           isOpen={showMaxScoreModal}
           onClose={() => setShowMaxScoreModal(false)}
           socket={socket}
+          foundWords={gameState.players.flatMap(player => [
+            ...player.wordsFound,
+            ...(player.eliminatedWords || [])
+          ])}
         />
       </div>
     );
@@ -780,6 +784,10 @@ export const BoggleGameMain: React.FC = () => {
         isOpen={showMaxScoreModal}
         onClose={() => setShowMaxScoreModal(false)}
         socket={socket}
+        foundWords={gameState.players.flatMap(player => [
+          ...player.wordsFound,
+          ...(player.eliminatedWords || [])
+        ])}
       />
     </div>
   );
