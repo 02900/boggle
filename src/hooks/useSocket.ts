@@ -9,6 +9,7 @@ interface UseSocketReturn {
   startGame: () => void;
   submitWord: (word: string, path: [number, number][]) => void;
   resetGame: () => void;
+  rotateBoard: () => void;
   diceRolling: DiceRoll[] | null;
   clearDiceRolling: () => void;
   triggerVibration: () => void;
@@ -118,6 +119,12 @@ export const useSocket = (): UseSocketReturn => {
       socket.emit('reset-game');
     }
   };
+  
+  const rotateBoard = () => {
+    if (socket) {
+      socket.emit('rotate-board');
+    }
+  };
 
   return {
     socket,
@@ -126,6 +133,7 @@ export const useSocket = (): UseSocketReturn => {
     startGame,
     submitWord,
     resetGame,
+    rotateBoard,
     diceRolling,
     clearDiceRolling: () => setDiceRolling(null),
     triggerVibration,
