@@ -13,6 +13,7 @@ interface UseSocketReturn {
   clearDiceRolling: () => void;
   triggerVibration: () => void;
   playSuccessSound: () => void;
+  playErrorSound: () => void;
 }
 
 export const useSocket = (): UseSocketReturn => {
@@ -45,13 +46,28 @@ export const useSocket = (): UseSocketReturn => {
     try {
       const audio = new Audio('/move-self.mp3');
       audio.volume = 0.5; // Volumen al 50%
-      console.log("Reproduciendo sonido");
+      console.log("Reproduciendo sonido de éxito");
       audio.play().catch(error => {
         // Silenciar errores de reproducción (ej: política de autoplay)
-        console.log('No se pudo reproducir el sonido:', error);
+        console.log('No se pudo reproducir el sonido de éxito:', error);
       });
     } catch (error) {
-      console.log('Error al crear el audio:', error);
+      console.log('Error al crear el audio de éxito:', error);
+    }
+  }, []);
+  
+  // Función para reproducir sonido de error
+  const playErrorSound = useCallback(() => {
+    try {
+      const audio = new Audio('/illegal.mp3');
+      audio.volume = 0.4; // Volumen un poco más bajo para errores
+      console.log("Reproduciendo sonido de error");
+      audio.play().catch(error => {
+        // Silenciar errores de reproducción (ej: política de autoplay)
+        console.log('No se pudo reproducir el sonido de error:', error);
+      });
+    } catch (error) {
+      console.log('Error al crear el audio de error:', error);
     }
   }, []);
 
@@ -114,5 +130,6 @@ export const useSocket = (): UseSocketReturn => {
     clearDiceRolling: () => setDiceRolling(null),
     triggerVibration,
     playSuccessSound,
+    playErrorSound,
   };
 };
