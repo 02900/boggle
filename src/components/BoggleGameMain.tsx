@@ -43,6 +43,7 @@ export const BoggleGameMain: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [rotationCooldown, setRotationCooldown] = useState(0);
   const [rotationMessage, setRotationMessage] = useState('');
+  const [highlightedPath, setHighlightedPath] = useState<[number, number][]>([]);
   
   // Detectar si es móvil
   useEffect(() => {
@@ -206,6 +207,116 @@ export const BoggleGameMain: React.FC = () => {
     if (isSelecting) {
       resetSelection();
     }
+  };
+
+  // Nueva función para manejar palabras completas desde el teclado
+  const handleKeyboardWordInput = (word: string) => {
+    // Buscar todas las rutas posibles para la palabra en el tablero
+    const foundPath = findWordPath(word, gameState.board);
+    
+    if (foundPath) {
+      // Si se encuentra una ruta válida, resaltarla y enviar la palabra
+      setHighlightedPath(foundPath);
+      submitWord(word, foundPath);
+      
+      // Limpiar el highlight después de un tiempo
+      setTimeout(() => {
+        setHighlightedPath([]);
+      }, 2000);
+    } else {
+      // Si no se encuentra ruta, mostrar mensaje de error
+      setMessage(`"${word}" - No se encontró ruta válida en el tablero`);
+      playErrorSound();
+    }
+  };
+
+  // Función para buscar una ruta válida para una palabra en el tablero
+  const findWordPath = (word: string, board: string[][]): [number, number][] | null => {
+    const rows = board.length;
+    const cols = board[0].length;
+    const wordUpper = word.toUpperCase();
+    
+    // Buscar desde cada posición del tablero
+    for (let startRow = 0; startRow < rows; startRow++) {
+      for (let startCol = 0; startCol < cols; startCol++) {
+        const path = searchFromPosition(wordUpper, board, startRow, startCol, [], 0);
+        if (path) {
+          return path;
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  // Función recursiva para buscar la palabra desde una posición específica
+  const searchFromPosition = (
+    word: string,
+    board: string[][],
+    row: number,
+    col: number,
+    currentPath: [number, number][],
+    letterIndex: number
+  ): [number, number][] | null => {
+    // Verificar límites
+    if (row < 0 || row >= board.length || col < 0 || col >= board[0].length) {
+      return null;
+    }
+    
+    // Verificar si la celda ya está en el path actual
+    if (currentPath.some(([r, c]) => r === row && c === col)) {
+      return null;
+    }
+    
+    const currentLetter = board[row][col];
+    const targetLetter = word[letterIndex];
+    
+    // Manejar dígrafos (CH, LL, QU)
+    let letterMatch = false;
+    let nextLetterIndex = letterIndex + 1;
+    
+    if (currentLetter === targetLetter) {
+      letterMatch = true;
+    } else if (currentLetter === 'Q' && letterIndex < word.length - 1 && word.substring(letterIndex, letterIndex + 2) === 'QU') {
+      letterMatch = true;
+      nextLetterIndex = letterIndex + 2;
+    } else if (letterIndex < word.length - 1) {
+      const digraph = word.substring(letterIndex, letterIndex + 2);
+      if ((digraph === 'CH' || digraph === 'LL') && currentLetter === digraph[0]) {
+        letterMatch = true;
+        nextLetterIndex = letterIndex + 2;
+      }
+    }
+    
+    if (!letterMatch) {
+      return null;
+    }
+    
+    const newPath = [...currentPath, [row, col] as [number, number]];
+    
+    // Si hemos encontrado toda la palabra
+    if (nextLetterIndex >= word.length) {
+      return newPath;
+    }
+    
+    // Buscar en todas las direcciones adyacentes (incluyendo diagonales)
+    const directions = [
+      [-1, -1], [-1, 0], [-1, 1],
+      [0, -1],           [0, 1],
+      [1, -1],  [1, 0],  [1, 1]
+    ];
+    
+    for (const [dr, dc] of directions) {
+      const nextRow = row + dr;
+      const nextCol = col + dc;
+      
+      const result = searchFromPosition(word, board, nextRow, nextCol, newPath, nextLetterIndex);
+      if (result) {
+        return result;
+      }
+    }
+    
+    return null;
   };
 
   if (!isJoined) {
@@ -410,9 +521,8 @@ export const BoggleGameMain: React.FC = () => {
               onMouseUp={handleMouseUpWrapper}
               onMouseLeave={handleMouseLeave}
               isCellSelected={isCellSelected}
-              onKeyboardInput={(letter) => handleKeyboardInput(letter, gameState.board)}
-              onKeyboardSubmit={() => handleKeyboardSubmit(submitWord)}
-              onKeyboardBackspace={handleKeyboardBackspace}
+              onKeyboardInput={handleKeyboardWordInput}
+              highlightedPath={highlightedPath}
             />
           )}
         </div>
@@ -491,9 +601,8 @@ export const BoggleGameMain: React.FC = () => {
               onMouseUp={handleMouseUpWrapper}
               onMouseLeave={handleMouseLeave}
               isCellSelected={isCellSelected}
-              onKeyboardInput={(letter) => handleKeyboardInput(letter, gameState.board)}
-              onKeyboardSubmit={() => handleKeyboardSubmit(submitWord)}
-              onKeyboardBackspace={handleKeyboardBackspace}
+              onKeyboardInput={handleKeyboardWordInput}
+              highlightedPath={highlightedPath}
             />
           </div>
 
