@@ -12,6 +12,7 @@ interface GameBoardProps {
   isCellSelected: (row: number, col: number) => boolean;
   onKeyboardInput: (word: string) => void; // Cambiado: ahora recibe palabra completa
   highlightedPath?: [number, number][]; // Nueva prop para mostrar ruta encontrada
+  highlightedErrorPath?: [number, number][]; // Nueva prop para mostrar ruta incorrecta en rojo
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -25,6 +26,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   isCellSelected,
   onKeyboardInput,
   highlightedPath = [],
+  highlightedErrorPath = [],
 }) => {
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const [typedWord, setTypedWord] = useState('');
@@ -160,12 +162,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 className={`
                   w-16 h-16 flex items-center justify-center text-xl font-bold rounded-lg cursor-pointer transition-all
                   ${
-                    // Prioridad: highlightedPath > selección actual
-                    highlightedPath.some(([r, c]) => r === rowIndex && c === colIndex)
-                      ? 'bg-green-500 text-white scale-105 shadow-lg ring-2 ring-green-300'
-                      : isCellSelected(rowIndex, colIndex) 
-                        ? 'bg-blue-500 text-white scale-105 shadow-lg' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
+                    // Prioridad: highlightedErrorPath (rojo) > highlightedPath (verde) > selección actual (azul)
+                    highlightedErrorPath.some(([r, c]) => r === rowIndex && c === colIndex)
+                      ? 'bg-red-500 text-white scale-105 shadow-lg ring-2 ring-red-300'
+                      : highlightedPath.some(([r, c]) => r === rowIndex && c === colIndex)
+                        ? 'bg-green-500 text-white scale-105 shadow-lg ring-2 ring-green-300'
+                        : isCellSelected(rowIndex, colIndex) 
+                          ? 'bg-blue-500 text-white scale-105 shadow-lg' 
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
                   }
                 `}
                 onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}

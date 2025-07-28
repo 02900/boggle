@@ -15,6 +15,8 @@ const SCOREBOARD_FILE = path.join(__dirname, 'scoreboard.json');
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
+const TIME_LIMIT = 188; // 3 minutos + 8 segundos de animación inicial
+
 // Lista de nombres predefinidos
 const RANDOM_NAMES = [
   'ShadowHunter', 'StormRider', 'FireWolf', 'IceBreaker', 'ThunderBolt',
@@ -95,7 +97,7 @@ class BoggleGame {
     this.board = [];
     this.players = new Map();
     this.gameState = 'waiting'; // esperando, jugando, terminado
-    this.timeLeft = 180; // 3 minutos
+    this.timeLeft = TIME_LIMIT; // 3 minutos
     this.timer = null;
     this.words = new Set(); // Palabras válidas del diccionario (simplificado para demo)
     this.lastRotationTime = 0; // Timestamp de la última rotación
@@ -237,7 +239,7 @@ class BoggleGame {
     
     const diceRolls = this.generateBoard();
     this.gameState = 'playing';
-    this.timeLeft = 180;
+    this.timeLeft = TIME_LIMIT;
     
     this.timer = setInterval(() => {
       this.timeLeft--;
@@ -359,7 +361,7 @@ class BoggleGame {
   resetGame() {
     this.board = [];
     this.gameState = 'waiting';
-    this.timeLeft = 180;
+    this.timeLeft = TIME_LIMIT;
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;

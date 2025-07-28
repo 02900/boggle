@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '@/hooks/useSocket';
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { GameState, WordResult } from '@/interfaces/game';
@@ -44,6 +44,10 @@ export const BoggleGameMain: React.FC = () => {
   const [rotationCooldown, setRotationCooldown] = useState(0);
   const [rotationMessage, setRotationMessage] = useState('');
   const [highlightedPath, setHighlightedPath] = useState<[number, number][]>([]);
+  const [highlightedErrorPath, setHighlightedErrorPath] = useState<[number, number][]>([]);
+  const [lastSubmittedPath, setLastSubmittedPath] = useState<[number, number][]>([]);
+  const [lastSubmittedWord, setLastSubmittedWord] = useState<string>('');
+  const lastSubmittedRef = useRef<{path: [number, number][], word: string}>({path: [], word: ''});
   
   // Detectar si es móvil
   useEffect(() => {
@@ -110,6 +114,11 @@ export const BoggleGameMain: React.FC = () => {
         triggerVibration();
         playSuccessSound();
       } else {
+        // Usar el último camino enviado para mostrarlo en rojo
+        const currentPath = [...lastSubmittedRef.current.path];
+        const currentWordToShow = lastSubmittedRef.current.word || currentWord;
+        console.log('Error path captured:', currentPath, 'Current word:', currentWordToShow, 'Last submitted from ref:', lastSubmittedRef.current);
+        
         // Si el jugador no fue encontrado, redirigir al menú principal
         if (result.reason === 'Jugador no encontrado') {
           setMessage('Sesión perdida. Redirigiendo al menú principal...');
@@ -119,13 +128,27 @@ export const BoggleGameMain: React.FC = () => {
             resetSelection();
           }, 2000);
         } else {
-          setMessage(`"${currentWord}" - ${result.reason || 'Palabra inválida'}`);
+          setMessage(`"${currentWordToShow}" - ${result.reason || 'Palabra inválida'}`);
+          // Mostrar el camino en rojo por 2 segundos
+          if (currentPath.length > 0) {
+            console.log('Setting error path:', currentPath);
+            setHighlightedErrorPath(currentPath);
+            // Resetear la selección después de un pequeño delay para permitir que se vea el rojo
+            setTimeout(() => {
+              resetSelection();
+            }, 100);
+            // Limpiar el resaltado de error después de 2 segundos
+            setTimeout(() => {
+              setHighlightedErrorPath([]);
+            }, 2000);
+          } else {
+            resetSelection();
+          }
           // Activar sonido de error para palabras inválidas
           console.log('Activando sonido de error para palabra inválida');
           playErrorSound();
         }
       }
-      resetSelection();
     });
 
     socket.on('player-joined', ({ playerName }) => {
@@ -200,7 +223,14 @@ export const BoggleGameMain: React.FC = () => {
   };
 
   const handleMouseUpWrapper = () => {
-    handleMouseUp((word, path) => submitWord(word, path));
+    handleMouseUp((word, path) => {
+      // Capturar el camino y palabra antes de enviar
+      setLastSubmittedPath([...path]);
+      setLastSubmittedWord(word);
+      lastSubmittedRef.current = {path: [...path], word};
+      console.log('Submitting word:', word, 'with path:', path);
+      submitWord(word, path);
+    });
   };
 
   const handleMouseLeave = () => {
@@ -217,6 +247,12 @@ export const BoggleGameMain: React.FC = () => {
     if (foundPath) {
       // Si se encuentra una ruta válida, resaltarla y enviar la palabra
       setHighlightedPath(foundPath);
+      // Capturar el camino y palabra antes de enviar
+      setLastSubmittedPath([...foundPath]);
+      setLastSubmittedWord(word);
+      lastSubmittedRef.current = {path: [...foundPath], word};
+      console.log('Submitting keyboard word:', word, 'with path:', foundPath);
+      console.log('States set - lastSubmittedPath:', [...foundPath], 'lastSubmittedWord:', word);
       submitWord(word, foundPath);
       
       // Limpiar el highlight después de un tiempo
@@ -535,6 +571,7 @@ export const BoggleGameMain: React.FC = () => {
               isCellSelected={isCellSelected}
               onKeyboardInput={handleKeyboardWordInput}
               highlightedPath={highlightedPath}
+              highlightedErrorPath={highlightedErrorPath}
             />
           )}
         </div>
@@ -615,6 +652,7 @@ export const BoggleGameMain: React.FC = () => {
               isCellSelected={isCellSelected}
               onKeyboardInput={handleKeyboardWordInput}
               highlightedPath={highlightedPath}
+              highlightedErrorPath={highlightedErrorPath}
             />
           </div>
 
