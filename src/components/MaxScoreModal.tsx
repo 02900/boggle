@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Socket } from "socket.io-client";
 
 interface WordData {
   word: string;
@@ -18,7 +18,7 @@ interface MaxScoreData {
 interface MaxScoreModalProps {
   isOpen: boolean;
   onClose: () => void;
-  socket: any;
+  socket: Socket | null;
   foundWords?: string[]; // Palabras encontradas por todos los jugadores
 }
 
