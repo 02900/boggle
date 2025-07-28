@@ -7,6 +7,7 @@ interface GameControlsProps {
   onStartGame: () => void;
   onResetGame: () => void;
   onRotateBoard: () => void;
+  onShowMaxScore?: () => void;
   isConnected: boolean;
   rotationCooldown: number;
   rotationMessage: string;
@@ -18,6 +19,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onStartGame,
   onResetGame,
   onRotateBoard,
+  onShowMaxScore,
   isConnected,
   rotationCooldown,
   rotationMessage,
@@ -120,6 +122,17 @@ export const GameControls: React.FC<GameControlsProps> = ({
             >
               <span>🔄</span>
               <span>{rotationCooldown > 0 ? `${rotationCooldown}s` : 'Rotar'}</span>
+            </button>
+          )}
+          
+          {gameState === 'finished' && onShowMaxScore && (
+            <button
+              onClick={onShowMaxScore}
+              disabled={!isConnected}
+              className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+            >
+              <span>🏆</span>
+              <span>Puntuación Máxima</span>
             </button>
           )}
           
