@@ -13,7 +13,7 @@ import { JoinGameForm } from './JoinGameForm';
 import { DiceRollingAnimation } from './DiceRollingAnimation';
 
 export const BoggleGameMain: React.FC = () => {
-  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound } = useSocket();
+  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound } = useSocket();
   const {
     currentWord,
     selectedPath,
@@ -117,6 +117,9 @@ export const BoggleGameMain: React.FC = () => {
           }, 2000);
         } else {
           setMessage(`"${currentWord}" - ${result.reason || 'Palabra inválida'}`);
+          // Activar sonido de error para palabras inválidas
+          console.log('Activando sonido de error para palabra inválida');
+          playErrorSound();
         }
       }
       resetSelection();
@@ -153,7 +156,7 @@ export const BoggleGameMain: React.FC = () => {
       socket.off('player-scored');
       socket.off('game-reset');
     };
-  }, [socket, currentWord, addFoundWord, setMessage, resetFoundWords, resetSelection, triggerVibration, playSuccessSound]);
+  }, [socket, currentWord, addFoundWord, setMessage, resetFoundWords, resetSelection, triggerVibration, playSuccessSound, playErrorSound]);
 
   const handleJoinGame = (playerName: string) => {
     joinGame(playerName);
