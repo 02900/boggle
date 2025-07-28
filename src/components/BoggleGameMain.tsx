@@ -465,13 +465,21 @@ export const BoggleGameMain: React.FC = () => {
           )}
           
           {gameState.gameState === 'finished' && (
-            <div className="mt-2 text-center">
-              <button
-                onClick={resetGame}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
-              >
-                🔄 Nuevo Juego
-              </button>
+            <div className="mt-2 text-center space-y-2">
+              <div className="flex justify-center space-x-2">
+                <button
+                  onClick={() => setShowMaxScoreModal(true)}
+                  className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                >
+                  🏆 Puntuación Máxima
+                </button>
+                <button
+                  onClick={resetGame}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                >
+                  🔄 Nuevo Juego
+                </button>
+              </div>
             </div>
           )}
           
@@ -674,6 +682,13 @@ export const BoggleGameMain: React.FC = () => {
             )}
           </div>
         )}
+        
+        {/* Modal de Puntuación Máxima */}
+        <MaxScoreModal
+          isOpen={showMaxScoreModal}
+          onClose={() => setShowMaxScoreModal(false)}
+          socket={socket}
+        />
       </div>
     );
   }
