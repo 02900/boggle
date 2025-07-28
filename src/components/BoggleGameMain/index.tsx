@@ -5,40 +5,42 @@ import { JoinGameForm } from "../JoinGameForm";
 import { ViewMobile } from "./view-mobile";
 import { ViewDesktop } from "./view-desktop";
 import { useBoggleGameMain } from "./use-boggle-game-main";
+import { useBoggleGameMainStore } from "./boogle-game.main.store";
+import { useSocketsStore } from "@/stores/sockets.store";
+import { useViewportStore } from "@/stores/viewport.store";
+import { useGameLogicStore } from "@/stores/game-logic.store";
 
 export const BoggleGameMain = () => {
   const {
-    isJoined,
-    handleJoinGame,
-    isConnected,
-    socket,
-    isMobile,
-    diceRolling,
-    clearDiceRolling,
     gameState,
+    rotationCooldown,
+    rotationMessage,
+    highlightedPath,
+    highlightedErrorPath,
+    highlightedSkipPath,
+    showMaxScoreModal,
+    setShowMaxScoreModal,
     currentPlayerId,
+    isJoined,
+  } = useBoggleGameMainStore();
+  const { foundWords, currentWord, message } = useGameLogicStore();
+  const { socket, isConnected, diceRolling, eliminateCommonWords } = useSocketsStore();
+  const { isMobile } = useViewportStore();
+
+  const {
+    handleJoinGame,
+    clearDiceRolling,
     getWordScore,
     startGame,
     rotateBoard,
     resetGame,
-    rotationCooldown,
-    rotationMessage,
-    setShowMaxScoreModal,
-    currentWord,
-    message,
     handleCellMouseEnterWrapper,
     handleMouseUpWrapper,
     handleMouseLeave,
     isCellSelected,
     handleKeyboardWordInput,
-    highlightedPath,
-    highlightedErrorPath,
-    highlightedSkipPath,
-    foundWords,
-    showMaxScoreModal,
     handleCellMouseDownWrapper,
     toggleEliminateCommonWords,
-    eliminateCommonWords,
   } = useBoggleGameMain();
 
   if (!isJoined) {

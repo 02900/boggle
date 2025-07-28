@@ -1,93 +1,70 @@
-import { useEffect, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { DiceRoll } from '@/interfaces/game';
+/* eslint-disable react-hooks/exhaustive-deps */
 
-interface UseSocketReturn {
-  socket: Socket | null;
-  isConnected: boolean;
-  joinGame: (playerName: string) => void;
-  startGame: () => void;
-  submitWord: (word: string, path: [number, number][]) => void;
-  resetGame: () => void;
-  rotateBoard: () => void;
-  diceRolling: DiceRoll[] | null;
-  clearDiceRolling: () => void;
-  triggerVibration: () => void;
-  playSuccessSound: () => void;
-  playErrorSound: () => void;
-  playSkipSound: () => void;
-  toggleEliminateCommonWords: (enabled: boolean) => void;
-  eliminateCommonWords: boolean;
-}
+import { useCallback, useEffect } from "react";
+import { io } from "socket.io-client";
+import { DiceRoll } from "@/interfaces/game";
+import { useSocketsStore } from "@/stores/sockets.store";
+import { useViewportStore } from "@/stores/viewport.store";
 
-export const useSocket = (): UseSocketReturn => {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [diceRolling, setDiceRolling] = useState<DiceRoll[] | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [eliminateCommonWords, setEliminateCommonWords] = useState(true);
-  
-  // Detectar si es móvil para la vibración
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-  
+export const useSocket = () => {
+  const {
+    socket,
+    setIsConnected,
+    setDiceRolling,
+    setEliminateCommonWords,
+    setSocket,
+  } = useSocketsStore();
+  const { isMobile } = useViewportStore();
+
   // Función para vibrar en móviles
   const triggerVibration = useCallback(() => {
-    if (isMobile && 'vibrate' in navigator) {
+    if (isMobile && "vibrate" in navigator) {
       navigator.vibrate(200); // Vibración de 200ms
     }
   }, [isMobile]);
-  
+
   // Función para reproducir sonido de éxito
   const playSuccessSound = useCallback(() => {
     try {
-      const audio = new Audio('/move-self.mp3');
+      const audio = new Audio("/move-self.mp3");
       audio.volume = 0.5; // Volumen al 50%
       console.log("Reproduciendo sonido de éxito");
-      audio.play().catch(error => {
+      audio.play().catch((error) => {
         // Silenciar errores de reproducción (ej: política de autoplay)
-        console.log('No se pudo reproducir el sonido de éxito:', error);
+        console.log("No se pudo reproducir el sonido de éxito:", error);
       });
     } catch (error) {
-      console.log('Error al crear el audio de éxito:', error);
+      console.log("Error al crear el audio de éxito:", error);
     }
   }, []);
-  
+
   // Función para reproducir sonido de error
   const playErrorSound = useCallback(() => {
     try {
-      const audio = new Audio('/illegal.mp3');
+      const audio = new Audio("/illegal.mp3");
       audio.volume = 0.4; // Volumen un poco más bajo para errores
       console.log("Reproduciendo sonido de error");
-      audio.play().catch(error => {
+      audio.play().catch((error) => {
         // Silenciar errores de reproducción (ej: política de autoplay)
-        console.log('No se pudo reproducir el sonido de error:', error);
+        console.log("No se pudo reproducir el sonido de error:", error);
       });
     } catch (error) {
-      console.log('Error al crear el audio de error:', error);
+      console.log("Error al crear el audio de error:", error);
     }
   }, []);
 
   // Función para reproducir sonido de skip (palabra repetida)
   const playSkipSound = useCallback(() => {
     try {
-      const audio = new Audio('/skip.mp3');
+      const audio = new Audio("/skip.mp3");
       audio.volume = 0.5; // Volumen medio para skip
       console.log("Reproduciendo sonido de skip");
-      audio.play().catch(error => {
+      audio.play().catch((error) => {
         // Silenciar errores de reproducción (ej: política de autoplay)
-        console.log('No se pudo reproducir el sonido de skip:', error);
+        console.log("No se pudo reproducir el sonido de skip:", error);
       });
     } catch (error) {
-      console.log('Error al crear el audio de skip:', error);
+      console.log("Error al crear el audio de skip:", error);
     }
   }, []);
 
@@ -95,81 +72,79 @@ export const useSocket = (): UseSocketReturn => {
     const newSocket = io();
     setSocket(newSocket);
 
-    newSocket.on('connect', () => {
+    newSocket.on("connect", () => {
       setIsConnected(true);
     });
 
-    newSocket.on('disconnect', () => {
+    newSocket.on("disconnect", () => {
       setIsConnected(false);
     });
 
-    newSocket.on('dice-rolling', (diceRolls: DiceRoll[]) => {
+    newSocket.on("dice-rolling", (diceRolls: DiceRoll[]) => {
       setDiceRolling(diceRolls);
     });
-    
-    newSocket.on('eliminate-common-words-changed', (data: { enabled: boolean; eliminateCommonWords: boolean }) => {
-      setEliminateCommonWords(data.eliminateCommonWords);
-    });
-    
+
+    newSocket.on(
+      "eliminate-common-words-changed",
+      (data: { enabled: boolean; eliminateCommonWords: boolean }) => {
+        setEliminateCommonWords(data.eliminateCommonWords);
+      }
+    );
+
     // El evento word-result se maneja en BoggleGameMain.tsx
     // para evitar duplicación de listeners
-
     return () => {
       newSocket.close();
     };
-  }, [triggerVibration, playSuccessSound]);
+  }, []);
 
   const joinGame = (playerName: string) => {
     if (socket) {
-      socket.emit('join-game', playerName);
+      socket.emit("join-game", playerName);
     }
   };
 
   const startGame = () => {
     if (socket) {
-      socket.emit('start-game');
+      socket.emit("start-game");
     }
   };
 
   const submitWord = (word: string, path: [number, number][]) => {
     if (socket) {
-      socket.emit('submit-word', { word, path });
+      socket.emit("submit-word", { word, path });
     }
   };
 
   const resetGame = () => {
     if (socket) {
-      socket.emit('reset-game');
+      socket.emit("reset-game");
     }
   };
-  
+
   const rotateBoard = () => {
     if (socket) {
-      socket.emit('rotate-board');
+      socket.emit("rotate-board");
     }
   };
-  
+
   const toggleEliminateCommonWords = (enabled: boolean) => {
     if (socket) {
-      socket.emit('toggle-eliminate-common-words', enabled);
+      socket.emit("toggle-eliminate-common-words", enabled);
     }
   };
 
   return {
-    socket,
-    isConnected,
     joinGame,
     startGame,
     submitWord,
     resetGame,
     rotateBoard,
-    diceRolling,
     clearDiceRolling: () => setDiceRolling(null),
     triggerVibration,
     playSuccessSound,
     playErrorSound,
     playSkipSound,
     toggleEliminateCommonWords,
-    eliminateCommonWords,
   };
 };
