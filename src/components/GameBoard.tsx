@@ -10,9 +10,8 @@ interface GameBoardProps {
   onMouseUp: () => void;
   onMouseLeave: () => void;
   isCellSelected: (row: number, col: number) => boolean;
-  onKeyboardInput: (letter: string) => void;
-  onKeyboardSubmit: () => void;
-  onKeyboardBackspace: () => void;
+  onKeyboardInput: (word: string) => void; // Cambiado: ahora recibe palabra completa
+  highlightedPath?: [number, number][]; // Nueva prop para mostrar ruta encontrada
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -25,10 +24,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onMouseLeave,
   isCellSelected,
   onKeyboardInput,
-  onKeyboardSubmit,
-  onKeyboardBackspace,
+  highlightedPath = [],
 }) => {
   const hiddenInputRef = useRef<HTMLInputElement>(null);
+  const [typedWord, setTypedWord] = useState('');
 
   // Detectar si es móvil
   const [isMobile, setIsMobile] = useState(false);
@@ -51,7 +50,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }
   }, [gameState.gameState, isMobile]);
 
-  // Manejar entrada del teclado
+  // Manejar entrada del teclado - Nuevo enfoque con palabra flotante
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     
@@ -60,11 +59,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const key = e.key.toLowerCase();
     
     if (key === 'enter') {
-      onKeyboardSubmit();
+      // Solo enviar si hay una palabra escrita
+      if (typedWord.trim().length >= 3) {
+        onKeyboardInput(typedWord.trim());
+        setTypedWord(''); // Limpiar después del submit
+      }
     } else if (key === 'backspace') {
-      onKeyboardBackspace();
+      // Eliminar última letra de la palabra flotante
+      setTypedWord(prev => prev.slice(0, -1));
     } else if (/^[a-záéíóúñü]$/.test(key)) {
-      onKeyboardInput(key.toUpperCase());
+      // Agregar letra a la palabra flotante
+      setTypedWord(prev => prev + key.toUpperCase());
     }
   };
 
@@ -108,7 +113,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6" onClick={() => !isMobile && hiddenInputRef.current?.focus()}>
+    <div className="bg-white rounded-lg shadow-md p-6 relative" onClick={() => !isMobile && hiddenInputRef.current?.focus()}>
       {/* Input invisible para capturar teclas del teclado (solo desktop) */}
       {!isMobile && (
         <input
@@ -122,6 +127,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           autoCapitalize="off"
           spellCheck={false}
         />
+      )}
+      
+      {/* Overlay flotante para mostrar la palabra que se está escribiendo (solo desktop) */}
+      {!isMobile && typedWord && (
+        <div className="fixed bottom-4 left-1/2 translate-x-[-50%] z-10">
+          <div className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg border-2 border-blue-600">
+            <div className="text-xs text-blue-100 mb-1">Escribiendo:</div>
+            <div className="text-lg font-mono font-bold">{typedWord}</div>
+            <div className="text-xs text-blue-100 mt-1">Presiona Enter para buscar</div>
+          </div>
+        </div>
       )}
       
       <h2 className="text-2xl font-bold mb-4 text-center">Tablero de Juego</h2>
@@ -143,9 +159,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 data-col={colIndex}
                 className={`
                   w-16 h-16 flex items-center justify-center text-xl font-bold rounded-lg cursor-pointer transition-all
-                  ${isCellSelected(rowIndex, colIndex) 
-                    ? 'bg-blue-500 text-white scale-105 shadow-lg' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
+                  ${
+                    // Prioridad: highlightedPath > selección actual
+                    highlightedPath.some(([r, c]) => r === rowIndex && c === colIndex)
+                      ? 'bg-green-500 text-white scale-105 shadow-lg ring-2 ring-green-300'
+                      : isCellSelected(rowIndex, colIndex) 
+                        ? 'bg-blue-500 text-white scale-105 shadow-lg' 
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
                   }
                 `}
                 onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
