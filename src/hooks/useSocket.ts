@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { GameState, WordResult, ClientEvents, GameEvents, DiceRoll } from '@/interfaces/game';
+import { DiceRoll } from '@/interfaces/game';
 
 interface UseSocketReturn {
   socket: Socket | null;
