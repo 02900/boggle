@@ -377,7 +377,11 @@ class BoggleGame {
     for (const player of this.players.values()) {
       player.score = 0;
       player.wordsFound = [];
+      player.eliminatedWords = []; // Reset eliminated words
     }
+    
+    // Reset max score data
+    this.maxScoreData = null;
   }
   
   // Configurar eliminación de palabras comunes
@@ -623,8 +627,18 @@ app.prepare().then(() => {
     });
 
     socket.on('get-max-score', () => {
-      const maxScoreData = game.findAllPossibleWords();
-      socket.emit('max-score-data', maxScoreData);
+      // Solo calcular si hay un tablero válido
+      if (game.board && game.board.length === 4 && game.board[0] && game.board[0].length === 4) {
+        const maxScoreData = game.findAllPossibleWords();
+        socket.emit('max-score-data', maxScoreData);
+      } else {
+        // Si no hay tablero válido, enviar datos vacíos
+        socket.emit('max-score-data', {
+          words: [],
+          maxScore: 0,
+          totalWords: 0
+        });
+      }
     });
 
     socket.on('toggle-eliminate-common-words', (enabled) => {
