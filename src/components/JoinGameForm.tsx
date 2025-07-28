@@ -8,26 +8,33 @@ interface JoinGameFormProps {
 export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnected }) => {
   const [playerName, setPlayerName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showNameEditor, setShowNameEditor] = useState(false);
+
+  const [useRandomName, setUseRandomName] = useState(true);
   
   // Cargar nombre desde localStorage al inicializar
   useEffect(() => {
     const savedName = localStorage.getItem('boggle-player-name');
     if (savedName) {
       setPlayerName(savedName);
+      setUseRandomName(false);
     }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!playerName.trim() || !isConnected) return;
+    if (!isConnected) return;
     
     setIsLoading(true);
     try {
-      const trimmedName = playerName.trim();
-      // Guardar nombre en localStorage
-      localStorage.setItem('boggle-player-name', trimmedName);
-      onJoinGame(trimmedName);
+      if (useRandomName || !playerName.trim()) {
+        // Usar nombre aleatorio (el servidor lo asignará)
+        onJoinGame('');
+      } else {
+        // Usar nombre personalizado
+        const trimmedName = playerName.trim();
+        localStorage.setItem('boggle-player-name', trimmedName);
+        onJoinGame(trimmedName);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -63,70 +70,66 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
           </div>
         </div>
 
-        {/* Editor de nombre o formulario */}
-        {playerName && !showNameEditor ? (
-          /* Mostrar nombre guardado con opción de editar */
-          <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-green-800 mb-1">
-                    ¡Bienvenido de vuelta!
-                  </div>
-                  <div className="text-lg font-semibold text-green-900">
-                    {playerName}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowNameEditor(true)}
-                  className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-800 rounded-md transition-colors"
-                >
-                  ✏️ Editar
-                </button>
-              </div>
+        {/* Opciones de nombre */}
+        <div className="space-y-4">
+          {/* Opción de nombre aleatorio */}
+          <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <input
+                type="radio"
+                id="randomName"
+                name="nameOption"
+                checked={useRandomName}
+                onChange={() => setUseRandomName(true)}
+                className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+              />
+              <label htmlFor="randomName" className="text-sm font-medium text-gray-700">
+                🎲 Usar nombre aleatorio
+              </label>
             </div>
           </div>
-        ) : (
-          /* Formulario para ingresar/editar nombre */
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="playerName" className="block text-sm font-medium text-gray-700 mb-2">
-                {showNameEditor ? 'Editar tu nombre' : 'Ingresa tu nombre'}
-              </label>
+
+          {/* Opción de nombre personalizado */}
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex items-center space-x-3">
               <input
-                id="playerName"
-                type="text"
-                placeholder="Tu nombre (ej: MaestroPalabras)"
-                value={playerName}
-                onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                maxLength={20}
-                disabled={!isConnected || isLoading}
+                type="radio"
+                id="customName"
+                name="nameOption"
+                checked={!useRandomName}
+                onChange={() => setUseRandomName(false)}
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
               />
-              <div className="text-xs text-gray-500 mt-1">
-                {playerName.length}/20 caracteres
-              </div>
+              <label htmlFor="customName" className="text-sm font-medium text-gray-700">
+                ✏️ Usar nombre personalizado
+              </label>
             </div>
             
-            {showNameEditor && (
-              <button
-                type="button"
-                onClick={() => setShowNameEditor(false)}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                ✅ Guardar Cambios
-              </button>
+            {!useRandomName && (
+              <div className="ml-7 mt-3">
+                <input
+                  type="text"
+                  placeholder="Tu nombre personalizado"
+                  value={playerName}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
+                  maxLength={20}
+                  disabled={!isConnected || isLoading}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {playerName.length}/20 caracteres
+                </div>
+              </div>
             )}
           </div>
-        )}
+        </div>
         
         {/* Formulario de unirse al juego */}
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
 
           <button
             type="submit"
-            disabled={!playerName.trim() || !isConnected || isLoading}
+            disabled={(!useRandomName && !playerName.trim()) || !isConnected || isLoading}
             className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
           >
             {isLoading ? (
@@ -137,7 +140,7 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
             ) : (
               <>
                 <span>🚀</span>
-                <span>Unirse al Juego</span>
+                <span>{useRandomName ? 'Unirse con Nombre Aleatorio' : 'Unirse al Juego'}</span>
               </>
             )}
           </button>

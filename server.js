@@ -12,6 +12,30 @@ const port = process.env.PORT || 3000;
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
+// Lista de nombres predefinidos
+const RANDOM_NAMES = [
+  'ShadowHunter', 'StormRider', 'FireWolf', 'IceBreaker', 'ThunderBolt',
+  'NightCrawler', 'BlazeFury', 'FrostBite', 'WindWalker', 'EarthShaker',
+  'VoidStrike', 'FlameGuard', 'MistWalker', 'RockSlide', 'LightBringer',
+  'DarkViper', 'SteelClaw', 'GhostRider', 'StarGazer', 'MoonBeam',
+  'SunFlare', 'SkySword', 'DeepDiver', 'HighFlyer', 'FastTrack',
+  'QuickShot', 'SharpEye', 'BoldMove', 'WildCard', 'FreeSpirit',
+  'BraveHeart', 'TrueAim', 'SwiftArrow', 'StrongArm', 'ClearMind',
+  'PureSoul', 'WiseOwl', 'CleverFox', 'MightyLion', 'FierceTiger',
+  'GentleGiant', 'SilentNinja', 'LoudThunder', 'CalmStorm', 'WarmIce',
+  'ColdFire', 'BrightDark', 'SoftSteel', 'HardCloud', 'LightShadow',
+  'HeavyFeather', 'SlowFlash', 'QuietRoar', 'TallShort', 'BigSmall',
+  'OldNew', 'FarNear', 'UpDown', 'LeftRight', 'InOut',
+  'YesNo', 'OnOff', 'HotCold', 'WetDry', 'LoudQuiet',
+  'FastSlow', 'HighLow', 'BigLittle', 'LongShort', 'WideNarrow',
+  'ThickThin', 'HeavyLight', 'HardSoft', 'RoughSmooth', 'SharpDull',
+  'BrightDim', 'ClearBlur', 'CleanDirty', 'FreshStale', 'NewOld',
+  'YoungOld', 'StrongWeak', 'RichPoor', 'FullEmpty', 'OpenClosed',
+  'FreeTrapped', 'SafeDanger', 'GoodBad', 'RightWrong', 'TrueFalse',
+  'RealFake', 'LiveDead', 'HealthySick', 'HappySad', 'LoveLate',
+  'PeaceWar', 'HopeHear', 'FaithDoubt', 'TrustLie', 'KindMean'
+];
+
 // Lógica del juego de Boggle
 class BoggleGame {
   constructor() {
@@ -23,6 +47,7 @@ class BoggleGame {
     this.words = new Set(); // Palabras válidas del diccionario (simplificado para demo)
     this.lastRotationTime = 0; // Timestamp de la última rotación
     this.rotationCooldown = 20000; // 20 segundos en milisegundos
+    this.availableNames = [...RANDOM_NAMES]; // Copia de nombres disponibles
     this.initializeDictionary();
   }
 
@@ -113,6 +138,29 @@ class BoggleGame {
     return diceRolls;
   }
 
+  // Obtener un nombre aleatorio único de la lista disponible
+  getRandomName() {
+    if (this.availableNames.length === 0) {
+      // Si se agotaron los nombres, reiniciar la lista
+      this.availableNames = [...RANDOM_NAMES];
+    }
+    
+    const randomIndex = Math.floor(Math.random() * this.availableNames.length);
+    const selectedName = this.availableNames[randomIndex];
+    
+    // Remover el nombre de la lista de disponibles
+    this.availableNames.splice(randomIndex, 1);
+    
+    return selectedName;
+  }
+
+  // Liberar un nombre cuando un jugador se desconecta
+  releaseName(playerName) {
+    if (RANDOM_NAMES.includes(playerName) && !this.availableNames.includes(playerName)) {
+      this.availableNames.push(playerName);
+    }
+  }
+
   addPlayer(playerId, playerName) {
     this.players.set(playerId, {
       id: playerId,
@@ -123,7 +171,12 @@ class BoggleGame {
   }
 
   removePlayer(playerId) {
-    this.players.delete(playerId);
+    const player = this.players.get(playerId);
+    if (player) {
+      // Liberar el nombre para que pueda ser reutilizado
+      this.releaseName(player.name);
+      this.players.delete(playerId);
+    }
   }
 
   startGame() {
@@ -300,11 +353,14 @@ app.prepare().then(() => {
     console.log('Player connected:', socket.id);
 
     socket.on('join-game', (playerName) => {
-      game.addPlayer(socket.id, playerName || `Player ${socket.id.slice(0, 6)}`);
+      // Si no se proporciona nombre o está vacío, asignar uno aleatorio
+      const finalName = (playerName && playerName.trim()) ? playerName.trim() : game.getRandomName();
+      
+      game.addPlayer(socket.id, finalName);
       socket.emit('game-state', game.getGameState());
       socket.broadcast.emit('player-joined', {
         playerId: socket.id,
-        playerName: playerName || `Player ${socket.id.slice(0, 6)}`
+        playerName: finalName
       });
     });
 
