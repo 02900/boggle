@@ -116,8 +116,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }
   };
 
+  const className = !isMobile ? 'bg-white rounded-lg shadow-md p-6 relative' : '';
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 relative" onClick={() => !isMobile && hiddenInputRef.current?.focus()}>
+    <div className={className} onClick={() => !isMobile && hiddenInputRef.current?.focus()}>
       {/* Input invisible para capturar teclas del teclado (solo desktop) */}
       {!isMobile && (
         <input
@@ -144,11 +146,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
       
-      <h2 className="text-2xl font-bold mb-4 text-center">Tablero de Juego</h2>
+      {!isMobile && (
+        <h2 className="text-2xl font-bold mb-4 text-center">Tablero de Juego</h2>
+      )}
       
       {gameState.board.length > 0 ? (
         <div 
-          className="grid grid-cols-4 gap-2 max-w-md mx-auto select-none mobile-drag-area"
+          className={`grid grid-cols-4 gap-2 mx-auto select-none mobile-drag-area ${isMobile ? "w-auto" : "w-fit"}`}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
           onTouchMove={handleTouchMove}
@@ -162,7 +166,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 data-row={rowIndex}
                 data-col={colIndex}
                 className={`
-                  w-16 h-16 flex items-center justify-center text-xl font-bold rounded-lg cursor-pointer transition-all
+                  flex items-center justify-center font-bold rounded-lg cursor-pointer transition-all
                   ${
                     // Prioridad: highlightedSkipPath (naranja) > highlightedErrorPath (rojo) > highlightedPath (verde) > selección actual (azul)
                     highlightedSkipPath.some(([r, c]) => r === rowIndex && c === colIndex)
@@ -175,6 +179,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             ? 'bg-blue-500 text-white scale-105 shadow-lg' 
                             : 'bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
                   }
+                  ${isMobile ? 'aspect-square w-auto text-4xl' : 'w-16 h-16 text-xl'}
                 `}
                 onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
                 onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
@@ -204,7 +209,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       )}
       
       {/* Mostrar Mensaje */}
-      {message && (
+      {message && !isMobile && (
         <div className="mt-4 text-center">
           <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border-l-4 border-blue-400">
             {message}

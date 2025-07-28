@@ -17,7 +17,6 @@ export const BoggleGameMain: React.FC = () => {
   const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound, playSkipSound } = useSocket();
   const {
     currentWord,
-    selectedPath,
     isSelecting,
     foundWords,
     message,
@@ -29,9 +28,6 @@ export const BoggleGameMain: React.FC = () => {
     addFoundWord,
     setMessage,
     resetFoundWords,
-    handleKeyboardInput,
-    handleKeyboardSubmit,
-    handleKeyboardBackspace
   } = useGameLogic();
 
   const [gameState, setGameState] = useState<GameState>({
@@ -47,8 +43,6 @@ export const BoggleGameMain: React.FC = () => {
   const [highlightedPath, setHighlightedPath] = useState<[number, number][]>([]);
   const [highlightedErrorPath, setHighlightedErrorPath] = useState<[number, number][]>([]);
   const [highlightedSkipPath, setHighlightedSkipPath] = useState<[number, number][]>([]);
-  const [lastSubmittedPath, setLastSubmittedPath] = useState<[number, number][]>([]);
-  const [lastSubmittedWord, setLastSubmittedWord] = useState<string>('');
   const lastSubmittedRef = useRef<{path: [number, number][], word: string}>({path: [], word: ''});
   const [showMaxScoreModal, setShowMaxScoreModal] = useState(false);
   
@@ -259,8 +253,6 @@ export const BoggleGameMain: React.FC = () => {
   const handleMouseUpWrapper = () => {
     handleMouseUp((word, path) => {
       // Capturar el camino y palabra antes de enviar
-      setLastSubmittedPath([...path]);
-      setLastSubmittedWord(word);
       lastSubmittedRef.current = {path: [...path], word};
       console.log('Submitting word:', word, 'with path:', path);
       submitWord(word, path);
@@ -282,8 +274,6 @@ export const BoggleGameMain: React.FC = () => {
       // Si se encuentra una ruta válida, resaltarla y enviar la palabra
       setHighlightedPath(foundPath);
       // Capturar el camino y palabra antes de enviar
-      setLastSubmittedPath([...foundPath]);
-      setLastSubmittedWord(word);
       lastSubmittedRef.current = {path: [...foundPath], word};
       console.log('Submitting keyboard word:', word, 'with path:', foundPath);
       console.log('States set - lastSubmittedPath:', [...foundPath], 'lastSubmittedWord:', word);
