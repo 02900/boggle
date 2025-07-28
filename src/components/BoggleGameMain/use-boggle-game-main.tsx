@@ -1,69 +1,72 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useSocket } from "@/hooks/useSocket";
 import { useGameLogic } from "@/hooks/useGameLogic";
 import { GameState, WordResult } from "@/interfaces/game";
+import { useViewportStore } from "@/stores/viewport.store";
+import { useSocketsStore } from "@/stores/sockets.store";
+import { useGameLogicStore } from "@/stores/game-logic.store";
+import { useBoggleGameMainStore } from "./boogle-game.main.store";
 
 const HIGHLIGHT_DURATION = 400;
 
 export const useBoggleGameMain = () => {
+  const { currentWord, isSelecting, setMessage } = useGameLogicStore();
+  const { socket } = useSocketsStore();
   const {
-    socket,
-    isConnected,
     joinGame,
     startGame,
     submitWord,
     resetGame,
     rotateBoard,
-    diceRolling,
     clearDiceRolling,
     triggerVibration,
     playSuccessSound,
     playErrorSound,
     playSkipSound,
     toggleEliminateCommonWords,
-    eliminateCommonWords,
   } = useSocket();
   const {
-    currentWord,
-    isSelecting,
-    foundWords,
-    message,
     handleCellMouseDown,
     handleCellMouseEnter,
     handleMouseUp,
     isCellSelected,
     resetSelection,
     addFoundWord,
-    setMessage,
     resetFoundWords,
   } = useGameLogic();
 
-  const [gameState, setGameState] = useState<GameState>({
-    board: [],
-    players: [],
-    gameState: "waiting",
-    timeLeft: 180,
-  });
+  const { setIsMobile } = useViewportStore();
 
-  const [isMobile, setIsMobile] = useState(false);
-  const [rotationCooldown, setRotationCooldown] = useState(0);
-  const [rotationMessage, setRotationMessage] = useState("");
-  const [highlightedPath, setHighlightedPath] = useState<[number, number][]>(
-    []
-  );
-  const [highlightedErrorPath, setHighlightedErrorPath] = useState<
-    [number, number][]
-  >([]);
-  const [highlightedSkipPath, setHighlightedSkipPath] = useState<
-    [number, number][]
-  >([]);
+  const {
+    gameState,
+    setGameState,
+    setRotationCooldown,
+    setRotationMessage,
+    setHighlightedPath,
+    setHighlightedErrorPath,
+    setHighlightedSkipPath,
+    setCurrentPlayerId,
+    setIsJoined,
+  } = useBoggleGameMainStore();
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const lastSubmittedRef = useRef<{ path: [number, number][]; word: string }>({
     path: [],
     word: "",
   });
-  const [showMaxScoreModal, setShowMaxScoreModal] = useState(false);
 
   // Detectar si es móvil
   useEffect(() => {
@@ -76,9 +79,6 @@ export const useBoggleGameMain = () => {
 
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
-  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
 
   // Función para calcular el puntaje de una palabra
   const getWordScore = (word: string): number => {
@@ -459,36 +459,18 @@ export const useBoggleGameMain = () => {
   };
 
   return {
-    isJoined,
     handleJoinGame,
-    isConnected,
-    socket,
-    isMobile,
-    diceRolling,
     clearDiceRolling,
-    gameState,
-    currentPlayerId,
     getWordScore,
     startGame,
     rotateBoard,
     resetGame,
-    rotationCooldown,
-    rotationMessage,
-    setShowMaxScoreModal,
-    currentWord,
-    message,
     handleCellMouseEnterWrapper,
     handleMouseUpWrapper,
     handleMouseLeave,
     isCellSelected,
     handleKeyboardWordInput,
-    highlightedPath,
-    highlightedErrorPath,
-    highlightedSkipPath,
-    foundWords,
-    showMaxScoreModal,
     handleCellMouseDownWrapper,
     toggleEliminateCommonWords,
-    eliminateCommonWords,
   };
 };
