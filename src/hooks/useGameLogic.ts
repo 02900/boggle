@@ -83,6 +83,22 @@ export const useGameLogic = (): UseGameLogicReturn => {
     setFoundWords([]);
   }, []);
 
+  // Función auxiliar para contar vecinos disponibles de una posición
+  const countAvailableNeighbors = useCallback((row: number, col: number, usedPositions: [number, number][], board: string[][]) => {
+    let count = 0;
+    for (let r = Math.max(0, row - 1); r <= Math.min(3, row + 1); r++) {
+      for (let c = Math.max(0, col - 1); c <= Math.min(3, col + 1); c++) {
+        if (r !== row || c !== col) {
+          const isUsed = usedPositions.some(([ur, uc]) => ur === r && uc === c);
+          if (!isUsed) {
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  }, []);
+
   // Funciones para manejo de teclado
   const handleKeyboardInput = useCallback((letter: string, board: string[][]) => {
     // Buscar la letra en el tablero
@@ -112,8 +128,32 @@ export const useGameLogic = (): UseGameLogicReturn => {
     }
     
     if (availablePositions.length > 0) {
-      // Usar la primera posición disponible
-      const [row, col] = availablePositions[0];
+      // Elegir la mejor posición basada en el potencial de continuación
+      let bestPosition = availablePositions[0];
+      let maxScore = -1;
+      
+      for (const [row, col] of availablePositions) {
+        // Calcular puntaje basado en vecinos disponibles
+        const neighborCount = countAvailableNeighbors(row, col, selectedPath, board);
+        
+        // Para la primera letra, priorizar posiciones centrales con más vecinos
+        // Para letras siguientes, priorizar posiciones con más opciones de continuación
+        let score = neighborCount;
+        
+        // Bonus para posiciones más centrales (evitar esquinas y bordes cuando sea posible)
+        if (row > 0 && row < 3 && col > 0 && col < 3) {
+          score += 2; // Posición central
+        } else if ((row === 0 || row === 3) && (col === 0 || col === 3)) {
+          score -= 1; // Penalizar esquinas
+        }
+        
+        if (score > maxScore) {
+          maxScore = score;
+          bestPosition = [row, col];
+        }
+      }
+      
+      const [row, col] = bestPosition;
       const newPath = [...selectedPath, [row, col] as [number, number]];
       setSelectedPath(newPath);
       setCurrentWord(prev => prev + letter);
@@ -121,7 +161,7 @@ export const useGameLogic = (): UseGameLogicReturn => {
     } else {
       setMessage(`No se puede agregar '${letter}' - no hay posiciones adyacentes disponibles`);
     }
-  }, [selectedPath]);
+  }, [selectedPath, countAvailableNeighbors]);
 
   const handleKeyboardSubmit = useCallback((onSubmitWord: (word: string, path: [number, number][]) => void) => {
     if (currentWord.length >= 3) {

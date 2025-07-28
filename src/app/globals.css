@@ -55,6 +55,13 @@ body {
     -khtml-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+  }
+  
+  /* Permitir scroll en pantalla de resultados finales */
+  .mobile-results-scrollable {
+    touch-action: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     user-select: none;
   }
 }
