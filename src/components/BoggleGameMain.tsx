@@ -53,8 +53,20 @@ export const BoggleGameMain: React.FC = () => {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+  
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [isJoined, setIsJoined] = useState(false);
-  const [currentPlayerId, setCurrentPlayerId] = useState<string>('');
+
+  // Función para calcular el puntaje de una palabra
+  const getWordScore = (word: string): number => {
+    const length = word.length;
+    if (length < 3) return 0;
+    if (length <= 4) return 1;
+    if (length === 5) return 2;
+    if (length === 6) return 3;
+    if (length === 7) return 5;
+    return 11; // 8+ letras
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -104,9 +116,8 @@ export const BoggleGameMain: React.FC = () => {
     });
 
     socket.on('player-scored', ({ playerId, word, points }) => {
-      if (playerId !== socket.id) {
-        setMessage(`¡Otro jugador encontró "${word}" por ${points} puntos!`);
-      }
+      // No mostrar mensaje a otros jugadores para no revelar palabras válidas
+      // Solo se actualiza el estado del juego automáticamente
     });
 
     socket.on('game-reset', (state: GameState) => {
@@ -206,6 +217,17 @@ export const BoggleGameMain: React.FC = () => {
             </div>
           )}
           
+          {gameState.gameState === 'playing' && (
+            <div className="mt-2 text-center">
+              <button
+                onClick={resetGame}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold"
+              >
+                🔄 Reiniciar
+              </button>
+            </div>
+          )}
+          
           {gameState.gameState === 'finished' && (
             <div className="mt-2 text-center">
               <button
@@ -218,21 +240,121 @@ export const BoggleGameMain: React.FC = () => {
           )}
         </div>
         
-        {/* Tablero de juego - ocupa el resto del espacio */}
-        <div className="flex-1 p-3 mobile-drag-area">
-          <GameBoard
-            gameState={gameState}
-            currentWord={currentWord}
-            message={message}
-            onCellMouseDown={handleCellMouseDownWrapper}
-            onCellMouseEnter={handleCellMouseEnterWrapper}
-            onMouseUp={handleMouseUpWrapper}
-            onMouseLeave={handleMouseLeave}
-            isCellSelected={isCellSelected}
-            onKeyboardInput={(letter) => handleKeyboardInput(letter, gameState.board)}
-            onKeyboardSubmit={() => handleKeyboardSubmit(submitWord)}
-            onKeyboardBackspace={handleKeyboardBackspace}
-          />
+        {/* Tablero de juego o resultados finales - ocupa el resto del espacio */}
+        <div className="flex-1 p-3 mobile-results-scrollable">
+          {gameState.gameState === 'finished' ? (
+            /* Pantalla de resultados finales */
+            <div className="bg-white rounded-lg shadow-md p-6 h-full flex flex-col">
+              <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
+                🏆 ¡Juego Terminado!
+              </h2>
+              
+              {/* Clasificación de jugadores */}
+              <div className="flex-1 overflow-y-auto">
+                <h3 className="text-lg font-semibold mb-3 text-center text-gray-700">
+                  Clasificación Final
+                </h3>
+                
+                <div className="space-y-4">
+                  {gameState.players
+                    .sort((a, b) => b.score - a.score)
+                    .map((player, index) => {
+                      const isCurrentPlayer = player.id === currentPlayerId;
+                      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`;
+                      
+                      // Ordenar palabras del jugador por puntaje (mayor a menor)
+                      const sortedWords = [...player.wordsFound]
+                        .map(word => ({ word, score: getWordScore(word) }))
+                        .sort((a, b) => b.score - a.score);
+                      
+                      return (
+                        <div
+                          key={player.id}
+                          className={`
+                            p-4 rounded-lg border-2
+                            ${
+                              isCurrentPlayer
+                                ? 'bg-blue-50 border-blue-300'
+                                : 'bg-gray-50 border-gray-200'
+                            }
+                          `}
+                        >
+                          {/* Header del jugador */}
+                          <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center space-x-3">
+                              <span className="text-2xl">{medal}</span>
+                              <div>
+                                <div className={`font-semibold ${
+                                  isCurrentPlayer ? 'text-blue-800' : 'text-gray-800'
+                                }`}>
+                                  {player.name} {isCurrentPlayer && '(Tú)'}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {player.wordsFound.length} palabras encontradas
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className={`text-xl font-bold ${
+                              isCurrentPlayer ? 'text-blue-600' : 'text-gray-700'
+                            }`}>
+                              {player.score} pts
+                            </div>
+                          </div>
+                          
+                          {/* Lista de palabras ordenadas por puntaje */}
+                          {sortedWords.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <div className="text-sm font-medium text-gray-700 mb-2">
+                                Palabras (ordenadas por puntaje):
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {sortedWords.map(({ word, score }, wordIndex) => (
+                                  <span
+                                    key={wordIndex}
+                                    className={`
+                                      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                      ${
+                                        score >= 5
+                                          ? 'bg-green-100 text-green-800'
+                                          : score >= 3
+                                          ? 'bg-yellow-100 text-yellow-800'
+                                          : 'bg-gray-100 text-gray-700'
+                                      }
+                                    `}
+                                  >
+                                    {word}
+                                    <span className="ml-1 text-xs opacity-75">
+                                      ({score}pts)
+                                    </span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Tablero de juego normal */
+            <GameBoard
+              gameState={gameState}
+              currentWord={currentWord}
+              message={message}
+              onCellMouseDown={handleCellMouseDownWrapper}
+              onCellMouseEnter={handleCellMouseEnterWrapper}
+              onMouseUp={handleMouseUpWrapper}
+              onMouseLeave={handleMouseLeave}
+              isCellSelected={isCellSelected}
+              onKeyboardInput={(letter) => handleKeyboardInput(letter, gameState.board)}
+              onKeyboardSubmit={() => handleKeyboardSubmit(submitWord)}
+              onKeyboardBackspace={handleKeyboardBackspace}
+            />
+          )}
         </div>
         
         {/* Footer con palabra actual y últimas palabras encontradas */}
@@ -318,7 +440,7 @@ export const BoggleGameMain: React.FC = () => {
               {/* Players List */}
               <PlayersList 
                 players={gameState.players} 
-                currentPlayerId={currentPlayerId}
+                currentPlayerId={currentPlayerId || undefined}
               />
 
               {/* Found Words */}

@@ -186,9 +186,8 @@ class BoggleGame {
   }
 
   isValidPath(path, word) {
-    if (path.length !== word.length) return false;
-    
-    // Check if path is valid (adjacent cells, no repeats)
+    // Construir la palabra desde el path para manejar dígrafos
+    let pathWord = '';
     const used = new Set();
     
     for (let i = 0; i < path.length; i++) {
@@ -202,8 +201,9 @@ class BoggleGame {
       if (used.has(cellKey)) return false;
       used.add(cellKey);
       
-      // Check if letter matches
-      if (this.board[row][col].toLowerCase() !== word[i].toLowerCase()) return false;
+      // Agregar la letra/dígrafo de esta celda a la palabra del path
+      const cellLetter = this.board[row][col].toLowerCase();
+      pathWord += cellLetter;
       
       // Check adjacency (except for first cell)
       if (i > 0) {
@@ -217,7 +217,8 @@ class BoggleGame {
       }
     }
     
-    return true;
+    // Comparar la palabra construida desde el path con la palabra enviada
+    return pathWord === word.toLowerCase();
   }
 
   calculatePoints(word) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface JoinGameFormProps {
   onJoinGame: (playerName: string) => void;
@@ -8,6 +8,15 @@ interface JoinGameFormProps {
 export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnected }) => {
   const [playerName, setPlayerName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showNameEditor, setShowNameEditor] = useState(false);
+  
+  // Cargar nombre desde localStorage al inicializar
+  useEffect(() => {
+    const savedName = localStorage.getItem('boggle-player-name');
+    if (savedName) {
+      setPlayerName(savedName);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,9 +24,20 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
     
     setIsLoading(true);
     try {
-      onJoinGame(playerName.trim());
+      const trimmedName = playerName.trim();
+      // Guardar nombre en localStorage
+      localStorage.setItem('boggle-player-name', trimmedName);
+      onJoinGame(trimmedName);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleNameChange = (newName: string) => {
+    setPlayerName(newName);
+    // Guardar inmediatamente en localStorage cuando se edita
+    if (newName.trim()) {
+      localStorage.setItem('boggle-player-name', newName.trim());
     }
   };
 
@@ -43,26 +63,66 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
           </div>
         </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="playerName" className="block text-sm font-medium text-gray-700 mb-2">
-              Ingresa tu nombre
-            </label>
-            <input
-              id="playerName"
-              type="text"
-              placeholder="Tu nombre (ej: MaestroPalabras)"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              maxLength={20}
-              disabled={!isConnected || isLoading}
-            />
-            <div className="text-xs text-gray-500 mt-1">
-              {playerName.length}/20 caracteres
+        {/* Editor de nombre o formulario */}
+        {playerName && !showNameEditor ? (
+          /* Mostrar nombre guardado con opción de editar */
+          <div className="space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-green-800 mb-1">
+                    ¡Bienvenido de vuelta!
+                  </div>
+                  <div className="text-lg font-semibold text-green-900">
+                    {playerName}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNameEditor(true)}
+                  className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-800 rounded-md transition-colors"
+                >
+                  ✏️ Editar
+                </button>
+              </div>
             </div>
           </div>
+        ) : (
+          /* Formulario para ingresar/editar nombre */
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="playerName" className="block text-sm font-medium text-gray-700 mb-2">
+                {showNameEditor ? 'Editar tu nombre' : 'Ingresa tu nombre'}
+              </label>
+              <input
+                id="playerName"
+                type="text"
+                placeholder="Tu nombre (ej: MaestroPalabras)"
+                value={playerName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                maxLength={20}
+                disabled={!isConnected || isLoading}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                {playerName.length}/20 caracteres
+              </div>
+            </div>
+            
+            {showNameEditor && (
+              <button
+                type="button"
+                onClick={() => setShowNameEditor(false)}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                ✅ Guardar Cambios
+              </button>
+            )}
+          </div>
+        )}
+        
+        {/* Formulario de unirse al juego */}
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
 
           <button
             type="submit"
