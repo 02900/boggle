@@ -152,7 +152,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       
       {gameState.board.length > 0 ? (
         <div 
-          className={`grid grid-cols-4 gap-4 mx-auto select-none mobile-drag-area ${isMobile ? "w-auto" : "w-fit"}`}
+          className={`grid grid-cols-4 mx-auto select-none mobile-drag-area ${isMobile ? "w-auto gap-8" : "w-fit gap-4"}`}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
           onTouchMove={handleTouchMove}
@@ -166,7 +166,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 data-row={rowIndex}
                 data-col={colIndex}
                 className={`
-                  flex items-center justify-center font-bold rounded-lg cursor-pointer transition-all
+                  flex items-center justify-center font-bold cursor-pointer transition-all
                   ${
                     // Prioridad: highlightedSkipPath (naranja) > highlightedErrorPath (rojo) > highlightedPath (verde) > selección actual (azul)
                     highlightedSkipPath.some(([r, c]) => r === rowIndex && c === colIndex)
@@ -179,7 +179,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                             ? 'bg-blue-500 text-white scale-105 shadow-lg' 
                             : 'bg-white md:bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
                   }
-                  ${isMobile ? 'aspect-square w-auto text-4xl' : 'w-16 h-16 text-xl'}
+                  ${isMobile ? 'aspect-square w-auto text-4xl rounded-2xl' : 'rounded-lg w-16 h-16 text-xl'}
                 `}
                 onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
                 onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
