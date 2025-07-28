@@ -3,6 +3,7 @@ export interface Player {
   name: string;
   score: number;
   wordsFound: string[];
+  eliminatedWords?: string[];
 }
 
 export interface DiceRoll {
@@ -39,6 +40,7 @@ export interface GameEvents {
   'player-left': (playerId: string) => void;
   'player-scored': (data: { playerId: string; word: string; points: number }) => void;
   'game-reset': (state: GameState) => void;
+  'eliminate-common-words-changed': (data: { enabled: boolean; eliminateCommonWords: boolean }) => void;
 }
 
 export interface ClientEvents {
@@ -46,6 +48,7 @@ export interface ClientEvents {
   'start-game': () => void;
   'submit-word': (data: { word: string; path: [number, number][] }) => void;
   'reset-game': () => void;
+  'toggle-eliminate-common-words': (enabled: boolean) => void;
 }
 
 export type GameStatus = 'waiting' | 'playing' | 'finished';

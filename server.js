@@ -15,7 +15,7 @@ const SCOREBOARD_FILE = path.join(__dirname, 'scoreboard.json');
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-const TIME_LIMIT = 18; // 3 minutos + 8 segundos de animación inicial
+const TIME_LIMIT = 188; // 3 minutos + 8 segundos de animación inicial
 
 // Lista de nombres predefinidos
 const RANDOM_NAMES = [
@@ -103,6 +103,7 @@ class BoggleGame {
     this.lastRotationTime = 0; // Timestamp de la última rotación
     this.rotationCooldown = 30000; // 30 segundos en milisegundos
     this.availableNames = [...RANDOM_NAMES]; // Copia de nombres disponibles
+    this.eliminateCommonWords = true; // Configuración para eliminar palabras comunes
     this.initializeDictionary();
   }
 
@@ -258,6 +259,11 @@ class BoggleGame {
       this.timer = null;
     }
     
+    // Eliminar palabras comunes si la opción está activada
+    if (this.eliminateCommonWords) {
+      this.eliminateCommonWordsFromPlayers();
+    }
+    
     // Actualizar scoreboard con los puntajes de esta partida
     const playerScores = Array.from(this.players.values()).map(player => ({
       name: player.name,
@@ -372,6 +378,61 @@ class BoggleGame {
       player.score = 0;
       player.wordsFound = [];
     }
+  }
+  
+  // Configurar eliminación de palabras comunes
+  setEliminateCommonWords(enabled) {
+    this.eliminateCommonWords = enabled;
+  }
+  
+  // Eliminar palabras comunes entre jugadores
+  eliminateCommonWordsFromPlayers() {
+    const players = Array.from(this.players.values());
+    if (players.length < 2) return; // No hay suficientes jugadores
+    
+    // Crear un mapa de palabras y los jugadores que las encontraron
+    const wordToPlayers = new Map();
+    
+    players.forEach(player => {
+      player.wordsFound.forEach(word => {
+        if (!wordToPlayers.has(word)) {
+          wordToPlayers.set(word, []);
+        }
+        wordToPlayers.get(word).push(player.id);
+      });
+    });
+    
+    // Encontrar palabras comunes (encontradas por 2 o más jugadores)
+    const commonWords = new Set();
+    wordToPlayers.forEach((playerIds, word) => {
+      if (playerIds.length > 1) {
+        commonWords.add(word);
+      }
+    });
+    
+    // Eliminar palabras comunes y recalcular puntuaciones
+    players.forEach(player => {
+      const originalWords = [...player.wordsFound];
+      const eliminatedWords = [];
+      const validWords = [];
+      
+      originalWords.forEach(word => {
+        if (commonWords.has(word)) {
+          eliminatedWords.push(word);
+        } else {
+          validWords.push(word);
+        }
+      });
+      
+      // Actualizar palabras encontradas y agregar información de eliminadas
+      player.wordsFound = validWords;
+      player.eliminatedWords = eliminatedWords;
+      
+      // Recalcular puntuación solo con palabras válidas
+      player.score = validWords.reduce((total, word) => {
+        return total + this.calculatePoints(word);
+      }, 0);
+    });
   }
   
   // Rotar el tablero 90 grados en sentido horario
@@ -564,6 +625,14 @@ app.prepare().then(() => {
     socket.on('get-max-score', () => {
       const maxScoreData = game.findAllPossibleWords();
       socket.emit('max-score-data', maxScoreData);
+    });
+
+    socket.on('toggle-eliminate-common-words', (enabled) => {
+      game.setEliminateCommonWords(enabled);
+      io.emit('eliminate-common-words-changed', {
+        enabled: enabled,
+        eliminateCommonWords: game.eliminateCommonWords
+      });
     });
 
     socket.on('disconnect', () => {

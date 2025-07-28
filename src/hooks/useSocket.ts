@@ -16,6 +16,8 @@ interface UseSocketReturn {
   playSuccessSound: () => void;
   playErrorSound: () => void;
   playSkipSound: () => void;
+  toggleEliminateCommonWords: (enabled: boolean) => void;
+  eliminateCommonWords: boolean;
 }
 
 export const useSocket = (): UseSocketReturn => {
@@ -23,6 +25,7 @@ export const useSocket = (): UseSocketReturn => {
   const [isConnected, setIsConnected] = useState(false);
   const [diceRolling, setDiceRolling] = useState<DiceRoll[] | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [eliminateCommonWords, setEliminateCommonWords] = useState(true);
   
   // Detectar si es móvil para la vibración
   useEffect(() => {
@@ -104,6 +107,10 @@ export const useSocket = (): UseSocketReturn => {
       setDiceRolling(diceRolls);
     });
     
+    newSocket.on('eliminate-common-words-changed', (data: { enabled: boolean; eliminateCommonWords: boolean }) => {
+      setEliminateCommonWords(data.eliminateCommonWords);
+    });
+    
     // El evento word-result se maneja en BoggleGameMain.tsx
     // para evitar duplicación de listeners
 
@@ -141,6 +148,12 @@ export const useSocket = (): UseSocketReturn => {
       socket.emit('rotate-board');
     }
   };
+  
+  const toggleEliminateCommonWords = (enabled: boolean) => {
+    if (socket) {
+      socket.emit('toggle-eliminate-common-words', enabled);
+    }
+  };
 
   return {
     socket,
@@ -156,5 +169,7 @@ export const useSocket = (): UseSocketReturn => {
     playSuccessSound,
     playErrorSound,
     playSkipSound,
+    toggleEliminateCommonWords,
+    eliminateCommonWords,
   };
 };

@@ -25,6 +25,17 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
   // Determinar si se deben mostrar las puntuaciones
   const shouldShowScores = gameState === 'finished' || isMobile;
   
+  // Función para calcular el puntaje de una palabra
+  const getWordScore = (word: string): number => {
+    const length = word.length;
+    if (length < 3) return 0;
+    if (length <= 4) return 1;
+    if (length === 5) return 2;
+    if (length === 6) return 3;
+    if (length === 7) return 5;
+    return 11; // 8+ letras
+  };
+  
   // Función para ordenar jugadores
   const getSortedPlayers = () => {
     if (shouldShowScores) {
@@ -69,7 +80,51 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
                     </span>
                     <div className="text-xs text-gray-500">
                       {player.wordsFound.length} palabras encontradas
+                      {player.eliminatedWords && player.eliminatedWords.length > 0 && (
+                        <span className="text-red-500 ml-1">
+                          ({player.eliminatedWords.length} eliminadas)
+                        </span>
+                      )}
                     </div>
+                    
+                    {/* Mostrar palabras cuando el juego ha terminado */}
+                    {gameState === 'finished' && (
+                      <div className="mt-2 space-y-1">
+                        {/* Palabras válidas */}
+                        {player.wordsFound.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {player.wordsFound.map((word, wordIndex) => (
+                              <span
+                                key={`valid-${wordIndex}`}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800"
+                              >
+                                {word}
+                                <span className="ml-1 text-green-600 font-medium text-xs">
+                                  +{getWordScore(word)}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Palabras eliminadas */}
+                        {player.eliminatedWords && player.eliminatedWords.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {player.eliminatedWords.map((word, wordIndex) => (
+                              <span
+                                key={`eliminated-${wordIndex}`}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-800 line-through"
+                              >
+                                {word}
+                                <span className="ml-1 text-red-600 font-medium text-xs">
+                                  -{getWordScore(word)}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
