@@ -404,6 +404,75 @@ class BoggleGame {
     
     return { success: true, cooldownTime: this.rotationCooldown / 1000 };
   }
+
+  // Encontrar todas las palabras posibles en el tablero y calcular puntuación máxima
+  findAllPossibleWords() {
+    const allWords = [];
+    const visited = Array(4).fill().map(() => Array(4).fill(false));
+    
+    // Función recursiva para explorar todos los caminos posibles
+    const dfs = (row, col, currentWord, currentPath) => {
+      // Marcar celda como visitada
+      visited[row][col] = true;
+      
+      // Agregar letra actual a la palabra
+      const cellLetter = this.board[row][col].toLowerCase();
+      currentWord += cellLetter;
+      currentPath.push([row, col]);
+      
+      // Si la palabra tiene 3+ letras y está en el diccionario, agregarla
+      if (currentWord.length >= 3 && this.words.has(currentWord)) {
+        allWords.push({
+          word: currentWord,
+          path: [...currentPath],
+          points: this.calculatePoints(currentWord)
+        });
+      }
+      
+      // Explorar celdas adyacentes
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue; // Skip current cell
+          
+          const newRow = row + dr;
+          const newCol = col + dc;
+          
+          // Verificar límites y que no esté visitada
+          if (newRow >= 0 && newRow < 4 && newCol >= 0 && newCol < 4 && !visited[newRow][newCol]) {
+            dfs(newRow, newCol, currentWord, currentPath);
+          }
+        }
+      }
+      
+      // Desmarcar celda (backtrack)
+      visited[row][col] = false;
+      currentPath.pop();
+    };
+    
+    // Iniciar búsqueda desde cada celda del tablero
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        dfs(row, col, '', []);
+      }
+    }
+    
+    // Remover duplicados (misma palabra puede encontrarse por diferentes caminos)
+    const uniqueWords = new Map();
+    allWords.forEach(wordData => {
+      if (!uniqueWords.has(wordData.word) || uniqueWords.get(wordData.word).points < wordData.points) {
+        uniqueWords.set(wordData.word, wordData);
+      }
+    });
+    
+    const finalWords = Array.from(uniqueWords.values());
+    const maxScore = finalWords.reduce((total, wordData) => total + wordData.points, 0);
+    
+    return {
+      words: finalWords.sort((a, b) => b.points - a.points || a.word.localeCompare(b.word)),
+      maxScore,
+      totalWords: finalWords.length
+    };
+  }
 }
 
 app.prepare().then(() => {
@@ -490,6 +559,11 @@ app.prepare().then(() => {
     socket.on('get-scoreboard', () => {
       const scoreboard = loadScoreboard();
       socket.emit('scoreboard-data', scoreboard);
+    });
+
+    socket.on('get-max-score', () => {
+      const maxScoreData = game.findAllPossibleWords();
+      socket.emit('max-score-data', maxScoreData);
     });
 
     socket.on('disconnect', () => {

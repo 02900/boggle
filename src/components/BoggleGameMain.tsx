@@ -11,6 +11,7 @@ import { GameControls } from './GameControls';
 import { GameInstructions } from './GameInstructions';
 import { JoinGameForm } from './JoinGameForm';
 import { DiceRollingAnimation } from './DiceRollingAnimation';
+import { MaxScoreModal } from './MaxScoreModal';
 
 export const BoggleGameMain: React.FC = () => {
   const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound, playSkipSound } = useSocket();
@@ -49,6 +50,7 @@ export const BoggleGameMain: React.FC = () => {
   const [lastSubmittedPath, setLastSubmittedPath] = useState<[number, number][]>([]);
   const [lastSubmittedWord, setLastSubmittedWord] = useState<string>('');
   const lastSubmittedRef = useRef<{path: [number, number][], word: string}>({path: [], word: ''});
+  const [showMaxScoreModal, setShowMaxScoreModal] = useState(false);
   
   // Detectar si es móvil
   useEffect(() => {
@@ -666,6 +668,7 @@ export const BoggleGameMain: React.FC = () => {
           onStartGame={startGame}
           onResetGame={resetGame}
           onRotateBoard={rotateBoard}
+          onShowMaxScore={() => setShowMaxScoreModal(true)}
           isConnected={isConnected}
           rotationCooldown={rotationCooldown}
           rotationMessage={rotationMessage}
@@ -708,6 +711,13 @@ export const BoggleGameMain: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Modal de Puntuación Máxima */}
+      <MaxScoreModal
+        isOpen={showMaxScoreModal}
+        onClose={() => setShowMaxScoreModal(false)}
+        socket={socket}
+      />
     </div>
   );
 };
