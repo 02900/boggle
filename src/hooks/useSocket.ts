@@ -11,6 +11,8 @@ interface UseSocketReturn {
   resetGame: () => void;
   diceRolling: DiceRoll[] | null;
   clearDiceRolling: () => void;
+  triggerVibration: () => void;
+  playSuccessSound: () => void;
 }
 
 export const useSocket = (): UseSocketReturn => {
@@ -69,13 +71,8 @@ export const useSocket = (): UseSocketReturn => {
       setDiceRolling(diceRolls);
     });
     
-    // Escuchar resultados de palabras para activar vibración y sonido
-    newSocket.on('word-result', (result: { valid: boolean; points: number; word: string; message: string }) => {
-      if (result.valid && result.points > 0) {
-        triggerVibration();
-        playSuccessSound();
-      }
-    });
+    // El evento word-result se maneja en BoggleGameMain.tsx
+    // para evitar duplicación de listeners
 
     return () => {
       newSocket.close();
@@ -115,5 +112,7 @@ export const useSocket = (): UseSocketReturn => {
     resetGame,
     diceRolling,
     clearDiceRolling: () => setDiceRolling(null),
+    triggerVibration,
+    playSuccessSound,
   };
 };

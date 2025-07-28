@@ -13,7 +13,7 @@ import { JoinGameForm } from './JoinGameForm';
 import { DiceRollingAnimation } from './DiceRollingAnimation';
 
 export const BoggleGameMain: React.FC = () => {
-  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, diceRolling, clearDiceRolling } = useSocket();
+  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound } = useSocket();
   const {
     currentWord,
     selectedPath,
@@ -98,11 +98,26 @@ export const BoggleGameMain: React.FC = () => {
     });
 
     socket.on('word-result', (result: WordResult) => {
+      console.log('word-result recibido en BoggleGameMain:', result);
       if (result.valid && result.word) {
         addFoundWord(result.word);
         setMessage(`¡Excelente! "${result.word}" vale ${result.points} puntos!`);
+        // Activar sonido y vibración para palabras válidas
+        console.log('Activando sonido y vibración para palabra válida');
+        triggerVibration();
+        playSuccessSound();
       } else {
-        setMessage(`"${currentWord}" - ${result.reason || 'Palabra inválida'}`);
+        // Si el jugador no fue encontrado, redirigir al menú principal
+        if (result.reason === 'Jugador no encontrado') {
+          setMessage('Sesión perdida. Redirigiendo al menú principal...');
+          setTimeout(() => {
+            setIsJoined(false);
+            resetFoundWords();
+            resetSelection();
+          }, 2000);
+        } else {
+          setMessage(`"${currentWord}" - ${result.reason || 'Palabra inválida'}`);
+        }
       }
       resetSelection();
     });
@@ -138,7 +153,7 @@ export const BoggleGameMain: React.FC = () => {
       socket.off('player-scored');
       socket.off('game-reset');
     };
-  }, [socket, currentWord, addFoundWord, setMessage, resetFoundWords, resetSelection]);
+  }, [socket, currentWord, addFoundWord, setMessage, resetFoundWords, resetSelection, triggerVibration, playSuccessSound]);
 
   const handleJoinGame = (playerName: string) => {
     joinGame(playerName);
