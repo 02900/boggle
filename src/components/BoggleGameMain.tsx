@@ -12,9 +12,11 @@ import { GameInstructions } from './GameInstructions';
 import { JoinGameForm } from './JoinGameForm';
 import { DiceRollingAnimation } from './DiceRollingAnimation';
 import { MaxScoreModal } from './MaxScoreModal';
+import { GameSettings } from './GameSettings';
+import { PlayerWordsDetail } from './PlayerWordsDetail';
 
 export const BoggleGameMain: React.FC = () => {
-  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound, playSkipSound } = useSocket();
+  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound, playSkipSound, toggleEliminateCommonWords, eliminateCommonWords } = useSocket();
   const {
     currentWord,
     isSelecting,
@@ -534,6 +536,11 @@ export const BoggleGameMain: React.FC = () => {
                                 </div>
                                 <div className="text-sm text-gray-600">
                                   {player.wordsFound.length} palabras encontradas
+                                  {player.eliminatedWords && player.eliminatedWords.length > 0 && (
+                                    <span className="text-red-500 ml-1">
+                                      ({player.eliminatedWords.length} eliminadas)
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -546,33 +553,70 @@ export const BoggleGameMain: React.FC = () => {
                           </div>
                           
                           {/* Lista de palabras ordenadas por puntaje */}
-                          {sortedWords.length > 0 && (
+                          {(sortedWords.length > 0 || (player.eliminatedWords && player.eliminatedWords.length > 0)) && (
                             <div className="mt-3 pt-3 border-t border-gray-200">
                               <div className="text-sm font-medium text-gray-700 mb-2">
-                                Palabras (ordenadas por puntaje):
+                                Palabras encontradas:
                               </div>
-                              <div className="flex flex-wrap gap-2">
-                                {sortedWords.map(({ word, score }, wordIndex) => (
-                                  <span
-                                    key={wordIndex}
-                                    className={`
-                                      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                      ${
-                                        score >= 5
-                                          ? 'bg-green-100 text-green-800'
-                                          : score >= 3
-                                          ? 'bg-yellow-100 text-yellow-800'
-                                          : 'bg-gray-100 text-gray-700'
-                                      }
-                                    `}
-                                  >
-                                    {word}
-                                    <span className="ml-1 text-xs opacity-75">
-                                      ({score}pts)
-                                    </span>
-                                  </span>
-                                ))}
-                              </div>
+                              
+                              {/* Palabras válidas */}
+                              {sortedWords.length > 0 && (
+                                <div className="mb-3">
+                                  <div className="text-xs font-medium text-green-600 mb-1">
+                                    Válidas ({sortedWords.length}):
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {sortedWords.map(({ word, score }, wordIndex) => (
+                                      <span
+                                        key={`valid-${wordIndex}`}
+                                        className={`
+                                          inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                          ${
+                                            score >= 5
+                                              ? 'bg-green-100 text-green-800'
+                                              : score >= 3
+                                              ? 'bg-yellow-100 text-yellow-800'
+                                              : 'bg-gray-100 text-gray-700'
+                                          }
+                                        `}
+                                      >
+                                        {word}
+                                        <span className="ml-1 text-xs opacity-75">
+                                          +{score}pts
+                                        </span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Palabras eliminadas */}
+                              {player.eliminatedWords && player.eliminatedWords.length > 0 && (
+                                <div>
+                                  <div className="text-xs font-medium text-red-600 mb-1">
+                                    Eliminadas ({player.eliminatedWords.length}):
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {player.eliminatedWords.map((word, wordIndex) => {
+                                      const score = getWordScore(word);
+                                      return (
+                                        <span
+                                          key={`eliminated-${wordIndex}`}
+                                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 line-through"
+                                        >
+                                          {word}
+                                          <span className="ml-1 text-xs opacity-75">
+                                            -{score}pts
+                                          </span>
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Palabras encontradas por múltiples jugadores
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -696,6 +740,19 @@ export const BoggleGameMain: React.FC = () => {
               {/* Found Words */}
               <FoundWords foundWords={foundWords} />
             </div>
+
+            {/* Game Settings */}
+            <GameSettings
+              eliminateCommonWords={eliminateCommonWords}
+              onToggleEliminateCommonWords={toggleEliminateCommonWords}
+              gameState={gameState.gameState}
+            />
+
+            {/* Player Words Detail */}
+            <PlayerWordsDetail
+              players={gameState.players}
+              gameState={gameState.gameState}
+            />
 
             {/* Instructions */}
             <GameInstructions />
