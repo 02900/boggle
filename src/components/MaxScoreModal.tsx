@@ -42,17 +42,26 @@ export const MaxScoreModal: React.FC<MaxScoreModalProps> = ({
       setLoading(false);
     });
 
+    // Reset max score data when game is reset
+    socket.on("game-reset", () => {
+      setMaxScoreData(null);
+      setLoading(false);
+    });
+
     return () => {
       socket.off("max-score-data");
+      socket.off("game-reset");
     };
   }, [socket]);
 
   useEffect(() => {
-    if (isOpen && socket && !maxScoreData) {
+    if (isOpen && socket) {
+      // Siempre resetear y solicitar datos frescos cuando se abre el modal
+      setMaxScoreData(null);
       setLoading(true);
       socket.emit("get-max-score");
     }
-  }, [isOpen, socket, maxScoreData]);
+  }, [isOpen, socket]);
 
   if (!isOpen) return null;
 

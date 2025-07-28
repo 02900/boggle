@@ -79,11 +79,18 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
                       )}
                     </span>
                     <div className="text-xs text-gray-500">
-                      {player.wordsFound.length} palabras encontradas
-                      {player.eliminatedWords && player.eliminatedWords.length > 0 && (
-                        <span className="text-red-500 ml-1">
-                          ({player.eliminatedWords.length} eliminadas)
-                        </span>
+                      {/* Solo mostrar conteo de palabras al jugador actual durante la partida */}
+                      {(gameState === 'finished' || player.id === currentPlayerId) ? (
+                        <>
+                          {player.wordsFound.length} palabras encontradas
+                          {player.eliminatedWords && player.eliminatedWords.length > 0 && (
+                            <span className="text-red-500 ml-1">
+                              ({player.eliminatedWords.length} eliminadas)
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-gray-400">Jugando...</span>
                       )}
                     </div>
                     
