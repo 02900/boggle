@@ -690,6 +690,7 @@ export const BoggleGameMain: React.FC = () => {
               <PlayersList 
                 players={gameState.players} 
                 currentPlayerId={currentPlayerId || undefined}
+                gameState={gameState.gameState}
               />
 
               {/* Found Words */}

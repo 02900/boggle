@@ -152,7 +152,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       
       {gameState.board.length > 0 ? (
         <div 
-          className={`grid grid-cols-4 gap-2 mx-auto select-none mobile-drag-area ${isMobile ? "w-auto" : "w-fit"}`}
+          className={`grid grid-cols-4 gap-4 mx-auto select-none mobile-drag-area ${isMobile ? "w-auto" : "w-fit"}`}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
           onTouchMove={handleTouchMove}
@@ -177,7 +177,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                           ? 'bg-green-500 text-white scale-105 shadow-lg ring-2 ring-green-300'
                           : isCellSelected(rowIndex, colIndex) 
                             ? 'bg-blue-500 text-white scale-105 shadow-lg' 
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
+                            : 'bg-white md:bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102'
                   }
                   ${isMobile ? 'aspect-square w-auto text-4xl' : 'w-16 h-16 text-xl'}
                 `}
