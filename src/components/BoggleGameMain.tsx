@@ -275,14 +275,26 @@ export const BoggleGameMain: React.FC = () => {
     let letterMatch = false;
     let nextLetterIndex = letterIndex + 1;
     
+    // Verificar si la letra actual coincide directamente
     if (currentLetter === targetLetter) {
       letterMatch = true;
-    } else if (currentLetter === 'Q' && letterIndex < word.length - 1 && word.substring(letterIndex, letterIndex + 2) === 'QU') {
-      letterMatch = true;
-      nextLetterIndex = letterIndex + 2;
-    } else if (letterIndex < word.length - 1) {
+    }
+    // Verificar dígrafos: QU, CH, LL
+    else if (letterIndex < word.length - 1) {
       const digraph = word.substring(letterIndex, letterIndex + 2);
-      if ((digraph === 'CH' || digraph === 'LL') && currentLetter === digraph[0]) {
+      
+      // Para QU: la celda contiene "QU" y la palabra necesita "QU"
+      if (digraph === 'QU' && currentLetter === 'QU') {
+        letterMatch = true;
+        nextLetterIndex = letterIndex + 2;
+      }
+      // Para CH: la celda contiene "CH" y la palabra necesita "CH"
+      else if (digraph === 'CH' && currentLetter === 'CH') {
+        letterMatch = true;
+        nextLetterIndex = letterIndex + 2;
+      }
+      // Para LL: la celda contiene "LL" y la palabra necesita "LL"
+      else if (digraph === 'LL' && currentLetter === 'LL') {
         letterMatch = true;
         nextLetterIndex = letterIndex + 2;
       }
@@ -320,7 +332,7 @@ export const BoggleGameMain: React.FC = () => {
   };
 
   if (!isJoined) {
-    return <JoinGameForm onJoinGame={handleJoinGame} isConnected={isConnected} />;
+    return <JoinGameForm onJoinGame={handleJoinGame} isConnected={isConnected} socket={socket} />;
   }
 
   // Layout móvil optimizado
