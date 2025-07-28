@@ -15,6 +15,8 @@ import { MaxScoreModal } from './MaxScoreModal';
 import { GameSettings } from './GameSettings';
 import { PlayerWordsDetail } from './PlayerWordsDetail';
 
+const HIGHLIGHT_DURATION = 400;
+
 export const BoggleGameMain: React.FC = () => {
   const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound, playSkipSound, toggleEliminateCommonWords, eliminateCommonWords } = useSocket();
   const {
@@ -116,7 +118,7 @@ export const BoggleGameMain: React.FC = () => {
           setHighlightedPath(currentPath);
           setTimeout(() => {
             setHighlightedPath([]);
-          }, 2000);
+          }, HIGHLIGHT_DURATION);
         }
         
         // Activar sonido y vibración para palabras válidas
@@ -150,7 +152,7 @@ export const BoggleGameMain: React.FC = () => {
             // Limpiar el resaltado naranja después de 2 segundos
             setTimeout(() => {
               setHighlightedSkipPath([]);
-            }, 2000);
+            }, HIGHLIGHT_DURATION);
           } else {
             resetSelection();
           }
@@ -170,7 +172,7 @@ export const BoggleGameMain: React.FC = () => {
             // Limpiar el resaltado de error después de 2 segundos
             setTimeout(() => {
               setHighlightedErrorPath([]);
-            }, 2000);
+            }, HIGHLIGHT_DURATION);
           } else {
             resetSelection();
           }
@@ -284,7 +286,7 @@ export const BoggleGameMain: React.FC = () => {
       // Limpiar el highlight después de un tiempo
       setTimeout(() => {
         setHighlightedPath([]);
-      }, 2000);
+      }, HIGHLIGHT_DURATION);
     } else {
       // Si no se encuentra ruta, mostrar mensaje de error
       setMessage(`"${word}" - No se encontró ruta válida en el tablero`);
@@ -455,12 +457,12 @@ export const BoggleGameMain: React.FC = () => {
               >
                 🔄 {rotationCooldown > 0 ? `${rotationCooldown}s` : 'Rotar'}
               </button>
-              <button
+              {/* <button
                 onClick={resetGame}
                 className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold"
               >
                 ♾️ Reiniciar
-              </button>
+              </button> */}
             </div>
           )}
           
