@@ -15,7 +15,7 @@ const SCOREBOARD_FILE = path.join(__dirname, 'scoreboard.json');
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-const TIME_LIMIT = 188; // 3 minutos + 8 segundos de animación inicial
+const TIME_LIMIT = 18; // 3 minutos + 8 segundos de animación inicial
 
 // Lista de nombres predefinidos
 const RANDOM_NAMES = [
