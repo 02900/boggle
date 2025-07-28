@@ -9,6 +9,9 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = process.env.PORT || 3000;
 
+// Archivo para persistir el scoreboard
+const SCOREBOARD_FILE = path.join(__dirname, 'scoreboard.json');
+
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
@@ -36,6 +39,56 @@ const RANDOM_NAMES = [
   'PeaceWar', 'HopeHear', 'FaithDoubt', 'TrustLie', 'KindMean'
 ];
 
+// Funciones para manejar el scoreboard persistente
+function loadScoreboard() {
+  try {
+    if (fs.existsSync(SCOREBOARD_FILE)) {
+      const data = fs.readFileSync(SCOREBOARD_FILE, 'utf8');
+      return JSON.parse(data);
+    } else {
+      // Si el archivo no existe, crearlo con un array vacío
+      const emptyScoreboard = [];
+      fs.writeFileSync(SCOREBOARD_FILE, JSON.stringify(emptyScoreboard, null, 2));
+      console.log('Archivo de scoreboard creado:', SCOREBOARD_FILE);
+      return emptyScoreboard;
+    }
+  } catch (error) {
+    console.error('Error al cargar scoreboard:', error);
+  }
+  return [];
+}
+
+function saveScoreboard(scoreboard) {
+  try {
+    fs.writeFileSync(SCOREBOARD_FILE, JSON.stringify(scoreboard, null, 2));
+  } catch (error) {
+    console.error('Error al guardar scoreboard:', error);
+  }
+}
+
+function updateScoreboard(playerScores) {
+  const scoreboard = loadScoreboard();
+  const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Agregar nuevos puntajes
+  playerScores.forEach(({ name, score }) => {
+    if (score > 0) { // Solo agregar si el puntaje es mayor a 0
+      scoreboard.push({
+        name,
+        score,
+        date: currentDate
+      });
+    }
+  });
+  
+  // Ordenar por puntaje descendente y mantener solo los top 10
+  scoreboard.sort((a, b) => b.score - a.score);
+  const top10 = scoreboard.slice(0, 10);
+  
+  saveScoreboard(top10);
+  return top10;
+}
+
 // Lógica del juego de Boggle
 class BoggleGame {
   constructor() {
@@ -46,7 +99,7 @@ class BoggleGame {
     this.timer = null;
     this.words = new Set(); // Palabras válidas del diccionario (simplificado para demo)
     this.lastRotationTime = 0; // Timestamp de la última rotación
-    this.rotationCooldown = 20000; // 20 segundos en milisegundos
+    this.rotationCooldown = 30000; // 30 segundos en milisegundos
     this.availableNames = [...RANDOM_NAMES]; // Copia de nombres disponibles
     this.initializeDictionary();
   }
@@ -202,6 +255,14 @@ class BoggleGame {
       clearInterval(this.timer);
       this.timer = null;
     }
+    
+    // Actualizar scoreboard con los puntajes de esta partida
+    const playerScores = Array.from(this.players.values()).map(player => ({
+      name: player.name,
+      score: player.score
+    }));
+    
+    updateScoreboard(playerScores);
   }
 
   submitWord(playerId, word, path) {
@@ -422,6 +483,11 @@ app.prepare().then(() => {
           message: result.reason
         });
       }
+    });
+
+    socket.on('get-scoreboard', () => {
+      const scoreboard = loadScoreboard();
+      socket.emit('scoreboard-data', scoreboard);
     });
 
     socket.on('disconnect', () => {

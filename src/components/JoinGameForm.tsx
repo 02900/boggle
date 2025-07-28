@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Socket } from 'socket.io-client';
+import { Scoreboard } from './Scoreboard';
 
 interface JoinGameFormProps {
   onJoinGame: (playerName: string) => void;
   isConnected: boolean;
+  socket: Socket | null;
 }
 
-export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnected }) => {
+export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnected, socket }) => {
   const [playerName, setPlayerName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
+  const [showScoreboard, setShowScoreboard] = useState(false);
   const [useRandomName, setUseRandomName] = useState(true);
   
   // Cargar nombre desde localStorage al inicializar
@@ -146,6 +149,19 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
           </button>
         </form>
 
+        {/* Botón para ver scoreboard */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowScoreboard(true)}
+            disabled={!isConnected}
+            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-md"
+          >
+            <span>🏆</span>
+            <span>Ver Mejores Puntajes</span>
+          </button>
+        </div>
+
         {/* Información del Juego */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <h3 className="font-semibold text-gray-800 mb-2">Características del Juego:</h3>
@@ -162,6 +178,14 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
           Desarrollado con Socket.IO y Next.js
         </div>
       </div>
+      
+      {/* Modal del Scoreboard */}
+      {showScoreboard && (
+        <Scoreboard 
+          socket={socket} 
+          onClose={() => setShowScoreboard(false)} 
+        />
+      )}
     </div>
   );
 };
