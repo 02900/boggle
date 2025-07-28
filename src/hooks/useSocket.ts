@@ -15,6 +15,7 @@ interface UseSocketReturn {
   triggerVibration: () => void;
   playSuccessSound: () => void;
   playErrorSound: () => void;
+  playSkipSound: () => void;
 }
 
 export const useSocket = (): UseSocketReturn => {
@@ -69,6 +70,21 @@ export const useSocket = (): UseSocketReturn => {
       });
     } catch (error) {
       console.log('Error al crear el audio de error:', error);
+    }
+  }, []);
+
+  // Función para reproducir sonido de skip (palabra repetida)
+  const playSkipSound = useCallback(() => {
+    try {
+      const audio = new Audio('/skip.mp3');
+      audio.volume = 0.5; // Volumen medio para skip
+      console.log("Reproduciendo sonido de skip");
+      audio.play().catch(error => {
+        // Silenciar errores de reproducción (ej: política de autoplay)
+        console.log('No se pudo reproducir el sonido de skip:', error);
+      });
+    } catch (error) {
+      console.log('Error al crear el audio de skip:', error);
     }
   }, []);
 
@@ -139,5 +155,6 @@ export const useSocket = (): UseSocketReturn => {
     triggerVibration,
     playSuccessSound,
     playErrorSound,
+    playSkipSound,
   };
 };

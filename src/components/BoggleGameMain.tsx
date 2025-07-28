@@ -13,7 +13,7 @@ import { JoinGameForm } from './JoinGameForm';
 import { DiceRollingAnimation } from './DiceRollingAnimation';
 
 export const BoggleGameMain: React.FC = () => {
-  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound } = useSocket();
+  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound, playSkipSound } = useSocket();
   const {
     currentWord,
     selectedPath,
@@ -45,6 +45,7 @@ export const BoggleGameMain: React.FC = () => {
   const [rotationMessage, setRotationMessage] = useState('');
   const [highlightedPath, setHighlightedPath] = useState<[number, number][]>([]);
   const [highlightedErrorPath, setHighlightedErrorPath] = useState<[number, number][]>([]);
+  const [highlightedSkipPath, setHighlightedSkipPath] = useState<[number, number][]>([]);
   const [lastSubmittedPath, setLastSubmittedPath] = useState<[number, number][]>([]);
   const [lastSubmittedWord, setLastSubmittedWord] = useState<string>('');
   const lastSubmittedRef = useRef<{path: [number, number][], word: string}>({path: [], word: ''});
@@ -109,15 +110,26 @@ export const BoggleGameMain: React.FC = () => {
       if (result.valid && result.word) {
         addFoundWord(result.word);
         setMessage(`¡Excelente! "${result.word}" vale ${result.points} puntos!`);
+        
+        // Mostrar el camino en verde por 2 segundos para palabras válidas
+        const currentPath = [...lastSubmittedRef.current.path];
+        if (currentPath.length > 0) {
+          console.log('Setting success path:', currentPath);
+          setHighlightedPath(currentPath);
+          setTimeout(() => {
+            setHighlightedPath([]);
+          }, 2000);
+        }
+        
         // Activar sonido y vibración para palabras válidas
         console.log('Activando sonido y vibración para palabra válida');
         triggerVibration();
         playSuccessSound();
       } else {
-        // Usar el último camino enviado para mostrarlo en rojo
+        // Usar el último camino enviado para mostrarlo en color según el tipo de error
         const currentPath = [...lastSubmittedRef.current.path];
         const currentWordToShow = lastSubmittedRef.current.word || currentWord;
-        console.log('Error path captured:', currentPath, 'Current word:', currentWordToShow, 'Last submitted from ref:', lastSubmittedRef.current);
+        console.log('Error path captured:', currentPath, 'Current word:', currentWordToShow, 'Reason:', result.reason);
         
         // Si el jugador no fue encontrado, redirigir al menú principal
         if (result.reason === 'Jugador no encontrado') {
@@ -127,13 +139,33 @@ export const BoggleGameMain: React.FC = () => {
             resetFoundWords();
             resetSelection();
           }, 2000);
-        } else {
-          setMessage(`"${currentWordToShow}" - ${result.reason || 'Palabra inválida'}`);
-          // Mostrar el camino en rojo por 2 segundos
+        } else if (result.reason === 'Palabra ya encontrada') {
+          // Caso especial: palabra válida pero ya encontrada - mostrar en naranja
+          setMessage(`"${currentWordToShow}" - ${result.reason}`);
           if (currentPath.length > 0) {
-            console.log('Setting error path:', currentPath);
+            console.log('Setting skip path (orange):', currentPath);
+            setHighlightedSkipPath(currentPath);
+            // Resetear la selección después de un pequeño delay
+            setTimeout(() => {
+              resetSelection();
+            }, 100);
+            // Limpiar el resaltado naranja después de 2 segundos
+            setTimeout(() => {
+              setHighlightedSkipPath([]);
+            }, 2000);
+          } else {
+            resetSelection();
+          }
+          // Activar sonido de skip para palabras repetidas
+          console.log('Activando sonido de skip para palabra repetida');
+          playSkipSound();
+        } else {
+          // Otros errores - mostrar en rojo
+          setMessage(`"${currentWordToShow}" - ${result.reason || 'Palabra inválida'}`);
+          if (currentPath.length > 0) {
+            console.log('Setting error path (red):', currentPath);
             setHighlightedErrorPath(currentPath);
-            // Resetear la selección después de un pequeño delay para permitir que se vea el rojo
+            // Resetear la selección después de un pequeño delay
             setTimeout(() => {
               resetSelection();
             }, 100);
@@ -572,6 +604,7 @@ export const BoggleGameMain: React.FC = () => {
               onKeyboardInput={handleKeyboardWordInput}
               highlightedPath={highlightedPath}
               highlightedErrorPath={highlightedErrorPath}
+              highlightedSkipPath={highlightedSkipPath}
             />
           )}
         </div>
@@ -653,6 +686,7 @@ export const BoggleGameMain: React.FC = () => {
               onKeyboardInput={handleKeyboardWordInput}
               highlightedPath={highlightedPath}
               highlightedErrorPath={highlightedErrorPath}
+              highlightedSkipPath={highlightedSkipPath}
             />
           </div>
 
