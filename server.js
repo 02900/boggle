@@ -21,6 +21,8 @@ class BoggleGame {
     this.timeLeft = 180; // 3 minutos
     this.timer = null;
     this.words = new Set(); // Palabras válidas del diccionario (simplificado para demo)
+    this.lastRotationTime = 0; // Timestamp de la última rotación
+    this.rotationCooldown = 20000; // 20 segundos en milisegundos
     this.initializeDictionary();
   }
 
@@ -255,6 +257,37 @@ class BoggleGame {
       player.wordsFound = [];
     }
   }
+  
+  // Rotar el tablero 90 grados en sentido horario
+  rotateBoard() {
+    const now = Date.now();
+    
+    // Verificar cooldown
+    if (now - this.lastRotationTime < this.rotationCooldown) {
+      const remainingTime = Math.ceil((this.rotationCooldown - (now - this.lastRotationTime)) / 1000);
+      return { success: false, reason: `Debes esperar ${remainingTime} segundos antes de rotar nuevamente` };
+    }
+    
+    // Solo permitir rotación durante el juego
+    if (this.gameState !== 'playing') {
+      return { success: false, reason: 'Solo se puede rotar el tablero durante el juego' };
+    }
+    
+    // Crear nuevo tablero rotado 90 grados en sentido horario
+    const rotatedBoard = [];
+    for (let i = 0; i < 4; i++) {
+      rotatedBoard[i] = [];
+      for (let j = 0; j < 4; j++) {
+        // Para rotar 90° horario: nuevo[i][j] = original[4-1-j][i]
+        rotatedBoard[i][j] = this.board[4 - 1 - j][i];
+      }
+    }
+    
+    this.board = rotatedBoard;
+    this.lastRotationTime = now;
+    
+    return { success: true, cooldownTime: this.rotationCooldown / 1000 };
+  }
 }
 
 app.prepare().then(() => {
@@ -317,6 +350,22 @@ app.prepare().then(() => {
     socket.on('reset-game', () => {
       game.resetGame();
       io.emit('game-reset', game.getGameState());
+    });
+    
+    socket.on('rotate-board', () => {
+      const result = game.rotateBoard();
+      if (result.success) {
+        // Enviar el tablero rotado a todos los jugadores
+        io.emit('board-rotated', {
+          board: game.board,
+          cooldownTime: result.cooldownTime
+        });
+      } else {
+        // Enviar mensaje de error solo al jugador que intentó rotar
+        socket.emit('rotation-error', {
+          message: result.reason
+        });
+      }
     });
 
     socket.on('disconnect', () => {

@@ -13,7 +13,7 @@ import { JoinGameForm } from './JoinGameForm';
 import { DiceRollingAnimation } from './DiceRollingAnimation';
 
 export const BoggleGameMain: React.FC = () => {
-  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound } = useSocket();
+  const { socket, isConnected, joinGame, startGame, submitWord, resetGame, rotateBoard, diceRolling, clearDiceRolling, triggerVibration, playSuccessSound, playErrorSound } = useSocket();
   const {
     currentWord,
     selectedPath,
@@ -41,6 +41,8 @@ export const BoggleGameMain: React.FC = () => {
   });
   
   const [isMobile, setIsMobile] = useState(false);
+  const [rotationCooldown, setRotationCooldown] = useState(0);
+  const [rotationMessage, setRotationMessage] = useState('');
   
   // Detectar si es móvil
   useEffect(() => {
@@ -144,6 +146,27 @@ export const BoggleGameMain: React.FC = () => {
       resetSelection();
       setMessage('¡El juego ha sido reiniciado!');
     });
+    
+    socket.on('board-rotated', ({ board, cooldownTime }) => {
+      setGameState(prev => ({ ...prev, board }));
+      setMessage('¡Tablero rotado 90°!');
+      setRotationCooldown(cooldownTime);
+      
+      // Iniciar countdown del cooldown
+      let countdown = cooldownTime;
+      const cooldownInterval = setInterval(() => {
+        countdown--;
+        setRotationCooldown(countdown);
+        if (countdown <= 0) {
+          clearInterval(cooldownInterval);
+        }
+      }, 1000);
+    });
+    
+    socket.on('rotation-error', ({ message }) => {
+      setRotationMessage(message);
+      setTimeout(() => setRotationMessage(''), 3000);
+    });
 
     return () => {
       socket.off('game-state');
@@ -155,6 +178,8 @@ export const BoggleGameMain: React.FC = () => {
       socket.off('player-left');
       socket.off('player-scored');
       socket.off('game-reset');
+      socket.off('board-rotated');
+      socket.off('rotation-error');
     };
   }, [socket, currentWord, addFoundWord, setMessage, resetFoundWords, resetSelection, triggerVibration, playSuccessSound, playErrorSound]);
 
@@ -236,12 +261,20 @@ export const BoggleGameMain: React.FC = () => {
           )}
           
           {gameState.gameState === 'playing' && (
-            <div className="mt-2 text-center">
+            <div className="mt-2 flex justify-center space-x-2">
+              <button
+                onClick={rotateBoard}
+                disabled={rotationCooldown > 0}
+                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm font-semibold"
+                title={rotationCooldown > 0 ? `Espera ${rotationCooldown}s` : 'Rotar tablero 90°'}
+              >
+                🔄 {rotationCooldown > 0 ? `${rotationCooldown}s` : 'Rotar'}
+              </button>
               <button
                 onClick={resetGame}
                 className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold"
               >
-                🔄 Reiniciar
+                ♾️ Reiniciar
               </button>
             </div>
           )}
@@ -254,6 +287,15 @@ export const BoggleGameMain: React.FC = () => {
               >
                 🔄 Nuevo Juego
               </button>
+            </div>
+          )}
+          
+          {/* Mensaje de Error de Rotación en Móvil */}
+          {rotationMessage && (
+            <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-center">
+              <div className="text-red-700 text-xs font-medium">
+                {rotationMessage}
+              </div>
             </div>
           )}
         </div>
@@ -431,7 +473,10 @@ export const BoggleGameMain: React.FC = () => {
           timeLeft={gameState.timeLeft}
           onStartGame={startGame}
           onResetGame={resetGame}
+          onRotateBoard={rotateBoard}
           isConnected={isConnected}
+          rotationCooldown={rotationCooldown}
+          rotationMessage={rotationMessage}
         />
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">

@@ -6,7 +6,10 @@ interface GameControlsProps {
   timeLeft: number;
   onStartGame: () => void;
   onResetGame: () => void;
+  onRotateBoard: () => void;
   isConnected: boolean;
+  rotationCooldown: number;
+  rotationMessage: string;
 }
 
 export const GameControls: React.FC<GameControlsProps> = ({
@@ -14,7 +17,10 @@ export const GameControls: React.FC<GameControlsProps> = ({
   timeLeft,
   onStartGame,
   onResetGame,
+  onRotateBoard,
   isConnected,
+  rotationCooldown,
+  rotationMessage,
 }) => {
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -105,12 +111,24 @@ export const GameControls: React.FC<GameControlsProps> = ({
             </button>
           )}
           
+          {gameState === 'playing' && (
+            <button
+              onClick={onRotateBoard}
+              disabled={!isConnected || rotationCooldown > 0}
+              className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+              title={rotationCooldown > 0 ? `Espera ${rotationCooldown}s` : 'Rotar tablero 90°'}
+            >
+              <span>🔄</span>
+              <span>{rotationCooldown > 0 ? `${rotationCooldown}s` : 'Rotar'}</span>
+            </button>
+          )}
+          
           <button
             onClick={onResetGame}
             disabled={!isConnected}
             className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
           >
-            <span>🔄</span>
+            <span>♾️</span>
             <span>Reiniciar</span>
           </button>
         </div>
@@ -129,6 +147,15 @@ export const GameControls: React.FC<GameControlsProps> = ({
           </div>
           <div className="text-xs text-gray-500 mt-1 text-center">
             Progreso del Juego
+          </div>
+        </div>
+      )}
+      
+      {/* Mensaje de Error de Rotación */}
+      {rotationMessage && (
+        <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
+          <div className="text-red-700 text-sm font-medium text-center">
+            {rotationMessage}
           </div>
         </div>
       )}
