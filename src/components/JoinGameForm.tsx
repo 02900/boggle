@@ -56,8 +56,8 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
       <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
         {/* Encabezado */}
         <div className="text-center mb-6">
-          <div className="text-6xl mb-4">🎯</div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Juego de Boggle</h1>
+          <div className="text-6xl mb-4">🎲</div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Boggle</h1>
           <p className="text-gray-600">
             ¡Únete al desafío multijugador de búsqueda de palabras!
           </p>
@@ -160,22 +160,6 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
             <span>🏆</span>
             <span>Ver Mejores Puntajes</span>
           </button>
-        </div>
-
-        {/* Información del Juego */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold text-gray-800 mb-2">Características del Juego:</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>• Juego multijugador en tiempo real</li>
-            <li>• Rondas de 3 minutos</li>
-            <li>• Gana puntos por encontrar palabras</li>
-            <li>• Compite con otros jugadores</li>
-          </ul>
-        </div>
-
-        {/* Pie de página */}
-        <div className="mt-6 text-center text-xs text-gray-500">
-          Desarrollado con Socket.IO y Next.js
         </div>
       </div>
       
