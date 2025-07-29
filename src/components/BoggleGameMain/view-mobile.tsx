@@ -11,28 +11,11 @@ import { useBoggleGameMain } from "./use-boggle-game-main";
 export const ViewMobile = () => {
   const { currentWord, message } = useGameLogicStore();
   const { setModalType } = useModalStore();
-  const {
-    gameState,
-    rotationCooldown,
-    rotationMessage,
-    highlightedPath,
-    highlightedErrorPath,
-    highlightedSkipPath,
-    currentPlayerId,
-  } = useBoggleGameMainStore();
+  const { gameState, rotationCooldown, rotationMessage, currentPlayerId } =
+    useBoggleGameMainStore();
 
-  const {
-    getWordScore,
-    startGame,
-    rotateBoard,
-    resetGame,
-    handleCellMouseEnterWrapper,
-    handleMouseUpWrapper,
-    handleMouseLeave,
-    isCellSelected,
-    handleKeyboardWordInput,
-    handleCellMouseDownWrapper,
-  } = useBoggleGameMain();
+  const { getWordScore, startGame, rotateBoard, resetGame } =
+    useBoggleGameMain();
 
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col overflow-hidden">
@@ -295,20 +278,7 @@ export const ViewMobile = () => {
           </div>
         ) : (
           /* Tablero de juego normal */
-          <GameBoard
-            gameState={gameState}
-            currentWord={currentWord}
-            message={message}
-            onCellMouseDown={handleCellMouseDownWrapper}
-            onCellMouseEnter={handleCellMouseEnterWrapper}
-            onMouseUp={handleMouseUpWrapper}
-            onMouseLeave={handleMouseLeave}
-            isCellSelected={isCellSelected}
-            onKeyboardInput={handleKeyboardWordInput}
-            highlightedPath={highlightedPath}
-            highlightedErrorPath={highlightedErrorPath}
-            highlightedSkipPath={highlightedSkipPath}
-          />
+          <GameBoard />
         )}
       </div>
 
