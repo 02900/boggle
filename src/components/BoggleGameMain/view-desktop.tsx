@@ -4,14 +4,12 @@ import React from "react";
 import { Socket } from "socket.io-client";
 import { DiceRoll, GameState } from "@/interfaces/game";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
-import { FoundWords } from "../FoundWords";
 import { GameBoard } from "../GameBoard";
 import { GameControls } from "../GameControls";
 import { GameInstructions } from "../GameInstructions";
 import { GameSettings } from "../GameSettings";
 import { MaxScoreModal } from "../MaxScoreModal";
 import { PlayersList } from "../PlayersList";
-import { PlayerWordsDetail } from "../PlayerWordsDetail";
 
 export const ViewDesktop = ({
   diceRolling,
@@ -122,28 +120,17 @@ export const ViewDesktop = ({
 
           {/* Sidebar */}
           <div className="xl:col-span-2 space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-6">
-              {/* Players List */}
-              <PlayersList
-                players={gameState.players}
-                currentPlayerId={currentPlayerId || undefined}
-                gameState={gameState.gameState}
-              />
-
-              {/* Found Words */}
-              <FoundWords foundWords={foundWords} />
-            </div>
+            {/* Players List */}
+            <PlayersList
+              players={gameState.players}
+              currentPlayerId={currentPlayerId || undefined}
+              gameState={gameState.gameState}
+            />
 
             {/* Game Settings */}
             <GameSettings
               eliminateCommonWords={eliminateCommonWords}
               onToggleEliminateCommonWords={toggleEliminateCommonWords}
-              gameState={gameState.gameState}
-            />
-
-            {/* Player Words Detail */}
-            <PlayerWordsDetail
-              players={gameState.players}
               gameState={gameState.gameState}
             />
 
