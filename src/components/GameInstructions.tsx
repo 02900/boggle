@@ -1,14 +1,15 @@
-export const GameInstructions = ({
-  setShowInstructionsModal,
-}: {
-  setShowInstructionsModal: (show: boolean) => void;
-}) => {
+import { useModalStore } from "@/stores/modal.store";
+import { ModalType } from "@/stores/modal.store";
+
+export const GameInstructions = () => {
+  const { setModalType } = useModalStore();
+
   return (
     <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-800">Instrucciones</h2>
         <button
-          onClick={() => setShowInstructionsModal(false)}
+          onClick={() => setModalType(ModalType.None)}
           className="text-gray-500 hover:text-gray-700"
         >
           <svg

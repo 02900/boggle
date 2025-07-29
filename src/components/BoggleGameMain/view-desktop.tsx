@@ -1,15 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Socket } from "socket.io-client";
+import React from "react";
 import { DiceRoll, GameState } from "@/interfaces/game";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
 import { GameBoard } from "../GameBoard";
 import { GameControls } from "../GameControls";
-import { GameInstructions } from "../GameInstructions";
-import { GameSettings } from "../GameSettings";
-import { MaxScoreModal } from "../MaxScoreModal";
 import { PlayersList } from "../PlayersList";
+import { ModalType, useModalStore } from "@/stores/modal.store";
 
 export const ViewDesktop = ({
   diceRolling,
@@ -22,7 +19,6 @@ export const ViewDesktop = ({
   resetGame,
   rotationCooldown,
   rotationMessage,
-  setShowMaxScoreModal,
   currentWord,
   message,
   handleCellMouseDownWrapper,
@@ -34,12 +30,7 @@ export const ViewDesktop = ({
   highlightedPath,
   highlightedErrorPath,
   highlightedSkipPath,
-  foundWords,
-  showMaxScoreModal,
-  socket,
   isConnected,
-  toggleEliminateCommonWords,
-  eliminateCommonWords,
 }: {
   diceRolling: DiceRoll[] | null;
   clearDiceRolling: () => void;
@@ -51,7 +42,6 @@ export const ViewDesktop = ({
   resetGame: () => void;
   rotationCooldown: number;
   rotationMessage: string;
-  setShowMaxScoreModal: (show: boolean) => void;
   currentWord: string;
   message: string;
   handleCellMouseDownWrapper: (row: number, col: number) => void;
@@ -63,16 +53,10 @@ export const ViewDesktop = ({
   highlightedPath: [number, number][];
   highlightedErrorPath: [number, number][];
   highlightedSkipPath: [number, number][];
-  foundWords: string[];
-  showMaxScoreModal: boolean;
-  socket: Socket | null;
   isConnected: boolean;
-  toggleEliminateCommonWords: (enabled: boolean) => void;
-  eliminateCommonWords: boolean;
 }) => {
-  // Modal state
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
+  const { setModalType } = useModalStore();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       {/* Animación de lanzamiento de dados */}
@@ -91,7 +75,7 @@ export const ViewDesktop = ({
           <div className="flex space-x-3">
             {/* Botón de configuración */}
             <button
-              onClick={() => setShowSettingsModal(true)}
+              onClick={() => setModalType(ModalType.Settings)}
               className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               title="Configuración"
             >
@@ -118,7 +102,7 @@ export const ViewDesktop = ({
             </button>
             {/* Botón de instrucciones */}
             <button
-              onClick={() => setShowInstructionsModal(true)}
+              onClick={() => setModalType(ModalType.Instructions)}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               title="Instrucciones"
             >
@@ -183,37 +167,6 @@ export const ViewDesktop = ({
           </div>
         </div>
       </div>
-
-      {/* Modal de Puntuación Máxima */}
-      <MaxScoreModal
-        isOpen={showMaxScoreModal}
-        onClose={() => setShowMaxScoreModal(false)}
-        socket={socket}
-        foundWords={gameState.players.flatMap((player) => [
-          ...player.wordsFound,
-          ...(player.eliminatedWords || []),
-        ])}
-      />
-
-      {/* Modal de Configuración */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <GameSettings
-            eliminateCommonWords={eliminateCommonWords}
-            onToggleEliminateCommonWords={toggleEliminateCommonWords}
-            setShowSettingsModal={setShowSettingsModal}
-          />
-        </div>
-      )}
-
-      {/* Modal de Instrucciones */}
-      {showInstructionsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <GameInstructions
-            setShowInstructionsModal={setShowInstructionsModal}
-          />
-        </div>
-      )}
     </div>
   );
 };

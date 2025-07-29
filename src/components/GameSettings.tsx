@@ -1,18 +1,20 @@
+import { ModalType, useModalStore } from "@/stores/modal.store";
+
 export const GameSettings = ({
   eliminateCommonWords,
   onToggleEliminateCommonWords,
-  setShowSettingsModal,
 }: {
   eliminateCommonWords: boolean;
   onToggleEliminateCommonWords: (enabled: boolean) => void;
-  setShowSettingsModal: (show: boolean) => void;
 }) => {
+  const { setModalType } = useModalStore();
+
   return (
     <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-800">Configuración</h2>
         <button
-          onClick={() => setShowSettingsModal(false)}
+          onClick={() => setModalType(ModalType.None)}
           className="text-gray-500 hover:text-gray-700"
         >
           <svg

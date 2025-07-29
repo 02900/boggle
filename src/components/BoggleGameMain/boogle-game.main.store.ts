@@ -38,11 +38,6 @@ interface BoggleGameMainStore {
       | ((prev: [number, number][]) => [number, number][])
   ) => void;
 
-  showMaxScoreModal: boolean;
-  setShowMaxScoreModal: (
-    showMaxScoreModal: boolean | ((prev: boolean) => boolean)
-  ) => void;
-
   currentPlayerId: string | null;
   setCurrentPlayerId: (
     currentPlayerId: string | null | ((prev: string | null) => string | null)
@@ -123,17 +118,6 @@ export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
         typeof highlightedSkipPath === "function"
           ? highlightedSkipPath(state.highlightedSkipPath)
           : highlightedSkipPath,
-    })),
-
-  showMaxScoreModal: false,
-  setShowMaxScoreModal: (
-    showMaxScoreModal: boolean | ((prev: boolean) => boolean)
-  ) =>
-    set((state) => ({
-      showMaxScoreModal:
-        typeof showMaxScoreModal === "function"
-          ? showMaxScoreModal(state.showMaxScoreModal)
-          : showMaxScoreModal,
     })),
 
   currentPlayerId: null,
