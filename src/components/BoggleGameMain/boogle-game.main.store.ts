@@ -45,16 +45,6 @@ interface BoggleGameMainStore {
 
   isJoined: boolean;
   setIsJoined: (isJoined: boolean | ((prev: boolean) => boolean)) => void;
-
-  lastSubmittedRef: { path: [number, number][]; word: string };
-  setLastSubmittedRef: (
-    lastSubmittedRef:
-      | { path: [number, number][]; word: string }
-      | ((prev: { path: [number, number][]; word: string }) => {
-          path: [number, number][];
-          word: string;
-        })
-  ) => void;
 }
 
 export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
@@ -146,23 +136,5 @@ export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
     set((state) => ({
       isJoined:
         typeof isJoined === "function" ? isJoined(state.isJoined) : isJoined,
-    })),
-  lastSubmittedRef: {
-    path: [],
-    word: "",
-  },
-  setLastSubmittedRef: (
-    lastSubmittedRef:
-      | { path: [number, number][]; word: string }
-      | ((prev: { path: [number, number][]; word: string }) => {
-          path: [number, number][];
-          word: string;
-        })
-  ) =>
-    set((state) => ({
-      lastSubmittedRef:
-        typeof lastSubmittedRef === "function"
-          ? lastSubmittedRef(state.lastSubmittedRef)
-          : lastSubmittedRef,
-    })),
+    }))
 }));

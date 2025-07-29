@@ -4,11 +4,11 @@ import { io } from 'socket.io-client';
 import { useBoggleGameMainStore } from '@/components/BoggleGameMain/boogle-game.main.store';
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { useSocket } from '@/hooks/useSocket';
+import { useHighlightManager } from '@/hooks/use-highlight-manager';
 import { DiceRoll, GameState, WordResult } from '@/interfaces/game';
 import { useGameLogicStore } from '@/stores/game-logic.store';
+import { getLastSubmittedRefGlobal } from '@/stores/last-submitted-ref.store';
 import { useSocketsStore } from '@/stores/sockets.store';
-
-const HIGHLIGHT_DURATION = 400;
 
 // listeners must be instatiate only once
 export const useSocketListeners = () => {
@@ -17,6 +17,7 @@ export const useSocketListeners = () => {
     useSocket();
 
   const { resetSelection, addFoundWord, resetFoundWords } = useGameLogic();
+  const { showHighlight } = useHighlightManager();
 
   const {
     socket,
@@ -30,12 +31,8 @@ export const useSocketListeners = () => {
     setGameState,
     setRotationCooldown,
     setRotationMessage,
-    setHighlightedPath,
-    setHighlightedErrorPath,
-    setHighlightedSkipPath,
     setCurrentPlayerId,
     setIsJoined,
-    lastSubmittedRef,
   } = useBoggleGameMainStore();
 
   useEffect(() => {
@@ -98,42 +95,34 @@ export const useSocketListeners = () => {
     });
 
     socket.on("word-result", (result: WordResult) => {
-      console.log("word-result recibido en BoggleGameMain:", result);
+      // Usar el store global síncrono en lugar del estado de Zustand
+      const globalLastSubmitted = getLastSubmittedRefGlobal();
+      const currentPath = [...globalLastSubmitted.path];
+      const currentWordToShow = globalLastSubmitted.word || currentWord;
+      
       if (result.valid && result.word) {
+        // Palabra válida
         addFoundWord(result.word);
         setMessage(
           `¡Excelente! "${result.word}" vale ${result.points} puntos!`
         );
-
-        // Mostrar el camino en verde por 2 segundos para palabras válidas
-        const currentPath = [...lastSubmittedRef.path];
-        if (currentPath.length > 0) {
-          console.log("Setting success path:", currentPath);
-          setHighlightedPath(currentPath);
-          setTimeout(() => {
-            setHighlightedPath([]);
-          }, HIGHLIGHT_DURATION);
-        }
-
-        // Activar sonido y vibración para palabras válidas
-        console.log("Activando sonido y vibración para palabra válida");
+        
+        // Mostrar highlight de éxito
+        showHighlight(currentPath, 'success');
+        
+        // Activar sonido y vibración
         triggerVibration();
         playSuccessSound();
       } else {
-        // Usar el último camino enviado para mostrarlo en color según el tipo de error
-        const currentPath = [...lastSubmittedRef.path];
-        const currentWordToShow = lastSubmittedRef.word || currentWord;
+        // Palabra inválida - manejar diferentes tipos de error
         console.log(
-          "Error path captured:",
-          currentPath,
-          "Current word:",
-          currentWordToShow,
-          "Reason:",
-          result.reason
+          "Error path:", currentPath,
+          "Word:", currentWordToShow,
+          "Reason:", result.reason
         );
 
-        // Si el jugador no fue encontrado, redirigir al menú principal
         if (result.reason === "Jugador no encontrado") {
+          // Sesión perdida
           setMessage("Sesión perdida. Redirigiendo al menú principal...");
           setTimeout(() => {
             setIsJoined(false);
@@ -141,47 +130,21 @@ export const useSocketListeners = () => {
             resetSelection();
           }, 2000);
         } else if (result.reason === "Palabra ya encontrada") {
-          // Caso especial: palabra válida pero ya encontrada - mostrar en naranja
+          // Palabra repetida - mostrar en naranja
           setMessage(`"${currentWordToShow}" - ${result.reason}`);
-          if (currentPath.length > 0) {
-            console.log("Setting skip path (orange):", currentPath);
-            setHighlightedSkipPath(currentPath);
-            // Resetear la selección después de un pequeño delay
-            setTimeout(() => {
-              resetSelection();
-            }, 100);
-            // Limpiar el resaltado naranja después de 2 segundos
-            setTimeout(() => {
-              setHighlightedSkipPath([]);
-            }, HIGHLIGHT_DURATION);
-          } else {
-            resetSelection();
-          }
-          // Activar sonido de skip para palabras repetidas
-          console.log("Activando sonido de skip para palabra repetida");
+          showHighlight(currentPath, 'skip');
           playSkipSound();
+          // Resetear selección después de un delay
+          setTimeout(() => resetSelection(), 100);
         } else {
           // Otros errores - mostrar en rojo
           setMessage(
             `"${currentWordToShow}" - ${result.reason || "Palabra inválida"}`
           );
-          if (currentPath.length > 0) {
-            console.log("Setting error path (red):", currentPath);
-            setHighlightedErrorPath(currentPath);
-            // Resetear la selección después de un pequeño delay
-            setTimeout(() => {
-              resetSelection();
-            }, 100);
-            // Limpiar el resaltado de error después de 2 segundos
-            setTimeout(() => {
-              setHighlightedErrorPath([]);
-            }, HIGHLIGHT_DURATION);
-          } else {
-            resetSelection();
-          }
-          // Activar sonido de error para palabras inválidas
-          console.log("Activando sonido de error para palabra inválida");
+          showHighlight(currentPath, 'error');
           playErrorSound();
+          // Resetear selección después de un delay
+          setTimeout(() => resetSelection(), 100);
         }
       }
     });
@@ -194,7 +157,7 @@ export const useSocketListeners = () => {
       setMessage("Un jugador abandonó el juego.");
     });
 
-    socket.on("player-scored", ({ playerId, word, points }) => {
+    socket.on("player-scored", ({ playerId: _playerId, word: _word, points: _points }) => {
       // No mostrar mensaje a otros jugadores para no revelar palabras válidas
       // Solo se actualiza el estado del juego automáticamente
     });
