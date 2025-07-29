@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Socket } from "socket.io-client";
+import { ModalType, useModalStore } from "@/stores/modal.store";
 
 interface WordData {
   word: string;
@@ -15,19 +16,14 @@ interface MaxScoreData {
   totalWords: number;
 }
 
-interface MaxScoreModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  socket: Socket | null;
-  foundWords?: string[]; // Palabras encontradas por todos los jugadores
-}
-
-export const MaxScoreModal: React.FC<MaxScoreModalProps> = ({
-  isOpen,
-  onClose,
+export const MaxScoreModal = ({
   socket,
   foundWords = [],
+}: {
+  socket: Socket | null;
+  foundWords?: string[]; // Palabras encontradas por todos los jugadores
 }) => {
+  const { setModalType } = useModalStore();
   const [maxScoreData, setMaxScoreData] = useState<MaxScoreData | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"byPoints" | "alphabetical">(
@@ -55,15 +51,13 @@ export const MaxScoreModal: React.FC<MaxScoreModalProps> = ({
   }, [socket]);
 
   useEffect(() => {
-    if (isOpen && socket) {
+    if (socket) {
       // Siempre resetear y solicitar datos frescos cuando se abre el modal
       setMaxScoreData(null);
       setLoading(true);
       socket.emit("get-max-score");
     }
-  }, [isOpen, socket]);
-
-  if (!isOpen) return null;
+  }, [socket]);
 
   // Función helper para verificar si una palabra fue encontrada
   const isWordFound = (word: string) => {
@@ -115,7 +109,9 @@ export const MaxScoreModal: React.FC<MaxScoreModalProps> = ({
                   {maxScoreData.totalWords} palabras • {maxScoreData.maxScore}{" "}
                   puntos máximos
                 </p>
-                <p className="text-gray-600">{foundWords.length} palabras encontradas</p>
+                <p className="text-gray-600">
+                  {foundWords.length} palabras encontradas
+                </p>
                 <p className="text-sm">
                   <span className="text-green-600 font-medium">
                     {obtainedPoints} puntos obtenidos
@@ -129,7 +125,7 @@ export const MaxScoreModal: React.FC<MaxScoreModalProps> = ({
             )}
           </div>
           <button
-            onClick={onClose}
+            onClick={() => setModalType(ModalType.None)}
             className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
           >
             ×
@@ -251,7 +247,7 @@ export const MaxScoreModal: React.FC<MaxScoreModalProps> = ({
               este tablero
             </span>
             <button
-              onClick={onClose}
+              onClick={() => setModalType(ModalType.None)}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
               Cerrar

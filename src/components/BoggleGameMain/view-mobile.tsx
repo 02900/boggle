@@ -5,7 +5,6 @@ import React from "react";
 import { DiceRoll, GameState } from "@/interfaces/game";
 import { GameBoard } from "../GameBoard";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
-import { MaxScoreModal } from "../MaxScoreModal";
 import { Socket } from "socket.io-client";
 
 export const ViewMobile = ({
@@ -19,7 +18,6 @@ export const ViewMobile = ({
     resetGame,
     rotationCooldown,
     rotationMessage,
-    setShowMaxScoreModal,
     currentWord,
     message,
     handleCellMouseDownWrapper,
@@ -31,8 +29,6 @@ export const ViewMobile = ({
     highlightedPath,
     highlightedErrorPath,
     highlightedSkipPath,
-    foundWords,
-    showMaxScoreModal,
     socket,
 }: {
     diceRolling: DiceRoll[] | null;
@@ -45,7 +41,6 @@ export const ViewMobile = ({
     resetGame: () => void;
     rotationCooldown: number;
     rotationMessage: string;
-    setShowMaxScoreModal: (show: boolean) => void;
     currentWord: string;
     message: string;
     handleCellMouseDownWrapper: (row: number, col: number) => void;
@@ -57,8 +52,6 @@ export const ViewMobile = ({
     highlightedPath: [number, number][];
     highlightedErrorPath: [number, number][];
     highlightedSkipPath: [number, number][];
-    foundWords: string[];
-    showMaxScoreModal: boolean;
     socket: Socket | null;
 }) => {
   return (
@@ -355,17 +348,6 @@ export const ViewMobile = ({
             </div>
           )}
 
-          {foundWords.length > 0 && (
-            <div className="text-center">
-              <div className="text-xs text-gray-500 mb-1">
-                Últimas palabras:
-              </div>
-              <div className="text-sm text-green-600 font-medium">
-                {foundWords.slice(-3).join(" • ")}
-              </div>
-            </div>
-          )}
-
           {message && (
             <div className="text-center mt-2">
               <div className="text-xs text-red-500">{message}</div>
@@ -373,17 +355,6 @@ export const ViewMobile = ({
           )}
         </div>
       )}
-
-      {/* Modal de Puntuación Máxima */}
-      <MaxScoreModal
-        isOpen={showMaxScoreModal}
-        onClose={() => setShowMaxScoreModal(false)}
-        socket={socket}
-        foundWords={gameState.players.flatMap((player) => [
-          ...player.wordsFound,
-          ...(player.eliminatedWords || []),
-        ])}
-      />
     </div>
   );
 };
