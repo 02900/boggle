@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Player, GameStatus } from '@/interfaces/game';
+import React from "react";
+import { Player, GameStatus } from "@/interfaces/game";
+import { useViewportStore } from "@/stores/viewport.store";
 
 interface PlayersListProps {
   players: Player[];
@@ -7,24 +8,16 @@ interface PlayersListProps {
   gameState?: GameStatus;
 }
 
-export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayerId, gameState = 'waiting' }) => {
-  const [isMobile, setIsMobile] = useState(false);
-  
-  // Detectar si es móvil
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-  
+export const PlayersList: React.FC<PlayersListProps> = ({
+  players,
+  currentPlayerId,
+  gameState = "waiting",
+}) => {
+  const { isMobile } = useViewportStore();
+
   // Determinar si se deben mostrar las puntuaciones
-  const shouldShowScores = gameState === 'finished' || isMobile;
-  
+  const shouldShowScores = gameState === "finished" || isMobile;
+
   // Función para calcular el puntaje de una palabra
   const getWordScore = (word: string): number => {
     const length = word.length;
@@ -35,7 +28,7 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
     if (length === 7) return 5;
     return 11; // 8+ letras
   };
-  
+
   // Función para ordenar jugadores
   const getSortedPlayers = () => {
     if (shouldShowScores) {
@@ -52,70 +45,78 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
         <span className="mr-2">👥</span>
         Jugadores ({players.length})
       </h3>
-      
+
       {players.length > 0 ? (
         <div className="space-y-2">
           {getSortedPlayers().map((player, index) => (
-              <div 
-                key={player.id} 
-                className={`
+            <div
+              key={player.id}
+              className={`
                   flex justify-between items-center p-3 rounded-lg transition-all
-                  ${player.id === currentPlayerId 
-                    ? 'bg-blue-100 border-2 border-blue-300' 
-                    : 'bg-gray-50 hover:bg-gray-100'
+                  ${
+                    player.id === currentPlayerId
+                      ? "bg-blue-100 border-2 border-blue-300"
+                      : "bg-gray-50 hover:bg-gray-100"
                   }
-                  ${shouldShowScores && index === 0 && players.length > 1 ? 'ring-2 ring-yellow-300' : ''}
+                  ${
+                    shouldShowScores && index === 0 && players.length > 1
+                      ? "ring-2 ring-yellow-300"
+                      : ""
+                  }
                 `}
-              >
-                <div className="flex items-center space-x-2">
-                  {shouldShowScores && index === 0 && players.length > 1 && (
-                    <span className="text-yellow-500 text-lg">👑</span>
-                  )}
-                  <div>
-                    <span className="font-medium text-gray-800">
-                      {player.name}
-                      {player.id === currentPlayerId && (
-                        <span className="text-xs text-blue-600 ml-1">(Tú)</span>
-                      )}
-                    </span>
-                    <div className="text-xs text-gray-500">
-                      {/* Solo mostrar conteo de palabras al jugador actual durante la partida */}
-                      {(gameState === 'finished' || player.id === currentPlayerId) ? (
-                        <>
-                          {player.wordsFound.length} palabras encontradas
-                          {player.eliminatedWords && player.eliminatedWords.length > 0 && (
+            >
+              <div className="flex items-center space-x-2">
+                {shouldShowScores && index === 0 && players.length > 1 && (
+                  <span className="text-yellow-500 text-lg">👑</span>
+                )}
+                <div>
+                  <span className="font-medium text-gray-800">
+                    {player.name}
+                    {player.id === currentPlayerId && (
+                      <span className="text-xs text-blue-600 ml-1">(Tú)</span>
+                    )}
+                  </span>
+                  <div className="text-xs text-gray-500">
+                    {/* Solo mostrar conteo de palabras al jugador actual durante la partida */}
+                    {gameState === "finished" ||
+                    player.id === currentPlayerId ? (
+                      <>
+                        {player.wordsFound.length} palabras encontradas
+                        {player.eliminatedWords &&
+                          player.eliminatedWords.length > 0 && (
                             <span className="text-red-500 ml-1">
                               ({player.eliminatedWords.length} eliminadas)
                             </span>
                           )}
-                        </>
-                      ) : (
-                        <span className="text-gray-400">Jugando...</span>
-                      )}
-                    </div>
-                    
-                    {/* Mostrar palabras cuando el juego ha terminado */}
-                    {gameState === 'finished' && (
-                      <div className="mt-2 space-y-1">
-                        {/* Palabras válidas */}
-                        {player.wordsFound.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {player.wordsFound.map((word, wordIndex) => (
-                              <span
-                                key={`valid-${wordIndex}`}
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800"
-                              >
-                                {word}
-                                <span className="ml-1 text-green-600 font-medium text-xs">
-                                  +{getWordScore(word)}
-                                </span>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">Jugando...</span>
+                    )}
+                  </div>
+
+                  {/* Mostrar palabras cuando el juego ha terminado */}
+                  {gameState === "finished" && (
+                    <div className="mt-2 space-y-1">
+                      {/* Palabras válidas */}
+                      {player.wordsFound.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {player.wordsFound.map((word, wordIndex) => (
+                            <span
+                              key={`valid-${wordIndex}`}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800"
+                            >
+                              {word}
+                              <span className="ml-1 text-green-600 font-medium text-xs">
+                                +{getWordScore(word)}
                               </span>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {/* Palabras eliminadas */}
-                        {player.eliminatedWords && player.eliminatedWords.length > 0 && (
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Palabras eliminadas */}
+                      {player.eliminatedWords &&
+                        player.eliminatedWords.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {player.eliminatedWords.map((word, wordIndex) => (
                               <span
@@ -130,27 +131,27 @@ export const PlayersList: React.FC<PlayersListProps> = ({ players, currentPlayer
                             ))}
                           </div>
                         )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="text-right">
-                  {(shouldShowScores || player.id === currentPlayerId) ? (
-                    <>
-                      <div className="text-lg font-bold text-blue-600">
-                        {player.score}
-                      </div>
-                      <div className="text-xs text-gray-500">puntos</div>
-                    </>
-                  ) : (
-                    <div className="text-sm text-gray-400">
-                      {gameState === 'playing' ? '🎮' : '⏳'}
                     </div>
                   )}
                 </div>
               </div>
-            ))}
+
+              <div className="text-right">
+                {shouldShowScores || player.id === currentPlayerId ? (
+                  <>
+                    <div className="text-lg font-bold text-blue-600">
+                      {player.score}
+                    </div>
+                    <div className="text-xs text-gray-500">puntos</div>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-400">
+                    {gameState === "playing" ? "🎮" : "⏳"}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="text-center text-gray-500 py-4">

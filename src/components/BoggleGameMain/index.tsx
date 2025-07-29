@@ -1,9 +1,13 @@
 "use client";
 
 import React from "react";
+
+import { useMobileListener } from "@/hooks/use-mobile-listener";
+import { useSocketListeners } from "@/hooks/use-socket-listeners";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useViewportStore } from "@/stores/viewport.store";
+
 import { GameInstructions } from "../GameInstructions";
 import { GameSettings } from "../GameSettings";
 import { JoinGameForm } from "../JoinGameForm";
@@ -14,6 +18,9 @@ import { ViewDesktop } from "./view-desktop";
 import { ViewMobile } from "./view-mobile";
 
 export const BoggleGameMain = () => {
+  useSocketListeners();
+  useMobileListener();
+
   const { gameState, isJoined } = useBoggleGameMainStore();
   const { socket, isConnected, eliminateCommonWords } = useSocketsStore();
   const { isMobile } = useViewportStore();

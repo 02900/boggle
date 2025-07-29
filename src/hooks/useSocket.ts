@@ -1,19 +1,9 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-
-import { useCallback, useEffect } from "react";
-import { io } from "socket.io-client";
-import { DiceRoll } from "@/interfaces/game";
+import { useCallback } from "react";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useViewportStore } from "@/stores/viewport.store";
 
 export const useSocket = () => {
-  const {
-    socket,
-    setIsConnected,
-    setDiceRolling,
-    setEliminateCommonWords,
-    setSocket,
-  } = useSocketsStore();
+  const { socket, setDiceRolling } = useSocketsStore();
   const { isMobile } = useViewportStore();
 
   // Función para vibrar en móviles
@@ -66,36 +56,6 @@ export const useSocket = () => {
     } catch (error) {
       console.log("Error al crear el audio de skip:", error);
     }
-  }, []);
-
-  useEffect(() => {
-    const newSocket = io();
-    setSocket(newSocket);
-
-    newSocket.on("connect", () => {
-      setIsConnected(true);
-    });
-
-    newSocket.on("disconnect", () => {
-      setIsConnected(false);
-    });
-
-    newSocket.on("dice-rolling", (diceRolls: DiceRoll[]) => {
-      setDiceRolling(diceRolls);
-    });
-
-    newSocket.on(
-      "eliminate-common-words-changed",
-      (data: { enabled: boolean; eliminateCommonWords: boolean }) => {
-        setEliminateCommonWords(data.eliminateCommonWords);
-      }
-    );
-
-    // El evento word-result se maneja en BoggleGameMain.tsx
-    // para evitar duplicación de listeners
-    return () => {
-      newSocket.close();
-    };
   }, []);
 
   const joinGame = (playerName: string) => {

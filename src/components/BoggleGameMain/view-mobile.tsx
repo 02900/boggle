@@ -3,14 +3,12 @@
 import React from "react";
 import { useGameLogicStore } from "@/stores/game-logic.store";
 import { ModalType, useModalStore } from "@/stores/modal.store";
-import { useSocketsStore } from "@/stores/sockets.store";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
 import { GameBoard } from "../GameBoard";
 import { useBoggleGameMainStore } from "./boogle-game.main.store";
 import { useBoggleGameMain } from "./use-boggle-game-main";
 
 export const ViewMobile = () => {
-  const { diceRolling } = useSocketsStore();
   const { currentWord, message } = useGameLogicStore();
   const { setModalType } = useModalStore();
   const {
@@ -24,7 +22,6 @@ export const ViewMobile = () => {
   } = useBoggleGameMainStore();
 
   const {
-    clearDiceRolling,
     getWordScore,
     startGame,
     rotateBoard,
@@ -40,12 +37,7 @@ export const ViewMobile = () => {
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col overflow-hidden">
       {/* Animación de lanzamiento de dados */}
-      {diceRolling && (
-        <DiceRollingAnimation
-          diceRolls={diceRolling}
-          onAnimationComplete={clearDiceRolling}
-        />
-      )}
+      <DiceRollingAnimation />
 
       {/* Header compacto con tiempo y puntos */}
       <div className="flex-shrink-0 bg-white shadow-sm p-3">
@@ -137,7 +129,7 @@ export const ViewMobile = () => {
       </div>
 
       {/* Tablero de juego o resultados finales - ocupa el resto del espacio */}
-      <div className="flex-1 p-3 mobile-results-scrollable">
+      <div className="flex-1 p-3">
         {gameState.gameState === "finished" ? (
           /* Pantalla de resultados finales */
           <div className="bg-white rounded-lg shadow-md p-6 h-full flex flex-col">

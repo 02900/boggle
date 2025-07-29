@@ -1,41 +1,40 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { DiceRoll } from '@/interfaces/game';
+import React, { useEffect, useRef, useState } from "react";
+import { useSocketsStore } from "@/stores/sockets.store";
+import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
-interface DiceRollingAnimationProps {
-  diceRolls: DiceRoll[];
-  onAnimationComplete: () => void;
-}
+export const DiceRollingAnimation = ({}) => {
+  const { diceRolling } = useSocketsStore();
+  const { clearDiceRolling } = useBoggleGameMain();
 
-export const DiceRollingAnimation: React.FC<DiceRollingAnimationProps> = ({
-  diceRolls,
-  onAnimationComplete
-}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [animatingDice, setAnimatingDice] = useState<number[]>([]);
-  const [finalResults, setFinalResults] = useState<{ [key: number]: string }>({});
+  const [finalResults, setFinalResults] = useState<{ [key: number]: string }>(
+    {}
+  );
   const [completedDice, setCompletedDice] = useState<Set<number>>(new Set());
   const animationStarted = useRef(false);
 
   useEffect(() => {
-    if (diceRolls.length === 0 || animationStarted.current) return;
-    
+    if (!diceRolling) return;
+    if (diceRolling.length === 0 || animationStarted.current) return;
+
     animationStarted.current = true;
 
     // Animar dados en grupos de 4 para hacer la animación más emocionante
     const animationSteps = [
-      [0, 1, 2, 3],      // Primera fila
-      [4, 5, 6, 7],      // Segunda fila  
-      [8, 9, 10, 11],    // Tercera fila
-      [12, 13, 14, 15]   // Cuarta fila
+      [0, 1, 2, 3], // Primera fila
+      [4, 5, 6, 7], // Segunda fila
+      [8, 9, 10, 11], // Tercera fila
+      [12, 13, 14, 15], // Cuarta fila
     ];
 
     let stepIndex = 0;
-    
+
     const animateNextStep = () => {
       if (stepIndex >= animationSteps.length) {
         // Animación completada
         setTimeout(() => {
-          onAnimationComplete();
+          clearDiceRolling();
         }, 1000);
         return;
       }
@@ -47,88 +46,33 @@ export const DiceRollingAnimation: React.FC<DiceRollingAnimationProps> = ({
       // Simular lanzamiento de dados por 1.5 segundos
       setTimeout(() => {
         // Mostrar resultados finales para estos dados
-        setFinalResults(prev => {
+        setFinalResults((prev) => {
           const newResults = { ...prev };
-          currentDiceIndices.forEach(diceIndex => {
-            newResults[diceIndex] = diceRolls[diceIndex].letter;
+          currentDiceIndices.forEach((diceIndex) => {
+            newResults[diceIndex] = diceRolling[diceIndex].letter;
           });
           return newResults;
         });
-        
-        setCompletedDice(prev => {
+
+        setCompletedDice((prev) => {
           const newCompleted = new Set(prev);
-          currentDiceIndices.forEach(diceIndex => {
+          currentDiceIndices.forEach((diceIndex) => {
             newCompleted.add(diceIndex);
           });
           return newCompleted;
         });
-        
+
         setAnimatingDice([]);
-        
+
         stepIndex++;
         setTimeout(animateNextStep, 300); // Pausa entre grupos
       }, 1500);
     };
 
     animateNextStep();
-  }, [diceRolls, onAnimationComplete]);
+  }, [diceRolling, clearDiceRolling]);
 
-  const getDicePosition = (diceIndex: number) => {
-    const row = Math.floor(diceIndex / 4);
-    const col = diceIndex % 4;
-    return { row, col };
-  };
-
-  const renderDice = (diceIndex: number) => {
-    const dice = diceRolls[diceIndex];
-    const isAnimating = animatingDice.includes(diceIndex) && !completedDice.has(diceIndex);
-    const finalResult = finalResults[diceIndex];
-    const isCompleted = completedDice.has(diceIndex);
-    const { row, col } = getDicePosition(diceIndex);
-
-    return (
-      <div
-        key={diceIndex}
-        className={`
-          relative w-16 h-16 border-2 rounded-lg flex items-center justify-center
-          transition-all duration-300 transform
-          ${isAnimating ? 'animate-bounce bg-blue-200 border-blue-400 scale-110' : ''}
-          ${isCompleted ? 'bg-green-100 border-green-400' : 'bg-white border-gray-400'}
-          ${!isAnimating && !isCompleted ? 'bg-gray-50 border-gray-300' : ''}
-        `}
-        style={{
-          gridRow: row + 1,
-          gridColumn: col + 1,
-        }}
-      >
-        {/* Contenido del dado */}
-        <div className="text-lg font-bold text-gray-800">
-          {isAnimating ? (
-            <div className="animate-spin text-2xl">🎲</div>
-          ) : isCompleted ? (
-            <span className="text-green-800">{finalResult}</span>
-          ) : (
-            <span className="text-gray-400">?</span>
-          )}
-        </div>
-
-        {/* Número del dado */}
-        <div className="absolute -top-2 -left-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-          {diceIndex + 1}
-        </div>
-
-        {/* Información del dado (mostrar en hover cuando no está animando) */}
-        {!isAnimating && (
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 hover:opacity-100 transition-opacity duration-200 z-10">
-            <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-              Dado {diceIndex + 1}: [{dice.faces.join(', ')}]
-              {isCompleted && ` → ${finalResult}`}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
+  if (!diceRolling) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -144,13 +88,21 @@ export const DiceRollingAnimation: React.FC<DiceRollingAnimationProps> = ({
 
         {/* Tablero de dados */}
         <div className="grid grid-cols-4 gap-3 max-w-md mx-auto mb-6">
-          {diceRolls.map((_, index) => renderDice(index))}
+          {diceRolling.map((_, index) => (
+            <RenderDice
+              key={index}
+              diceIndex={index}
+              animatingDice={animatingDice}
+              completedDice={completedDice}
+              finalResults={finalResults}
+            />
+          ))}
         </div>
 
         {/* Progreso */}
         <div className="text-center">
           <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-            <div 
+            <div
               className="bg-blue-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${(currentStep / 4) * 100}%` }}
             ></div>
@@ -162,14 +114,94 @@ export const DiceRollingAnimation: React.FC<DiceRollingAnimationProps> = ({
 
         {/* Información adicional */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h3 className="font-semibold text-blue-800 mb-2">ℹ️ Sobre los Dados</h3>
+          <h3 className="font-semibold text-blue-800 mb-2">
+            ℹ️ Sobre los Dados
+          </h3>
           <p className="text-sm text-blue-700">
-            Cada dado tiene 6 caras con diferentes letras. Los dados se lanzan y mezclan 
-            aleatoriamente para crear un tablero único en cada partida, igual que en el 
-            Boggle tradicional.
+            Cada dado tiene 6 caras con diferentes letras. Los dados se lanzan y
+            mezclan aleatoriamente para crear un tablero único en cada partida,
+            igual que en el Boggle tradicional.
           </p>
         </div>
       </div>
+    </div>
+  );
+};
+
+const RenderDice = ({
+  diceIndex,
+  animatingDice,
+  completedDice,
+  finalResults,
+}: {
+  diceIndex: number;
+  animatingDice: number[];
+  completedDice: Set<number>;
+  finalResults: { [key: number]: string };
+}) => {
+  const { diceRolling } = useSocketsStore();
+  const dice = diceRolling?.[diceIndex];
+  const isAnimating =
+    animatingDice.includes(diceIndex) && !completedDice.has(diceIndex);
+  const finalResult = finalResults[diceIndex];
+  const isCompleted = completedDice.has(diceIndex);
+
+  const getDicePosition = (diceIndex: number) => {
+    const row = Math.floor(diceIndex / 4);
+    const col = diceIndex % 4;
+    return { row, col };
+  };
+
+  const { row, col } = getDicePosition(diceIndex);
+
+  return (
+    <div
+      key={diceIndex}
+      className={`
+        relative w-16 h-16 border-2 rounded-lg flex items-center justify-center
+        transition-all duration-300 transform
+        ${
+          isAnimating
+            ? "animate-bounce bg-blue-200 border-blue-400 scale-110"
+            : ""
+        }
+        ${
+          isCompleted
+            ? "bg-green-100 border-green-400"
+            : "bg-white border-gray-400"
+        }
+        ${!isAnimating && !isCompleted ? "bg-gray-50 border-gray-300" : ""}
+      `}
+      style={{
+        gridRow: row + 1,
+        gridColumn: col + 1,
+      }}
+    >
+      {/* Contenido del dado */}
+      <div className="text-lg font-bold text-gray-800">
+        {isAnimating ? (
+          <div className="animate-spin text-2xl">🎲</div>
+        ) : isCompleted ? (
+          <span className="text-green-800">{finalResult}</span>
+        ) : (
+          <span className="text-gray-400">?</span>
+        )}
+      </div>
+
+      {/* Número del dado */}
+      <div className="absolute -top-2 -left-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+        {diceIndex + 1}
+      </div>
+
+      {/* Información del dado (mostrar en hover cuando no está animando) */}
+      {!isAnimating && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 hover:opacity-100 transition-opacity duration-200 z-10">
+          <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+            Dado {diceIndex + 1}: [{dice?.faces.join(", ")}]
+            {isCompleted && ` → ${finalResult}`}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

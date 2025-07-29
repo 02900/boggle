@@ -35,13 +35,6 @@ body {
 
 /* Prevenir scroll en móviles y optimizar para juego */
 @media (max-width: 768px) {
-  html, body {
-    height: 100vh;
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-  }
-  
   /* Prevenir zoom en inputs en iOS */
   input[type="text"], input[type="email"], input[type="password"], textarea {
     font-size: 16px !important;
@@ -55,13 +48,5 @@ body {
     -khtml-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-  }
-  
-  /* Permitir scroll en pantalla de resultados finales */
-  .mobile-results-scrollable {
-    touch-action: auto;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    user-select: none;
   }
 }

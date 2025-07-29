@@ -12,13 +12,11 @@ import { useBoggleGameMainStore } from "./boogle-game.main.store";
 import { useBoggleGameMain } from "./use-boggle-game-main";
 
 export const ViewDesktop = () => {
-  const { diceRolling, isConnected } = useSocketsStore();
+  const { diceRolling } = useSocketsStore();
   const { currentWord, message } = useGameLogicStore();
   const { setModalType } = useModalStore();
   const {
     gameState,
-    rotationCooldown,
-    rotationMessage,
     highlightedPath,
     highlightedErrorPath,
     highlightedSkipPath,
@@ -26,10 +24,6 @@ export const ViewDesktop = () => {
   } = useBoggleGameMainStore();
 
   const {
-    clearDiceRolling,
-    startGame,
-    rotateBoard,
-    resetGame,
     handleCellMouseEnterWrapper,
     handleMouseUpWrapper,
     handleMouseLeave,
@@ -41,17 +35,12 @@ export const ViewDesktop = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       {/* Animación de lanzamiento de dados */}
-      {diceRolling && (
-        <DiceRollingAnimation
-          diceRolls={diceRolling}
-          onAnimationComplete={clearDiceRolling}
-        />
-      )}
+      <DiceRollingAnimation />
 
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center space-x-2">
-            Boggle
+            🎲 Boggle
           </h1>
           <div className="flex space-x-3">
             {/* Botón de configuración */}
