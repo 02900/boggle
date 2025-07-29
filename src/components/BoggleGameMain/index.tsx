@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { useGameLogicStore } from "@/stores/game-logic.store";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useViewportStore } from "@/stores/viewport.store";
@@ -15,37 +14,11 @@ import { ViewDesktop } from "./view-desktop";
 import { ViewMobile } from "./view-mobile";
 
 export const BoggleGameMain = () => {
-  const {
-    gameState,
-    rotationCooldown,
-    rotationMessage,
-    highlightedPath,
-    highlightedErrorPath,
-    highlightedSkipPath,
-    currentPlayerId,
-    isJoined,
-  } = useBoggleGameMainStore();
-  const { foundWords, currentWord, message } = useGameLogicStore();
-  const { socket, isConnected, diceRolling, eliminateCommonWords } =
-    useSocketsStore();
+  const { gameState, isJoined } = useBoggleGameMainStore();
+  const { socket, isConnected, eliminateCommonWords } = useSocketsStore();
   const { isMobile } = useViewportStore();
-  const { modalType, setModalType } = useModalStore();
-
-  const {
-    handleJoinGame,
-    clearDiceRolling,
-    getWordScore,
-    startGame,
-    rotateBoard,
-    resetGame,
-    handleCellMouseEnterWrapper,
-    handleMouseUpWrapper,
-    handleMouseLeave,
-    isCellSelected,
-    handleKeyboardWordInput,
-    handleCellMouseDownWrapper,
-    toggleEliminateCommonWords,
-  } = useBoggleGameMain();
+  const { modalType } = useModalStore();
+  const { handleJoinGame, toggleEliminateCommonWords } = useBoggleGameMain();
 
   if (!isJoined) {
     return (
@@ -56,59 +29,10 @@ export const BoggleGameMain = () => {
       />
     );
   }
+
   return (
     <>
-      {isMobile ? (
-        <ViewMobile
-          diceRolling={diceRolling}
-          clearDiceRolling={clearDiceRolling}
-          gameState={gameState}
-          currentPlayerId={currentPlayerId}
-          getWordScore={getWordScore}
-          startGame={startGame}
-          rotateBoard={rotateBoard}
-          resetGame={resetGame}
-          rotationCooldown={rotationCooldown}
-          rotationMessage={rotationMessage}
-          currentWord={currentWord}
-          message={message}
-          handleCellMouseEnterWrapper={handleCellMouseEnterWrapper}
-          handleMouseUpWrapper={handleMouseUpWrapper}
-          handleMouseLeave={handleMouseLeave}
-          isCellSelected={isCellSelected}
-          handleKeyboardWordInput={handleKeyboardWordInput}
-          highlightedPath={highlightedPath}
-          highlightedErrorPath={highlightedErrorPath}
-          highlightedSkipPath={highlightedSkipPath}
-          socket={socket}
-          handleCellMouseDownWrapper={handleCellMouseDownWrapper}
-        />
-      ) : (
-        <ViewDesktop
-          diceRolling={diceRolling}
-          clearDiceRolling={clearDiceRolling}
-          gameState={gameState}
-          currentPlayerId={currentPlayerId}
-          getWordScore={getWordScore}
-          startGame={startGame}
-          rotateBoard={rotateBoard}
-          resetGame={resetGame}
-          rotationCooldown={rotationCooldown}
-          rotationMessage={rotationMessage}
-          currentWord={currentWord}
-          message={message}
-          handleCellMouseEnterWrapper={handleCellMouseEnterWrapper}
-          handleMouseUpWrapper={handleMouseUpWrapper}
-          handleMouseLeave={handleMouseLeave}
-          isCellSelected={isCellSelected}
-          handleKeyboardWordInput={handleKeyboardWordInput}
-          highlightedPath={highlightedPath}
-          highlightedErrorPath={highlightedErrorPath}
-          highlightedSkipPath={highlightedSkipPath}
-          handleCellMouseDownWrapper={handleCellMouseDownWrapper}
-          isConnected={isConnected}
-        />
-      )}
+      {isMobile ? <ViewMobile /> : <ViewDesktop />}
 
       {/* Modal de Puntuación Máxima */}
       {modalType === ModalType.MaxScore && (

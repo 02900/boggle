@@ -1,61 +1,42 @@
 "use client";
 
 import React from "react";
-import { DiceRoll, GameState } from "@/interfaces/game";
+import { useGameLogicStore } from "@/stores/game-logic.store";
+import { ModalType, useModalStore } from "@/stores/modal.store";
+import { useSocketsStore } from "@/stores/sockets.store";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
 import { GameBoard } from "../GameBoard";
 import { GameControls } from "../GameControls";
 import { PlayersList } from "../PlayersList";
-import { ModalType, useModalStore } from "@/stores/modal.store";
+import { useBoggleGameMainStore } from "./boogle-game.main.store";
+import { useBoggleGameMain } from "./use-boggle-game-main";
 
-export const ViewDesktop = ({
-  diceRolling,
-  clearDiceRolling,
-  gameState,
-  currentPlayerId,
-  getWordScore,
-  startGame,
-  rotateBoard,
-  resetGame,
-  rotationCooldown,
-  rotationMessage,
-  currentWord,
-  message,
-  handleCellMouseDownWrapper,
-  handleCellMouseEnterWrapper,
-  handleMouseUpWrapper,
-  handleMouseLeave,
-  isCellSelected,
-  handleKeyboardWordInput,
-  highlightedPath,
-  highlightedErrorPath,
-  highlightedSkipPath,
-  isConnected,
-}: {
-  diceRolling: DiceRoll[] | null;
-  clearDiceRolling: () => void;
-  gameState: GameState;
-  currentPlayerId: string | null;
-  getWordScore: (word: string) => number;
-  startGame: () => void;
-  rotateBoard: () => void;
-  resetGame: () => void;
-  rotationCooldown: number;
-  rotationMessage: string;
-  currentWord: string;
-  message: string;
-  handleCellMouseDownWrapper: (row: number, col: number) => void;
-  handleCellMouseEnterWrapper: (row: number, col: number) => void;
-  handleMouseUpWrapper: () => void;
-  handleMouseLeave: () => void;
-  isCellSelected: (row: number, col: number) => boolean;
-  handleKeyboardWordInput: (key: string) => void;
-  highlightedPath: [number, number][];
-  highlightedErrorPath: [number, number][];
-  highlightedSkipPath: [number, number][];
-  isConnected: boolean;
-}) => {
+export const ViewDesktop = () => {
+  const { diceRolling, isConnected } = useSocketsStore();
+  const { currentWord, message } = useGameLogicStore();
   const { setModalType } = useModalStore();
+  const {
+    gameState,
+    rotationCooldown,
+    rotationMessage,
+    highlightedPath,
+    highlightedErrorPath,
+    highlightedSkipPath,
+    currentPlayerId,
+  } = useBoggleGameMainStore();
+
+  const {
+    clearDiceRolling,
+    startGame,
+    rotateBoard,
+    resetGame,
+    handleCellMouseEnterWrapper,
+    handleMouseUpWrapper,
+    handleMouseLeave,
+    isCellSelected,
+    handleKeyboardWordInput,
+    handleCellMouseDownWrapper,
+  } = useBoggleGameMain();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -125,17 +106,7 @@ export const ViewDesktop = ({
         </div>
 
         {/* Game Controls */}
-        <GameControls
-          gameState={gameState.gameState}
-          timeLeft={gameState.timeLeft}
-          onStartGame={startGame}
-          onResetGame={resetGame}
-          onRotateBoard={rotateBoard}
-          onShowMaxScore={() => setShowMaxScoreModal(true)}
-          isConnected={isConnected}
-          rotationCooldown={rotationCooldown}
-          rotationMessage={rotationMessage}
-        />
+        <GameControls />
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Game Board - Takes up more space */}

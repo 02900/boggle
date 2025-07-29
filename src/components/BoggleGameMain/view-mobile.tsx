@@ -1,59 +1,42 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React from "react";
-import { DiceRoll, GameState } from "@/interfaces/game";
-import { GameBoard } from "../GameBoard";
+import { useGameLogicStore } from "@/stores/game-logic.store";
+import { ModalType, useModalStore } from "@/stores/modal.store";
+import { useSocketsStore } from "@/stores/sockets.store";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
-import { Socket } from "socket.io-client";
+import { GameBoard } from "../GameBoard";
+import { useBoggleGameMainStore } from "./boogle-game.main.store";
+import { useBoggleGameMain } from "./use-boggle-game-main";
 
-export const ViewMobile = ({
-    diceRolling,
-    clearDiceRolling,
+export const ViewMobile = () => {
+  const { diceRolling } = useSocketsStore();
+  const { currentWord, message } = useGameLogicStore();
+  const { setModalType } = useModalStore();
+  const {
     gameState,
+    rotationCooldown,
+    rotationMessage,
+    highlightedPath,
+    highlightedErrorPath,
+    highlightedSkipPath,
     currentPlayerId,
+  } = useBoggleGameMainStore();
+
+  const {
+    clearDiceRolling,
     getWordScore,
     startGame,
     rotateBoard,
     resetGame,
-    rotationCooldown,
-    rotationMessage,
-    currentWord,
-    message,
-    handleCellMouseDownWrapper,
     handleCellMouseEnterWrapper,
     handleMouseUpWrapper,
     handleMouseLeave,
     isCellSelected,
     handleKeyboardWordInput,
-    highlightedPath,
-    highlightedErrorPath,
-    highlightedSkipPath,
-    socket,
-}: {
-    diceRolling: DiceRoll[] | null;
-    clearDiceRolling: () => void;
-    gameState: GameState;
-    currentPlayerId: string | null;
-    getWordScore: (word: string) => number;
-    startGame: () => void;
-    rotateBoard: () => void;
-    resetGame: () => void;
-    rotationCooldown: number;
-    rotationMessage: string;
-    currentWord: string;
-    message: string;
-    handleCellMouseDownWrapper: (row: number, col: number) => void;
-    handleCellMouseEnterWrapper: (row: number, col: number) => void;
-    handleMouseUpWrapper: () => void;
-    handleMouseLeave: () => void;
-    isCellSelected: (row: number, col: number) => boolean;
-    handleKeyboardWordInput: (key: string) => void;
-    highlightedPath: [number, number][];
-    highlightedErrorPath: [number, number][];
-    highlightedSkipPath: [number, number][];
-    socket: Socket | null;
-}) => {
+    handleCellMouseDownWrapper,
+  } = useBoggleGameMain();
+
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col overflow-hidden">
       {/* Animación de lanzamiento de dados */}
@@ -128,7 +111,7 @@ export const ViewMobile = ({
           <div className="mt-2 text-center space-y-2">
             <div className="flex justify-center space-x-2">
               <button
-                onClick={() => setShowMaxScoreModal(true)}
+                onClick={() => setModalType(ModalType.MaxScore)}
                 className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
               >
                 🏆 Puntuación Máxima
