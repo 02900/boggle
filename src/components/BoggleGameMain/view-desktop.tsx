@@ -1,36 +1,16 @@
 "use client";
 
 import React from "react";
-import { useGameLogicStore } from "@/stores/game-logic.store";
 import { ModalType, useModalStore } from "@/stores/modal.store";
-import { useSocketsStore } from "@/stores/sockets.store";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
 import { GameBoard } from "../GameBoard";
 import { GameControls } from "../GameControls";
 import { PlayersList } from "../PlayersList";
 import { useBoggleGameMainStore } from "./boogle-game.main.store";
-import { useBoggleGameMain } from "./use-boggle-game-main";
 
 export const ViewDesktop = () => {
-  const { diceRolling } = useSocketsStore();
-  const { currentWord, message } = useGameLogicStore();
   const { setModalType } = useModalStore();
-  const {
-    gameState,
-    highlightedPath,
-    highlightedErrorPath,
-    highlightedSkipPath,
-    currentPlayerId,
-  } = useBoggleGameMainStore();
-
-  const {
-    handleCellMouseEnterWrapper,
-    handleMouseUpWrapper,
-    handleMouseLeave,
-    isCellSelected,
-    handleKeyboardWordInput,
-    handleCellMouseDownWrapper,
-  } = useBoggleGameMain();
+  const { gameState, currentPlayerId } = useBoggleGameMainStore();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -100,20 +80,7 @@ export const ViewDesktop = () => {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Game Board - Takes up more space */}
           <div className="xl:col-span-2">
-            <GameBoard
-              gameState={gameState}
-              currentWord={currentWord}
-              message={message}
-              onCellMouseDown={handleCellMouseDownWrapper}
-              onCellMouseEnter={handleCellMouseEnterWrapper}
-              onMouseUp={handleMouseUpWrapper}
-              onMouseLeave={handleMouseLeave}
-              isCellSelected={isCellSelected}
-              onKeyboardInput={handleKeyboardWordInput}
-              highlightedPath={highlightedPath}
-              highlightedErrorPath={highlightedErrorPath}
-              highlightedSkipPath={highlightedSkipPath}
-            />
+            <GameBoard />
           </div>
 
           {/* Sidebar */}

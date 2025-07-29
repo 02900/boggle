@@ -1,36 +1,27 @@
 import React, { useEffect, useRef, useState } from "react";
-import { GameState } from "@/interfaces/game";
 import { useViewportStore } from "@/stores/viewport.store";
+import { useGameLogicStore } from "@/stores/game-logic.store";
+import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
+import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
-interface GameBoardProps {
-  gameState: GameState;
-  currentWord: string;
-  message: string;
-  onCellMouseDown: (row: number, col: number) => void;
-  onCellMouseEnter: (row: number, col: number) => void;
-  onMouseUp: () => void;
-  onMouseLeave: () => void;
-  isCellSelected: (row: number, col: number) => boolean;
-  onKeyboardInput: (word: string) => void; // Cambiado: ahora recibe palabra completa
-  highlightedPath?: [number, number][]; // Nueva prop para mostrar ruta encontrada
-  highlightedErrorPath?: [number, number][]; // Nueva prop para mostrar ruta incorrecta en rojo
-  highlightedSkipPath?: [number, number][]; // Nueva prop para mostrar ruta repetida en naranja
-}
+export const GameBoard = () => {
+  const { currentWord, message } = useGameLogicStore();
+  const {
+    gameState,
+    highlightedPath,
+    highlightedErrorPath,
+    highlightedSkipPath,
+  } = useBoggleGameMainStore();
 
-export const GameBoard: React.FC<GameBoardProps> = ({
-  gameState,
-  currentWord,
-  message,
-  onCellMouseDown,
-  onCellMouseEnter,
-  onMouseUp,
-  onMouseLeave,
-  isCellSelected,
-  onKeyboardInput,
-  highlightedPath = [],
-  highlightedErrorPath = [],
-  highlightedSkipPath = [],
-}) => {
+  const {
+    handleCellMouseDownWrapper,
+    handleCellMouseEnterWrapper,
+    handleKeyboardWordInput,
+    handleMouseLeave,
+    handleMouseUpWrapper,
+    isCellSelected,
+  } = useBoggleGameMain();
+
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const [typedWord, setTypedWord] = useState("");
   const { isMobile } = useViewportStore();
@@ -57,7 +48,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     if (key === "enter") {
       // Solo enviar si hay una palabra escrita
       if (typedWord.trim().length >= 3) {
-        onKeyboardInput(typedWord.trim());
+        handleKeyboardWordInput(typedWord.trim());
         setTypedWord(""); // Limpiar después del submit
       }
     } else if (key === "backspace") {
@@ -86,7 +77,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const handleTouchStart = (e: React.TouchEvent, row: number, col: number) => {
     if (isMobile) {
       e.preventDefault();
-      onCellMouseDown(row, col);
+      handleCellMouseDownWrapper(row, col);
     }
   };
 
@@ -100,7 +91,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       if (cellElement) {
         const row = parseInt(cellElement.getAttribute("data-row") || "0");
         const col = parseInt(cellElement.getAttribute("data-col") || "0");
-        onCellMouseEnter(row, col);
+        handleCellMouseEnterWrapper(row, col);
       }
     }
   };
@@ -108,7 +99,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (isMobile) {
       e.preventDefault();
-      onMouseUp();
+      handleMouseUpWrapper();
     }
   };
 
@@ -149,19 +140,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       )}
 
-      {!isMobile && (
-        <h2 className="text-2xl font-bold mb-4 text-center">
-          Tablero de Juego
-        </h2>
-      )}
-
       {gameState.board.length > 0 ? (
         <div
           className={`grid grid-cols-4 mx-auto select-none mobile-drag-area ${
             isMobile ? "w-auto gap-8" : "w-fit gap-4"
           }`}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseLeave}
+          onMouseUp={handleMouseUpWrapper}
+          onMouseLeave={handleMouseLeave}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
@@ -198,8 +183,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       : "rounded-lg w-16 h-16 text-xl"
                   }
                 `}
-                onMouseDown={() => onCellMouseDown(rowIndex, colIndex)}
-                onMouseEnter={() => onCellMouseEnter(rowIndex, colIndex)}
+                onMouseDown={() =>
+                  handleCellMouseDownWrapper(rowIndex, colIndex)
+                }
+                onMouseEnter={() =>
+                  handleCellMouseEnterWrapper(rowIndex, colIndex)
+                }
                 onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
               >
                 {letter}
