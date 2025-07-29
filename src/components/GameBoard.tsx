@@ -6,7 +6,7 @@ import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store"
 import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
 export const GameBoard = () => {
-  const { currentWord, message } = useGameLogicStore();
+  const { message } = useGameLogicStore();
   const {
     gameState,
     highlightedPath,
@@ -214,15 +214,6 @@ export const GameBoard = () => {
           <div className="animate-pulse">
             <div className="text-lg mb-2">⏳</div>
             <div>Esperando que comience el juego...</div>
-          </div>
-        </div>
-      )}
-
-      {/* Mostrar Palabra Actual */}
-      {currentWord && (
-        <div className="mt-6 text-center">
-          <div className="text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg inline-block">
-            Palabra Actual: <span className="font-mono">{currentWord}</span>
           </div>
         </div>
       )}

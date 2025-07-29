@@ -27,6 +27,8 @@ export const useBoggleGameMain = () => {
     resetSelection,
   } = useGameLogic();
 
+  const { setSelectedPath } = useGameLogicStore();
+
   const { gameState, setIsJoined } = useBoggleGameMainStore();
 
   // Función para calcular el puntaje de una palabra
@@ -80,6 +82,8 @@ export const useBoggleGameMain = () => {
     const foundPath = findWordPath(word, gameState.board);
 
     if (foundPath) {
+      // Marcar las celdas como seleccionadas (azul) para feedback visual inmediato
+      setSelectedPath(foundPath);
       // Usar directamente la función unificada - mismo comportamiento que mouse/touch
       handleUnifiedSubmit(word, foundPath);
     } else {
