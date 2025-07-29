@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useViewportStore } from "@/stores/viewport.store";
 import { useGameLogicStore } from "@/stores/game-logic.store";
+import { useViewportStore } from "@/stores/viewport.store";
+import { composeClasses } from "@/utils/compose-classes";
 import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
 import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
@@ -12,6 +13,39 @@ export const GameBoard = () => {
     highlightedErrorPath,
     highlightedSkipPath,
   } = useBoggleGameMainStore();
+
+  // Helper function to check if a cell is in a specific path
+  const isCellInPath = (
+    path: number[][],
+    rowIndex: number,
+    colIndex: number
+  ) => {
+    return path.some(([r, c]) => r === rowIndex && c === colIndex);
+  };
+
+  // Helper function to get cell highlight classes based on priority
+  const getCellHighlightClasses = (rowIndex: number, colIndex: number) => {
+    if (isCellInPath(highlightedSkipPath, rowIndex, colIndex)) {
+      return "bg-orange-500 text-white scale-105 shadow-lg ring-2 ring-orange-300";
+    }
+    if (isCellInPath(highlightedErrorPath, rowIndex, colIndex)) {
+      return "bg-red-500 text-white scale-105 shadow-lg ring-2 ring-red-300";
+    }
+    if (isCellInPath(highlightedPath, rowIndex, colIndex)) {
+      return "bg-green-500 text-white scale-105 shadow-lg ring-2 ring-green-300";
+    }
+    if (isCellSelected(rowIndex, colIndex)) {
+      return "bg-blue-500 text-white scale-105 shadow-lg";
+    }
+    return "bg-white md:bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102";
+  };
+
+  // Helper function to get responsive size classes
+  const getCellSizeClasses = () => {
+    return isMobile
+      ? "aspect-square w-auto text-4xl rounded-2xl"
+      : "rounded-lg w-16 h-16 text-xl";
+  };
 
   const {
     handleCellMouseDownWrapper,
@@ -157,32 +191,11 @@ export const GameBoard = () => {
                 data-cell="true"
                 data-row={rowIndex}
                 data-col={colIndex}
-                className={`
-                  flex items-center justify-center font-bold cursor-pointer transition-all
-                  ${
-                    // Prioridad: highlightedSkipPath (naranja) > highlightedErrorPath (rojo) > highlightedPath (verde) > selección actual (azul)
-                    highlightedSkipPath.some(
-                      ([r, c]) => r === rowIndex && c === colIndex
-                    )
-                      ? "bg-orange-500 text-white scale-105 shadow-lg ring-2 ring-orange-300"
-                      : highlightedErrorPath.some(
-                          ([r, c]) => r === rowIndex && c === colIndex
-                        )
-                      ? "bg-red-500 text-white scale-105 shadow-lg ring-2 ring-red-300"
-                      : highlightedPath.some(
-                          ([r, c]) => r === rowIndex && c === colIndex
-                        )
-                      ? "bg-green-500 text-white scale-105 shadow-lg ring-2 ring-green-300"
-                      : isCellSelected(rowIndex, colIndex)
-                      ? "bg-blue-500 text-white scale-105 shadow-lg"
-                      : "bg-white md:bg-gray-100 hover:bg-gray-200 text-gray-800 hover:scale-102"
-                  }
-                  ${
-                    isMobile
-                      ? "aspect-square w-auto text-4xl rounded-2xl"
-                      : "rounded-lg w-16 h-16 text-xl"
-                  }
-                `}
+                className={composeClasses(
+                  "flex items-center justify-center font-bold cursor-pointer transition-all",
+                  getCellHighlightClasses(rowIndex, colIndex),
+                  getCellSizeClasses()
+                )}
                 onMouseDown={() =>
                   handleCellMouseDownWrapper(rowIndex, colIndex)
                 }
