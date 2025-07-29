@@ -3,9 +3,8 @@
 import { useSocket } from "@/hooks/useSocket";
 import { useGameLogic } from "@/hooks/useGameLogic";
 import { useGameLogicStore } from "@/stores/game-logic.store";
+import { setLastSubmittedRefGlobal } from "@/stores/last-submitted-ref.store";
 import { useBoggleGameMainStore } from "./boogle-game.main.store";
-
-const HIGHLIGHT_DURATION = 400;
 
 export const useBoggleGameMain = () => {
   const { isSelecting, setMessage } = useGameLogicStore();
@@ -28,8 +27,7 @@ export const useBoggleGameMain = () => {
     resetSelection,
   } = useGameLogic();
 
-  const { gameState, setHighlightedPath, setIsJoined, setLastSubmittedRef } =
-    useBoggleGameMainStore();
+  const { gameState, setIsJoined } = useBoggleGameMainStore();
 
   // Función para calcular el puntaje de una palabra
   const getWordScore = (word: string): number => {
@@ -57,13 +55,16 @@ export const useBoggleGameMain = () => {
     handleCellMouseEnter(row, col, gameState.board);
   };
 
+  // Función unificada para submit que usan tanto mouse como keyboard
+  const handleUnifiedSubmit = (word: string, path: [number, number][]) => {
+    // Actualizar AMBOS: store global (síncrono) y estado Zustand (asíncrono)
+    const submittedData = { path: [...path], word };
+    setLastSubmittedRefGlobal(submittedData); // ✅ Actualización síncrona global
+    submitWord(word, path);
+  };
+
   const handleMouseUpWrapper = () => {
-    handleMouseUp((word, path) => {
-      // Capturar el camino y palabra antes de enviar
-      setLastSubmittedRef({ path: [...path], word });
-      console.log("Submitting word:", word, "with path:", path);
-      submitWord(word, path);
-    });
+    handleMouseUp(handleUnifiedSubmit);
   };
 
   const handleMouseLeave = () => {
@@ -72,29 +73,15 @@ export const useBoggleGameMain = () => {
     }
   };
 
-  // Nueva función para manejar palabras completas desde el teclado
+  // Función para manejar palabras desde el teclado
+  // Usa exactamente la misma lógica de submit que drag/touch
   const handleKeyboardWordInput = (word: string) => {
     // Buscar todas las rutas posibles para la palabra en el tablero
     const foundPath = findWordPath(word, gameState.board);
 
     if (foundPath) {
-      // Si se encuentra una ruta válida, resaltarla y enviar la palabra
-      setHighlightedPath(foundPath);
-      // Capturar el camino y palabra antes de enviar
-      setLastSubmittedRef({ path: [...foundPath], word });
-      console.log("Submitting keyboard word:", word, "with path:", foundPath);
-      console.log(
-        "States set - lastSubmittedPath:",
-        [...foundPath],
-        "lastSubmittedWord:",
-        word
-      );
-      submitWord(word, foundPath);
-
-      // Limpiar el highlight después de un tiempo
-      setTimeout(() => {
-        setHighlightedPath([]);
-      }, HIGHLIGHT_DURATION);
+      // Usar directamente la función unificada - mismo comportamiento que mouse/touch
+      handleUnifiedSubmit(word, foundPath);
     } else {
       // Si no se encuentra ruta, mostrar mensaje de error
       setMessage(`"${word}" - No se encontró ruta válida en el tablero`);
