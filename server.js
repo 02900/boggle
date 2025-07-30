@@ -734,6 +734,7 @@ app.prepare().then(() => {
     });
 
     socket.on("reset-game", () => {
+      console.log("Reset game requested from ", socket.id);
       game.resetGame();
       io.emit("game-reset", game.getGameState());
     });
