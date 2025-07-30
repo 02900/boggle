@@ -143,7 +143,7 @@ export const GameBoard = () => {
 
   return (
     <div
-      className={className}
+      className="flex-1 p-3"
       onClick={() => !isMobile && hiddenInputRef.current?.focus()}
     >
       {/* Input invisible para capturar teclas del teclado (solo desktop) */}
