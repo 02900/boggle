@@ -4,7 +4,6 @@ import React from "react";
 import { useMobileListener } from "@/hooks/use-mobile-listener";
 import { useSocketListeners } from "@/hooks/use-socket-listeners";
 import { ModalType, useModalStore } from "@/stores/modal.store";
-import { useSocketsStore } from "@/stores/sockets.store";
 import { useViewportStore } from "@/stores/viewport.store";
 import { GameInstructions } from "../GameInstructions";
 import { GameSettings } from "../GameSettings";
@@ -18,8 +17,7 @@ export const BoggleGameMain = () => {
   useSocketListeners();
   useMobileListener();
 
-  const { gameState, isJoined } = useBoggleGameMainStore();
-  const { socket } = useSocketsStore();
+  const { isJoined } = useBoggleGameMainStore();
   const { isMobile } = useViewportStore();
   const { modalType } = useModalStore();
 
@@ -32,15 +30,7 @@ export const BoggleGameMain = () => {
       {isMobile ? <ViewMobile /> : <ViewDesktop />}
 
       {/* Modal de Puntuación Máxima */}
-      {modalType === ModalType.MaxScore && (
-        <MaxScoreModal
-          socket={socket}
-          foundWords={gameState.players.flatMap((player) => [
-            ...player.wordsFound,
-            ...(player.eliminatedWords || []),
-          ])}
-        />
-      )}
+      {modalType === ModalType.MaxScore && <MaxScoreModal />}
 
       {/* Modal de Configuración */}
       {modalType === ModalType.Settings && (

@@ -1,39 +1,17 @@
-import { useSocketsStore } from "@/stores/sockets.store";
-import React, { useState, useEffect } from "react";
-
-interface ScoreEntry {
-  name: string;
-  score: number;
-  date: string;
-}
+import { useScoreboardStore } from "@/stores/scoreboard.store";
+import React, { useEffect } from "react";
 
 export const Scoreboard = ({
   onClose,
 }: {
   onClose: () => void;
 }) => {
-  const { socket } = useSocketsStore();
-  const [scoreboard, setScoreboard] = useState<ScoreEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { scoreboard, isLoading, requestScoreboard } = useScoreboardStore();
 
   useEffect(() => {
-    if (!socket) return;
-
-    // Solicitar datos del scoreboard
-    socket.emit("get-scoreboard");
-
-    // Escuchar respuesta del scoreboard
-    const handleScoreboardData = (data: ScoreEntry[]) => {
-      setScoreboard(data);
-      setIsLoading(false);
-    };
-
-    socket.on("scoreboard-data", handleScoreboardData);
-
-    return () => {
-      socket.off("scoreboard-data", handleScoreboardData);
-    };
-  }, [socket]);
+    // Request scoreboard data when component mounts
+    requestScoreboard();
+  }, [requestScoreboard]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
