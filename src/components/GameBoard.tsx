@@ -137,9 +137,9 @@ export const GameBoard = () => {
     }
   };
 
-  const className = !isMobile
-    ? "bg-white rounded-lg shadow-md p-6 relative"
-    : "";
+  const classNameBoard = isMobile
+    ? "w-auto gap-8"
+    : "bg-white rounded-lg shadow-md p-6 relative w-fit gap-4";
 
   return (
     <div
@@ -176,9 +176,7 @@ export const GameBoard = () => {
 
       {gameState.board.length > 0 ? (
         <div
-          className={`grid grid-cols-4 mx-auto select-none mobile-drag-area ${
-            isMobile ? "w-auto gap-8" : "w-fit gap-4"
-          }`}
+          className={`grid grid-cols-4 mx-auto select-none mobile-drag-area ${classNameBoard}`}
           onMouseUp={handleMouseUpWrapper}
           onMouseLeave={handleMouseLeave}
           onTouchMove={handleTouchMove}
