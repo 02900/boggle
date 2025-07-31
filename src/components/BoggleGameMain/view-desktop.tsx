@@ -6,11 +6,9 @@ import { DiceRollingAnimation } from "../DiceRollingAnimation";
 import { GameBoard } from "../GameBoard";
 import { GameControls } from "../GameControls";
 import { PlayersList } from "../PlayersList";
-import { useBoggleGameMainStore } from "./boogle-game.main.store";
 
 export const ViewDesktop = () => {
   const { setModalType } = useModalStore();
-  const { gameState, currentPlayerId } = useBoggleGameMainStore();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -84,11 +82,7 @@ export const ViewDesktop = () => {
           {/* Sidebar */}
           <div className="xl:col-span-2 space-y-6">
             {/* Players List */}
-            <PlayersList
-              players={gameState.players}
-              currentPlayerId={currentPlayerId || undefined}
-              gameState={gameState.gameState}
-            />
+            <PlayersList />
           </div>
         </div>
       </div>

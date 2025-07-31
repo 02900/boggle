@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
-export const DiceRollingAnimation = ({}) => {
+export const DiceRollingAnimation = () => {
   const { diceRolling } = useSocketsStore();
   const { clearDiceRolling } = useBoggleGameMain();
 

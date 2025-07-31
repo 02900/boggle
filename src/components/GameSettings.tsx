@@ -1,12 +1,10 @@
 import { ModalType, useModalStore } from "@/stores/modal.store";
+import { useSocketsStore } from "@/stores/sockets.store";
+import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
-export const GameSettings = ({
-  eliminateCommonWords,
-  onToggleEliminateCommonWords,
-}: {
-  eliminateCommonWords: boolean;
-  onToggleEliminateCommonWords: (enabled: boolean) => void;
-}) => {
+export const GameSettings = () => {
+  const { eliminateCommonWords } = useSocketsStore();
+  const { toggleEliminateCommonWords } = useBoggleGameMain();
   const { setModalType } = useModalStore();
 
   return (
@@ -52,7 +50,7 @@ export const GameSettings = ({
               id="eliminate-common-words"
               type="checkbox"
               checked={eliminateCommonWords}
-              onChange={(e) => onToggleEliminateCommonWords(e.target.checked)}
+              onChange={(e) => toggleEliminateCommonWords(e.target.checked)}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
             />
           </div>

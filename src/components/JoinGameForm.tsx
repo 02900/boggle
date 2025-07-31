@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Socket } from "socket.io-client";
+import React, { useEffect, useState } from "react";
+import { useSocketsStore } from "@/stores/sockets.store";
+import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 import { Scoreboard } from "./Scoreboard";
 
-export const JoinGameForm = ({
-  onJoinGame,
-  isConnected,
-  socket,
-}: {
-  onJoinGame: (playerName: string) => void;
-  isConnected: boolean;
-  socket: Socket | null;
-}) => {
+export const JoinGameForm = () => {
+  const { isConnected } = useSocketsStore();
+  const { handleJoinGame } = useBoggleGameMain();
+
   const [playerName, setPlayerName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showScoreboard, setShowScoreboard] = useState(false);
@@ -33,12 +29,12 @@ export const JoinGameForm = ({
     try {
       if (useRandomName || !playerName.trim()) {
         // Usar nombre aleatorio (el servidor lo asignará)
-        onJoinGame("");
+        handleJoinGame("");
       } else {
         // Usar nombre personalizado
         const trimmedName = playerName.trim();
         localStorage.setItem("boggle-player-name", trimmedName);
-        onJoinGame(trimmedName);
+        handleJoinGame(trimmedName);
       }
     } finally {
       setIsLoading(false);
@@ -190,7 +186,7 @@ export const JoinGameForm = ({
 
       {/* Modal del Scoreboard */}
       {showScoreboard && (
-        <Scoreboard socket={socket} onClose={() => setShowScoreboard(false)} />
+        <Scoreboard onClose={() => setShowScoreboard(false)} />
       )}
     </div>
   );

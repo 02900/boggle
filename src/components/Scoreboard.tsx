@@ -1,5 +1,5 @@
+import { useSocketsStore } from "@/stores/sockets.store";
 import React, { useState, useEffect } from "react";
-import { Socket } from "socket.io-client";
 
 interface ScoreEntry {
   name: string;
@@ -8,12 +8,11 @@ interface ScoreEntry {
 }
 
 export const Scoreboard = ({
-  socket,
   onClose,
 }: {
-  socket: Socket | null;
   onClose: () => void;
 }) => {
+  const { socket } = useSocketsStore();
   const [scoreboard, setScoreboard] = useState<ScoreEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
