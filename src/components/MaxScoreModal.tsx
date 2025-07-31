@@ -1,63 +1,29 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Socket } from "socket.io-client";
 import { ModalType, useModalStore } from "@/stores/modal.store";
+import { useMaxScoreStore, WordData } from "@/stores/max-score.store";
+import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
 
-interface WordData {
-  word: string;
-  points: number;
-  path: [number, number][];
-}
+export const MaxScoreModal = () => {
+  const { gameState } = useBoggleGameMainStore();
+  const { maxScoreData, isLoading, requestMaxScore } = useMaxScoreStore();
 
-interface MaxScoreData {
-  words: WordData[];
-  maxScore: number;
-  totalWords: number;
-}
+  // TODO: Review maybe would need memo (?)
+  const foundWords = gameState.players.flatMap((player) => [
+    ...player.wordsFound,
+    ...(player.eliminatedWords || []),
+  ]);
 
-export const MaxScoreModal = ({
-  socket,
-  foundWords = [],
-}: {
-  socket: Socket | null;
-  foundWords?: string[]; // Palabras encontradas por todos los jugadores
-}) => {
   const { setModalType } = useModalStore();
-  const [maxScoreData, setMaxScoreData] = useState<MaxScoreData | null>(null);
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"byPoints" | "alphabetical">(
     "byPoints"
   );
 
   useEffect(() => {
-    if (!socket) return;
-
-    socket.on("max-score-data", (data: MaxScoreData) => {
-      setMaxScoreData(data);
-      setLoading(false);
-    });
-
-    // Reset max score data when game is reset
-    socket.on("game-reset", () => {
-      setMaxScoreData(null);
-      setLoading(false);
-    });
-
-    return () => {
-      socket.off("max-score-data");
-      socket.off("game-reset");
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    if (socket) {
-      // Siempre resetear y solicitar datos frescos cuando se abre el modal
-      setMaxScoreData(null);
-      setLoading(true);
-      socket.emit("get-max-score");
-    }
-  }, [socket]);
+    // Request max score data when component mounts
+    requestMaxScore();
+  }, [requestMaxScore]);
 
   // Función helper para verificar si una palabra fue encontrada
   const isWordFound = (word: string) => {
@@ -158,7 +124,7 @@ export const MaxScoreModal = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-2 text-gray-600">
