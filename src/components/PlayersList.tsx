@@ -1,20 +1,13 @@
 import React from "react";
-import { Player, GameStatus } from "@/interfaces/game";
 import { useViewportStore } from "@/stores/viewport.store";
+import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
 
-export const PlayersList = ({
-  players,
-  currentPlayerId,
-  gameState = "waiting",
-}: {
-  players: Player[];
-  currentPlayerId?: string;
-  gameState?: GameStatus;
-}) => {
+export const PlayersList = () => {
+  const { gameState, currentPlayerId } = useBoggleGameMainStore();
   const { isMobile } = useViewportStore();
 
   // Determinar si se deben mostrar las puntuaciones
-  const shouldShowScores = gameState === "finished" || isMobile;
+  const shouldShowScores = gameState.gameState === "finished" || isMobile;
 
   // Función para calcular el puntaje de una palabra
   const getWordScore = (word: string): number => {
@@ -31,20 +24,20 @@ export const PlayersList = ({
   const getSortedPlayers = () => {
     if (shouldShowScores) {
       // Si se muestran puntuaciones, ordenar por puntuación
-      return players.sort((a, b) => b.score - a.score);
+      return gameState.players.sort((a, b) => b.score - a.score);
     } else {
       // Si no se muestran puntuaciones, ordenar por nombre para mantener consistencia
-      return players.sort((a, b) => a.name.localeCompare(b.name));
+      return gameState.players.sort((a, b) => a.name.localeCompare(b.name));
     }
   };
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <h3 className="text-xl font-bold mb-3 flex items-center">
         <span className="mr-2">👥</span>
-        Jugadores ({players.length})
+        Jugadores ({gameState.players.length})
       </h3>
 
-      {players.length > 0 ? (
+      {gameState.players.length > 0 ? (
         <div className="space-y-2">
           {getSortedPlayers().map((player, index) => (
             <div
@@ -57,16 +50,20 @@ export const PlayersList = ({
                       : "bg-gray-50 hover:bg-gray-100"
                   }
                   ${
-                    shouldShowScores && index === 0 && players.length > 1
+                    shouldShowScores &&
+                    index === 0 &&
+                    gameState.players.length > 1
                       ? "ring-2 ring-yellow-300"
                       : ""
                   }
                 `}
             >
               <div className="flex items-center space-x-2">
-                {shouldShowScores && index === 0 && players.length > 1 && (
-                  <span className="text-yellow-500 text-lg">👑</span>
-                )}
+                {shouldShowScores &&
+                  index === 0 &&
+                  gameState.players.length > 1 && (
+                    <span className="text-yellow-500 text-lg">👑</span>
+                  )}
                 <div>
                   <span className="font-medium text-gray-800">
                     {player.name}
@@ -76,7 +73,7 @@ export const PlayersList = ({
                   </span>
                   <div className="text-xs text-gray-500">
                     {/* Solo mostrar conteo de palabras al jugador actual durante la partida */}
-                    {gameState === "finished" ||
+                    {gameState.gameState === "finished" ||
                     player.id === currentPlayerId ? (
                       <>
                         {player.wordsFound.length} palabras encontradas
@@ -93,7 +90,7 @@ export const PlayersList = ({
                   </div>
 
                   {/* Mostrar palabras cuando el juego ha terminado */}
-                  {gameState === "finished" && (
+                  {gameState.gameState === "finished" && (
                     <div className="mt-2 space-y-1">
                       {/* Palabras válidas */}
                       {player.wordsFound.length > 0 && (
@@ -144,7 +141,7 @@ export const PlayersList = ({
                   </>
                 ) : (
                   <div className="text-sm text-gray-400">
-                    {gameState === "playing" ? "🎮" : "⏳"}
+                    {gameState.gameState === "playing" ? "🎮" : "⏳"}
                   </div>
                 )}
               </div>
