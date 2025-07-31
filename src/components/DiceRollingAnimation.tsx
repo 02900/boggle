@@ -15,9 +15,23 @@ export const DiceRollingAnimation = () => {
   const animationStarted = useRef(false);
 
   useEffect(() => {
-    if (!diceRolling) return;
+    if (!diceRolling) {
+      // Reset all state when diceRolling becomes null (animation cleared)
+      setCurrentStep(0);
+      setAnimatingDice([]);
+      setFinalResults({});
+      setCompletedDice(new Set());
+      animationStarted.current = false;
+      return;
+    }
+    
     if (diceRolling.length === 0 || animationStarted.current) return;
 
+    // Reset all state for new animation
+    setCurrentStep(0);
+    setAnimatingDice([]);
+    setFinalResults({});
+    setCompletedDice(new Set());
     animationStarted.current = true;
 
     // Animar dados en grupos de 4 para hacer la animación más emocionante
