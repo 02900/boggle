@@ -2,16 +2,14 @@ import React from "react";
 import { Player, GameStatus } from "@/interfaces/game";
 import { useViewportStore } from "@/stores/viewport.store";
 
-interface PlayersListProps {
-  players: Player[];
-  currentPlayerId?: string;
-  gameState?: GameStatus;
-}
-
-export const PlayersList: React.FC<PlayersListProps> = ({
+export const PlayersList = ({
   players,
   currentPlayerId,
   gameState = "waiting",
+}: {
+  players: Player[];
+  currentPlayerId?: string;
+  gameState?: GameStatus;
 }) => {
   const { isMobile } = useViewportStore();
 
