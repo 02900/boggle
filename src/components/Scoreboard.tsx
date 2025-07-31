@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Socket } from 'socket.io-client';
+import React, { useState, useEffect } from "react";
+import { Socket } from "socket.io-client";
 
 interface ScoreEntry {
   name: string;
@@ -7,12 +7,13 @@ interface ScoreEntry {
   date: string;
 }
 
-interface ScoreboardProps {
+export const Scoreboard = ({
+  socket,
+  onClose,
+}: {
   socket: Socket | null;
   onClose: () => void;
-}
-
-export const Scoreboard: React.FC<ScoreboardProps> = ({ socket, onClose }) => {
+}) => {
   const [scoreboard, setScoreboard] = useState<ScoreEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,7 +21,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ socket, onClose }) => {
     if (!socket) return;
 
     // Solicitar datos del scoreboard
-    socket.emit('get-scoreboard');
+    socket.emit("get-scoreboard");
 
     // Escuchar respuesta del scoreboard
     const handleScoreboardData = (data: ScoreEntry[]) => {
@@ -28,28 +29,32 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ socket, onClose }) => {
       setIsLoading(false);
     };
 
-    socket.on('scoreboard-data', handleScoreboardData);
+    socket.on("scoreboard-data", handleScoreboardData);
 
     return () => {
-      socket.off('scoreboard-data', handleScoreboardData);
+      socket.off("scoreboard-data", handleScoreboardData);
     };
   }, [socket]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
   const getMedalEmoji = (position: number) => {
     switch (position) {
-      case 1: return '🥇';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return `${position}°`;
+      case 1:
+        return "🥇";
+      case 2:
+        return "🥈";
+      case 3:
+        return "🥉";
+      default:
+        return `${position}°`;
     }
   };
 
@@ -99,20 +104,24 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ socket, onClose }) => {
                   key={`${entry.name}-${entry.score}-${entry.date}-${index}`}
                   className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
                     index < 3
-                      ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 shadow-md'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                      ? "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 shadow-md"
+                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
                   }`}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className={`text-2xl font-bold ${
-                      index < 3 ? 'text-yellow-600' : 'text-gray-500'
-                    }`}>
+                    <div
+                      className={`text-2xl font-bold ${
+                        index < 3 ? "text-yellow-600" : "text-gray-500"
+                      }`}
+                    >
                       {getMedalEmoji(index + 1)}
                     </div>
                     <div>
-                      <div className={`font-semibold ${
-                        index < 3 ? 'text-gray-800' : 'text-gray-700'
-                      }`}>
+                      <div
+                        className={`font-semibold ${
+                          index < 3 ? "text-gray-800" : "text-gray-700"
+                        }`}
+                      >
                         {entry.name}
                       </div>
                       <div className="text-xs text-gray-500">
@@ -120,15 +129,13 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ socket, onClose }) => {
                       </div>
                     </div>
                   </div>
-                  <div className={`text-right ${
-                    index < 3 ? 'text-orange-600' : 'text-gray-600'
-                  }`}>
-                    <div className="text-xl font-bold">
-                      {entry.score}
-                    </div>
-                    <div className="text-xs">
-                      puntos
-                    </div>
+                  <div
+                    className={`text-right ${
+                      index < 3 ? "text-orange-600" : "text-gray-600"
+                    }`}
+                  >
+                    <div className="text-xl font-bold">{entry.score}</div>
+                    <div className="text-xs">puntos</div>
                   </div>
                 </div>
               ))}

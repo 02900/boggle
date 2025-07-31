@@ -1,22 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Socket } from 'socket.io-client';
-import { Scoreboard } from './Scoreboard';
+import React, { useState, useEffect } from "react";
+import { Socket } from "socket.io-client";
+import { Scoreboard } from "./Scoreboard";
 
-interface JoinGameFormProps {
+export const JoinGameForm = ({
+  onJoinGame,
+  isConnected,
+  socket,
+}: {
   onJoinGame: (playerName: string) => void;
   isConnected: boolean;
   socket: Socket | null;
-}
-
-export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnected, socket }) => {
-  const [playerName, setPlayerName] = useState('');
+}) => {
+  const [playerName, setPlayerName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [useRandomName, setUseRandomName] = useState(true);
-  
+
   // Cargar nombre desde localStorage al inicializar
   useEffect(() => {
-    const savedName = localStorage.getItem('boggle-player-name');
+    const savedName = localStorage.getItem("boggle-player-name");
     if (savedName) {
       setPlayerName(savedName);
       setUseRandomName(false);
@@ -26,28 +28,28 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConnected) return;
-    
+
     setIsLoading(true);
     try {
       if (useRandomName || !playerName.trim()) {
         // Usar nombre aleatorio (el servidor lo asignará)
-        onJoinGame('');
+        onJoinGame("");
       } else {
         // Usar nombre personalizado
         const trimmedName = playerName.trim();
-        localStorage.setItem('boggle-player-name', trimmedName);
+        localStorage.setItem("boggle-player-name", trimmedName);
         onJoinGame(trimmedName);
       }
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleNameChange = (newName: string) => {
     setPlayerName(newName);
     // Guardar inmediatamente en localStorage cuando se edita
     if (newName.trim()) {
-      localStorage.setItem('boggle-player-name', newName.trim());
+      localStorage.setItem("boggle-player-name", newName.trim());
     }
   };
 
@@ -66,9 +68,19 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
         {/* Estado de Conexión */}
         <div className="mb-4 p-3 rounded-lg border">
           <div className="flex items-center justify-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className={`text-sm font-medium ${isConnected ? 'text-green-700' : 'text-red-700'}`}>
-              {isConnected ? '✅ Conectado al servidor' : '❌ Conectando al servidor...'}
+            <div
+              className={`w-3 h-3 rounded-full ${
+                isConnected ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+            <span
+              className={`text-sm font-medium ${
+                isConnected ? "text-green-700" : "text-red-700"
+              }`}
+            >
+              {isConnected
+                ? "✅ Conectado al servidor"
+                : "❌ Conectando al servidor..."}
             </span>
           </div>
         </div>
@@ -86,7 +98,10 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
                 onChange={() => setUseRandomName(true)}
                 className="w-4 h-4 text-purple-600 focus:ring-purple-500"
               />
-              <label htmlFor="randomName" className="text-sm font-medium text-gray-700">
+              <label
+                htmlFor="randomName"
+                className="text-sm font-medium text-gray-700"
+              >
                 🎲 Usar nombre aleatorio
               </label>
             </div>
@@ -103,11 +118,14 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
                 onChange={() => setUseRandomName(false)}
                 className="w-4 h-4 text-blue-600 focus:ring-blue-500"
               />
-              <label htmlFor="customName" className="text-sm font-medium text-gray-700">
+              <label
+                htmlFor="customName"
+                className="text-sm font-medium text-gray-700"
+              >
                 ✏️ Usar nombre personalizado
               </label>
             </div>
-            
+
             {!useRandomName && (
               <div className="ml-7 mt-3">
                 <input
@@ -126,13 +144,16 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
             )}
           </div>
         </div>
-        
+
         {/* Formulario de unirse al juego */}
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-
           <button
             type="submit"
-            disabled={(!useRandomName && !playerName.trim()) || !isConnected || isLoading}
+            disabled={
+              (!useRandomName && !playerName.trim()) ||
+              !isConnected ||
+              isLoading
+            }
             className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
           >
             {isLoading ? (
@@ -143,7 +164,11 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
             ) : (
               <>
                 <span>🚀</span>
-                <span>{useRandomName ? 'Unirse con Nombre Aleatorio' : 'Unirse al Juego'}</span>
+                <span>
+                  {useRandomName
+                    ? "Unirse con Nombre Aleatorio"
+                    : "Unirse al Juego"}
+                </span>
               </>
             )}
           </button>
@@ -162,13 +187,10 @@ export const JoinGameForm: React.FC<JoinGameFormProps> = ({ onJoinGame, isConnec
           </button>
         </div>
       </div>
-      
+
       {/* Modal del Scoreboard */}
       {showScoreboard && (
-        <Scoreboard 
-          socket={socket} 
-          onClose={() => setShowScoreboard(false)} 
-        />
+        <Scoreboard socket={socket} onClose={() => setShowScoreboard(false)} />
       )}
     </div>
   );
