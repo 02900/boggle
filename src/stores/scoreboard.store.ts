@@ -5,6 +5,7 @@ export interface ScoreEntry {
   name: string;
   score: number;
   date: string;
+  playerCount: number;
 }
 
 interface ScoreboardState {
