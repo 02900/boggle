@@ -15,10 +15,12 @@ const DEBUG_MODE = true;
 // Función de debug para imprimir logs solo cuando DEBUG_MODE está activo
 function debugLog(event, data = null, socketId = null) {
   if (!DEBUG_MODE) return;
-  
+
   const timestamp = new Date().toISOString();
-  const socketInfo = socketId ? ` [Socket: ${socketId.substring(0, 8)}...]` : '';
-  
+  const socketInfo = socketId
+    ? ` [Socket: ${socketId.substring(0, 8)}...]`
+    : "";
+
   if (data) {
     console.log(`🔍 [${timestamp}] ${event}${socketInfo}:`, data);
   } else {
@@ -168,7 +170,7 @@ function saveScoreboard(scoreboard) {
   }
 }
 
-function updateScoreboard(playerScores) {
+function updateScoreboard(playerScores, playerCount) {
   const scoreboard = loadScoreboard();
   const currentDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
@@ -180,16 +182,17 @@ function updateScoreboard(playerScores) {
         name,
         score,
         date: currentDate,
+        playerCount, // Agregar número de jugadores
       });
     }
   });
 
-  // Ordenar por puntaje descendente y mantener solo los top 10
+  // Ordenar por puntaje descendente y mantener solo los top 50 para permitir más variedad
   scoreboard.sort((a, b) => b.score - a.score);
-  const top10 = scoreboard.slice(0, 10);
+  const top50 = scoreboard.slice(0, 50);
 
-  saveScoreboard(top10);
-  return top10;
+  saveScoreboard(top50);
+  return top50;
 }
 
 // Lógica del juego de Boggle
@@ -392,8 +395,9 @@ class BoggleGame {
       name: player.name,
       score: player.score,
     }));
+    const playerCount = this.players.size;
 
-    updateScoreboard(playerScores);
+    updateScoreboard(playerScores, playerCount);
   }
 
   submitWord(playerId, word, path) {
@@ -705,7 +709,11 @@ app.prepare().then(() => {
           : game.getRandomName();
 
       game.addPlayer(socket.id, finalName);
-      debugLog("EMIT: game-state (after join)", { playerCount: game.players.size, finalName }, socket.id);
+      debugLog(
+        "EMIT: game-state (after join)",
+        { playerCount: game.players.size, finalName },
+        socket.id
+      );
       socket.emit("game-state", game.getGameState());
       debugLog("BROADCAST: player-joined", { finalName }, socket.id);
       socket.broadcast.emit("player-joined", {
@@ -718,7 +726,9 @@ app.prepare().then(() => {
       debugLog("EVENT: start-game", null, socket.id);
       const result = game.startGame();
       if (result.success) {
-        debugLog("EMIT: dice-rolling (game started)", { diceCount: result.diceRolls.length });
+        debugLog("EMIT: dice-rolling (game started)", {
+          diceCount: result.diceRolls.length,
+        });
         // Primero enviar la información de los dados para la animación
         io.emit("dice-rolling", result.diceRolls);
 
@@ -742,13 +752,30 @@ app.prepare().then(() => {
     });
 
     socket.on("submit-word", ({ word, path }) => {
-      debugLog("EVENT: submit-word", { word, pathLength: path?.length }, socket.id);
+      debugLog(
+        "EVENT: submit-word",
+        { word, pathLength: path?.length },
+        socket.id
+      );
       const result = game.submitWord(socket.id, word, path);
-      debugLog("EMIT: word-result", { valid: result.valid, word: result.word, points: result.points, reason: result.reason }, socket.id);
+      debugLog(
+        "EMIT: word-result",
+        {
+          valid: result.valid,
+          word: result.word,
+          points: result.points,
+          reason: result.reason,
+        },
+        socket.id
+      );
       socket.emit("word-result", result);
 
       if (result.valid) {
-        debugLog("BROADCAST: player-scored", { word: result.word, points: result.points }, socket.id);
+        debugLog(
+          "BROADCAST: player-scored",
+          { word: result.word, points: result.points },
+          socket.id
+        );
         socket.broadcast.emit("player-scored", {
           playerId: socket.id,
           word: result.word,
@@ -787,7 +814,11 @@ app.prepare().then(() => {
     socket.on("get-scoreboard", () => {
       debugLog("EVENT: get-scoreboard", null, socket.id);
       const scoreboard = loadScoreboard();
-      debugLog("EMIT: scoreboard-data", { count: scoreboard.length }, socket.id);
+      debugLog(
+        "EMIT: scoreboard-data",
+        { count: scoreboard.length },
+        socket.id
+      );
       socket.emit("scoreboard-data", scoreboard);
     });
 
@@ -801,10 +832,21 @@ app.prepare().then(() => {
         game.board[0].length === 4
       ) {
         const maxScoreData = game.findAllPossibleWords();
-        debugLog("EMIT: max-score-data", { totalWords: maxScoreData.totalWords, maxScore: maxScoreData.maxScore }, socket.id);
+        debugLog(
+          "EMIT: max-score-data",
+          {
+            totalWords: maxScoreData.totalWords,
+            maxScore: maxScoreData.maxScore,
+          },
+          socket.id
+        );
         socket.emit("max-score-data", maxScoreData);
       } else {
-        debugLog("EMIT: max-score-data (empty - no valid board)", null, socket.id);
+        debugLog(
+          "EMIT: max-score-data (empty - no valid board)",
+          null,
+          socket.id
+        );
         // Si no hay tablero válido, enviar datos vacíos
         socket.emit("max-score-data", {
           words: [],
@@ -817,7 +859,10 @@ app.prepare().then(() => {
     socket.on("toggle-eliminate-common-words", (enabled) => {
       debugLog("EVENT: toggle-eliminate-common-words", { enabled }, socket.id);
       game.setEliminateCommonWords(enabled);
-      debugLog("EMIT: eliminate-common-words-changed", { enabled, eliminateCommonWords: game.eliminateCommonWords });
+      debugLog("EMIT: eliminate-common-words-changed", {
+        enabled,
+        eliminateCommonWords: game.eliminateCommonWords,
+      });
       io.emit("eliminate-common-words-changed", {
         enabled: enabled,
         eliminateCommonWords: game.eliminateCommonWords,
