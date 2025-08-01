@@ -9,11 +9,14 @@ export const MaxScoreModal = () => {
   const { gameState } = useBoggleGameMainStore();
   const { maxScoreData, isLoading, requestMaxScore } = useMaxScoreStore();
 
-  // TODO: Review maybe would need memo (?)
-  const foundWords = gameState.players.flatMap((player) => [
-    ...player.wordsFound,
-    ...(player.eliminatedWords || []),
-  ]);
+  const foundWords = Array.from(
+    new Set(
+      gameState.players.flatMap((player) => [
+        ...player.wordsFound,
+        ...(player.eliminatedWords || []),
+      ])
+    )
+  );
 
   const { setModalType } = useModalStore();
   const [activeTab, setActiveTab] = useState<"byPoints" | "alphabetical">(
