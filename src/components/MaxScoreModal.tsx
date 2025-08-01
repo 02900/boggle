@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useMaxScoreStore, WordData } from "@/stores/max-score.store";
 import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
@@ -149,20 +150,27 @@ export const MaxScoreModal = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                           {words.map((wordData, index) => {
                             const wasFound = isWordFound(wordData.word);
+                            const raeUrl = `https://dle.rae.es/${encodeURIComponent(
+                              wordData.word.toLowerCase()
+                            )}?m=form`;
                             return (
-                              <div
+                              <Link
                                 key={index}
-                                className={`px-3 py-2 rounded border text-sm font-medium transition-colors ${
+                                href={raeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`px-3 py-2 rounded border text-sm font-medium transition-colors hover:no-underline block ${
                                   wasFound
                                     ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
                                     : "bg-white text-gray-700 hover:bg-blue-50"
                                 }`}
+                                title="Clic para ver definición RAE"
                               >
                                 {wordData.word.toUpperCase()}
                                 {wasFound && (
                                   <span className="ml-1 text-green-600">✓</span>
                                 )}
-                              </div>
+                              </Link>
                             );
                           })}
                         </div>
@@ -173,14 +181,21 @@ export const MaxScoreModal = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                   {sortedWords.map((wordData, index) => {
                     const wasFound = isWordFound(wordData.word);
+                    const raeUrl = `https://dle.rae.es/${encodeURIComponent(
+                      wordData.word.toLowerCase()
+                    )}?m=form`;
                     return (
-                      <div
+                      <Link
                         key={index}
-                        className={`px-3 py-2 rounded border text-sm font-medium transition-colors flex justify-between items-center ${
+                        href={raeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`px-3 py-2 rounded border text-sm font-medium transition-colors flex justify-between items-center hover:no-underline ${
                           wasFound
                             ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
                             : "bg-gray-50 text-gray-700 hover:bg-blue-50"
                         }`}
+                        title="Clic para ver definición RAE"
                       >
                         <span>
                           {wordData.word.toUpperCase()}
@@ -195,7 +210,7 @@ export const MaxScoreModal = () => {
                         >
                           {wordData.points}
                         </span>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
