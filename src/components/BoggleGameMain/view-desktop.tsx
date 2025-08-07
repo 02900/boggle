@@ -6,9 +6,11 @@ import { DiceRollingAnimation } from "../DiceRollingAnimation";
 import { GameBoard } from "../GameBoard";
 import { GameControls } from "../GameControls";
 import { PlayersList } from "../PlayersList";
+import { useBoggleGameMainStore } from "./boogle-game-main.store";
 
 export const ViewDesktop = () => {
   const { setModalType } = useModalStore();
+  const { gameState } = useBoggleGameMainStore();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -20,7 +22,20 @@ export const ViewDesktop = () => {
           <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center space-x-2">
             🎲 Boggle
           </h1>
+          
+          {/* Botón de puntuación máxima */}
           <div className="flex space-x-3">
+            {gameState.gameState === "finished" && (
+              <button
+                onClick={() => setModalType(ModalType.MaxScore)}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                title="Puntuación Máxima"
+              >
+                <span>🏆</span>
+                <span className="hidden sm:inline">Puntuación Máxima</span>
+              </button>
+            )}
+
             {/* Botón de configuración */}
             <button
               onClick={() => setModalType(ModalType.Settings)}

@@ -1,10 +1,10 @@
+import { useSocket } from "@/hooks/useSocket";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useSocketsStore } from "@/stores/sockets.store";
-import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
 export const GameSettings = () => {
   const { eliminateCommonWords } = useSocketsStore();
-  const { toggleEliminateCommonWords } = useBoggleGameMain();
+  const { toggleEliminateCommonWords } = useSocket();
   const { setModalType } = useModalStore();
 
   return (

@@ -202,13 +202,40 @@ class BoggleGame {
     this.players = new Map();
     this.gameState = "waiting"; // esperando, jugando, terminado
     this.timeLeft = TIME_LIMIT; // 3 minutos
-    this.timer = null;
+    this.timer = null; // Timer interno para decrementar timeLeft
+    this.updateTimer = null; // Timer para enviar actualizaciones a los clientes
+    this.io = null; // Referencia al socket.io server para enviar actualizaciones
     this.words = new Set(); // Palabras válidas del diccionario (simplificado para demo)
     this.lastRotationTime = 0; // Timestamp de la última rotación
     this.rotationCooldown = 30000; // 30 segundos en milisegundos
     this.availableNames = [...RANDOM_NAMES]; // Copia de nombres disponibles
     this.eliminateCommonWords = true; // Configuración para eliminar palabras comunes
     this.initializeDictionary();
+  }
+
+  // Método para configurar la referencia a socket.io server
+  setIO(io) {
+    this.io = io;
+  }
+
+  // Métodos para limpiar timers
+  clearTimers() {
+    this.clearInternalTimer();
+    this.clearUpdateTimer();
+  }
+
+  clearInternalTimer() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+
+  clearUpdateTimer() {
+    if (this.updateTimer) {
+      clearInterval(this.updateTimer);
+      this.updateTimer = null;
+    }
   }
 
   initializeDictionary() {
@@ -364,10 +391,14 @@ class BoggleGame {
   startGame() {
     if (this.players.size < 1) return false;
 
+    // Limpiar cualquier timer existente antes de iniciar uno nuevo
+    this.clearTimers();
+
     const diceRolls = this.generateBoard();
     this.gameState = "playing";
     this.timeLeft = TIME_LIMIT;
 
+    // Timer interno para decrementar el tiempo
     this.timer = setInterval(() => {
       this.timeLeft--;
       if (this.timeLeft <= 0) {
@@ -375,15 +406,31 @@ class BoggleGame {
       }
     }, 1000);
 
+    // Timer para enviar actualizaciones a los clientes
+    if (this.io) {
+      this.updateTimer = setInterval(() => {
+        if (this.gameState === "playing") {
+          this.io.emit("timer-update", this.timeLeft);
+        } else {
+          // Si el juego ya no está en curso, limpiar este timer
+          this.clearUpdateTimer();
+        }
+      }, 1000);
+    }
+
     return { success: true, diceRolls };
   }
 
   endGame() {
     this.gameState = "finished";
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
+    
+    // Enviar notificación de fin de juego ANTES de limpiar los timers
+    if (this.io) {
+      this.io.emit("game-ended", this.getGameState());
     }
+    
+    // Limpiar ambos timers usando el método centralizado
+    this.clearTimers();
 
     // Eliminar palabras comunes si la opción está activada
     if (this.eliminateCommonWords) {
@@ -495,10 +542,8 @@ class BoggleGame {
     this.board = [];
     this.gameState = "waiting";
     this.timeLeft = TIME_LIMIT;
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
+    // Limpiar todos los timers usando el método centralizado
+    this.clearTimers();
 
     // Reset player scores but keep players
     for (const player of this.players.values()) {
@@ -696,6 +741,8 @@ app.prepare().then(() => {
   const io = new Server(httpServer);
 
   const game = new BoggleGame();
+  // Configurar la referencia a io en el objeto game para que pueda enviar actualizaciones
+  game.setIO(io);
 
   io.on("connection", (socket) => {
     debugLog("EVENT: connection", null, socket.id);
@@ -737,17 +784,7 @@ app.prepare().then(() => {
           io.emit("game-started", game.getGameState());
         }, 3000); // 3 segundos para la animación de dados
 
-        // Send timer updates
-        const timerInterval = setInterval(() => {
-          if (game.gameState === "playing") {
-            io.emit("timer-update", game.timeLeft);
-          } else {
-            clearInterval(timerInterval);
-            if (game.gameState === "finished") {
-              io.emit("game-ended", game.getGameState());
-            }
-          }
-        }, 1000);
+        // El timer de actualizaciones ahora está manejado internamente por la clase BoggleGame
       }
     });
 

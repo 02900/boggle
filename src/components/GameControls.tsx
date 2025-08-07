@@ -1,17 +1,16 @@
 import React from "react";
+import { useSocket } from "@/hooks/useSocket";
 import { GameStatus } from "@/interfaces/game";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useSocketsStore } from "@/stores/sockets.store";
-import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
-import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
+import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
 
 export const GameControls = () => {
   const { isConnected } = useSocketsStore();
   const { modalType, setModalType } = useModalStore();
   const { gameState, rotationCooldown, rotationMessage } =
     useBoggleGameMainStore();
-
-  const { startGame, rotateBoard, resetGame } = useBoggleGameMain();
+  const { startGame, rotateBoard, resetGame } = useSocket();
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);

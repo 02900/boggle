@@ -9,7 +9,7 @@ import { GameInstructions } from "../GameInstructions";
 import { GameSettings } from "../GameSettings";
 import { JoinGameForm } from "../JoinGameForm";
 import { MaxScoreModal } from "../MaxScoreModal";
-import { useBoggleGameMainStore } from "./boogle-game.main.store";
+import { useBoggleGameMainStore } from "./boogle-game-main.store";
 import { ViewDesktop } from "./view-desktop";
 import { ViewMobile } from "./view-mobile";
 

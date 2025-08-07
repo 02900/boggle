@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useMaxScoreStore, WordData } from "@/stores/max-score.store";
-import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
+import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
 
 export const MaxScoreModal = () => {
   const { gameState } = useBoggleGameMainStore();
