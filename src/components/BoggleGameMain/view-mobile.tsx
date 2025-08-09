@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useSocket } from "@/hooks/useSocket";
 import { useGameLogicStore } from "@/stores/game-logic.store";
 import { ModalType, useModalStore } from "@/stores/modal.store";
@@ -116,7 +117,7 @@ export const ViewMobile = () => {
 
           {/* Clasificación de jugadores */}
 
-          {gameState.players
+          {(gameState.allParticipants || gameState.players)
             .sort((a, b) => b.score - a.score)
             .map((player, index) => {
               const isCurrentPlayer = player.id === currentPlayerId;
@@ -157,6 +158,11 @@ export const ViewMobile = () => {
                           }`}
                         >
                           {player.name} {isCurrentPlayer && "(Tú)"}
+                          {player.isConnected === false && (
+                            <span className="text-xs text-red-600 ml-1">
+                              (Desconectado)
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-600">
                           {player.wordsFound.length} palabras encontradas
@@ -195,26 +201,35 @@ export const ViewMobile = () => {
                             Válidas ({sortedWords.length}):
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {sortedWords.map(({ word, score }, wordIndex) => (
-                              <span
-                                key={`valid-${wordIndex}`}
-                                className={`
-                                          inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                          ${
-                                            score >= 5
-                                              ? "bg-green-100 text-green-800"
-                                              : score >= 3
-                                              ? "bg-yellow-100 text-yellow-800"
-                                              : "bg-gray-100 text-gray-700"
-                                          }
-                                        `}
-                              >
-                                {word}
-                                <span className="ml-1 text-xs opacity-75">
-                                  +{score}pts
-                                </span>
-                              </span>
-                            ))}
+                            {sortedWords.map(({ word, score }, wordIndex) => {
+                              const raeUrl = `https://dle.rae.es/${encodeURIComponent(
+                                word.toLowerCase()
+                              )}?m=form`;
+                              return (
+                                <Link
+                                  key={`valid-${wordIndex}`}
+                                  href={raeUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`
+                                            inline-flex items-center px-2 py-1 rounded-full text-xs font-medium hover:no-underline transition-colors
+                                            ${
+                                              score >= 5
+                                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                                : score >= 3
+                                                ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                            }
+                                          `}
+                                  title="Clic para ver definición RAE"
+                                >
+                                  {word}
+                                  <span className="ml-1 text-xs opacity-75">
+                                    +{score}pts
+                                  </span>
+                                </Link>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -230,16 +245,23 @@ export const ViewMobile = () => {
                             <div className="flex flex-wrap gap-2">
                               {player.eliminatedWords.map((word, wordIndex) => {
                                 const score = getWordScore(word);
+                                const raeUrl = `https://dle.rae.es/${encodeURIComponent(
+                                  word.toLowerCase()
+                                )}?m=form`;
                                 return (
-                                  <span
+                                  <Link
                                     key={`eliminated-${wordIndex}`}
-                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 line-through"
+                                    href={raeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 line-through hover:bg-red-200 hover:no-underline transition-colors"
+                                    title="Clic para ver definición RAE"
                                   >
                                     {word}
                                     <span className="ml-1 text-xs opacity-75">
                                       -{score}pts
                                     </span>
-                                  </span>
+                                  </Link>
                                 );
                               })}
                             </div>

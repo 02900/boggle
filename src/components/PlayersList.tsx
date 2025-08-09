@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { useViewportStore } from "@/stores/viewport.store";
 import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
 
@@ -126,17 +127,26 @@ export const PlayersList = () => {
                       {/* Palabras válidas */}
                       {player.wordsFound.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {player.wordsFound.map((word, wordIndex) => (
-                            <span
-                              key={`valid-${wordIndex}`}
-                              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800"
-                            >
-                              {word}
-                              <span className="ml-1 text-green-600 font-medium text-xs">
-                                +{getWordScore(word)}
-                              </span>
-                            </span>
-                          ))}
+                          {player.wordsFound.map((word, wordIndex) => {
+                            const raeUrl = `https://dle.rae.es/${encodeURIComponent(
+                              word.toLowerCase()
+                            )}?m=form`;
+                            return (
+                              <Link
+                                key={`valid-${wordIndex}`}
+                                href={raeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800 hover:bg-green-200 hover:no-underline transition-colors"
+                                title="Clic para ver definición RAE"
+                              >
+                                {word}
+                                <span className="ml-1 text-green-600 font-medium text-xs">
+                                  +{getWordScore(word)}
+                                </span>
+                              </Link>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -144,17 +154,26 @@ export const PlayersList = () => {
                       {player.eliminatedWords &&
                         player.eliminatedWords.length > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {player.eliminatedWords.map((word, wordIndex) => (
-                              <span
-                                key={`eliminated-${wordIndex}`}
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-800 line-through"
-                              >
-                                {word}
-                                <span className="ml-1 text-red-600 font-medium text-xs">
-                                  -{getWordScore(word)}
-                                </span>
-                              </span>
-                            ))}
+                            {player.eliminatedWords.map((word, wordIndex) => {
+                              const raeUrl = `https://dle.rae.es/${encodeURIComponent(
+                                word.toLowerCase()
+                              )}?m=form`;
+                              return (
+                                <Link
+                                  key={`eliminated-${wordIndex}`}
+                                  href={raeUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-800 line-through hover:bg-red-200 hover:no-underline transition-colors"
+                                  title="Clic para ver definición RAE"
+                                >
+                                  {word}
+                                  <span className="ml-1 text-red-600 font-medium text-xs">
+                                    -{getWordScore(word)}
+                                  </span>
+                                </Link>
+                              );
+                            })}
                           </div>
                         )}
                     </div>
