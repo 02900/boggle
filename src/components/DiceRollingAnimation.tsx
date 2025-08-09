@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSocketsStore } from "@/stores/sockets.store";
-import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
+import { useSocket } from "@/hooks/useSocket";
 
 export const DiceRollingAnimation = () => {
   const { diceRolling } = useSocketsStore();
-  const { clearDiceRolling } = useBoggleGameMain();
-
+  const { clearDiceRolling } = useSocket();
   const [currentStep, setCurrentStep] = useState(0);
   const [animatingDice, setAnimatingDice] = useState<number[]>([]);
   const [finalResults, setFinalResults] = useState<{ [key: number]: string }>(

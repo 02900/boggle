@@ -1,6 +1,6 @@
 import React from "react";
 import { useViewportStore } from "@/stores/viewport.store";
-import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
+import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
 
 export const PlayersList = () => {
   const { gameState, currentPlayerId } = useBoggleGameMainStore();
@@ -30,6 +30,7 @@ export const PlayersList = () => {
       return gameState.players.sort((a, b) => a.name.localeCompare(b.name));
     }
   };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <h3 className="text-xl font-bold mb-3 flex items-center">

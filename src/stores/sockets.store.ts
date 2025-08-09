@@ -17,7 +17,7 @@ export const useSocketsStore = create<SocketsStore>((set) => ({
   socket: null,
   isConnected: false,
   diceRolling: null,
-  eliminateCommonWords: false,
+  eliminateCommonWords: true, // Cambiar a true para coincidir con el servidor por defecto
   setSocket: (socket: Socket) => set({ socket }),
   setIsConnected: (isConnected: boolean) => set({ isConnected }),
   setDiceRolling: (diceRolling: DiceRoll[] | null) => set({ diceRolling }),

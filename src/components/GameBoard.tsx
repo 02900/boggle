@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useGameLogicStore } from "@/stores/game-logic.store";
 import { useViewportStore } from "@/stores/viewport.store";
 import { composeClasses } from "@/utils/compose-classes";
-import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game.main.store";
+import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
 import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
 
 export const GameBoard = () => {
@@ -143,7 +143,7 @@ export const GameBoard = () => {
 
   return (
     <div
-      className="flex-1 p-3"
+      className="p-3"
       onClick={() => !isMobile && hiddenInputRef.current?.focus()}
     >
       {/* Input invisible para capturar teclas del teclado (solo desktop) */}

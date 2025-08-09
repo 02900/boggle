@@ -4,20 +4,11 @@ import { useSocket } from "@/hooks/useSocket";
 import { useGameLogic } from "@/hooks/useGameLogic";
 import { useGameLogicStore } from "@/stores/game-logic.store";
 import { setLastSubmittedRefGlobal } from "@/stores/last-submitted-ref.store";
-import { useBoggleGameMainStore } from "./boogle-game.main.store";
+import { useBoggleGameMainStore } from "./boogle-game-main.store";
 
 export const useBoggleGameMain = () => {
   const { isSelecting, setMessage } = useGameLogicStore();
-  const {
-    joinGame,
-    startGame,
-    submitWord,
-    resetGame,
-    rotateBoard,
-    clearDiceRolling,
-    playErrorSound,
-    toggleEliminateCommonWords,
-  } = useSocket();
+  const { joinGame, submitWord, playErrorSound } = useSocket();
 
   const {
     handleCellMouseDown,
@@ -218,17 +209,12 @@ export const useBoggleGameMain = () => {
 
   return {
     handleJoinGame,
-    clearDiceRolling,
     getWordScore,
-    startGame,
-    rotateBoard,
-    resetGame,
     handleCellMouseEnterWrapper,
     handleMouseUpWrapper,
     handleMouseLeave,
     isCellSelected,
     handleKeyboardWordInput,
     handleCellMouseDownWrapper,
-    toggleEliminateCommonWords,
   };
 };
