@@ -74,12 +74,6 @@ export const ViewMobile = () => {
             >
               🔄 {rotationCooldown > 0 ? `${rotationCooldown}s` : "Rotar"}
             </button>
-            {/* <button
-                onClick={resetGame}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold"
-              >
-                ♾️ Reiniciar
-              </button> */}
           </div>
         )}
 
@@ -267,7 +261,7 @@ export const ViewMobile = () => {
 
       {/* Footer con palabra actual y últimas palabras encontradas */}
       {gameState.gameState === "playing" && (
-        <div className="bg-white shadow-sm p-3 border-t">
+        <div className="bg-white shadow-sm p-3 border-t mt-auto">
           {currentWord && (
             <div className="text-center mb-2">
               <span className="text-lg font-bold text-blue-600">

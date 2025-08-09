@@ -7,6 +7,12 @@
   },
   {
     "name": "TeruMaster",
+    "score": 87,
+    "date": "2025-08-09",
+    "playerCount": 2
+  },
+  {
+    "name": "TeruMaster",
     "score": 70,
     "date": "2025-08-02",
     "playerCount": 3
@@ -40,6 +46,12 @@
     "score": 45,
     "date": "2025-08-02",
     "playerCount": 4
+  },
+  {
+    "name": "Terpodia",
+    "score": 45,
+    "date": "2025-08-09",
+    "playerCount": 2
   },
   {
     "name": "EarthShaker",
@@ -286,17 +298,5 @@
     "score": 17,
     "date": "2025-08-07",
     "playerCount": 2
-  },
-  {
-    "name": "TeruMaster",
-    "score": 17,
-    "date": "2025-08-07",
-    "playerCount": 2
-  },
-  {
-    "name": "Peano",
-    "score": 16,
-    "date": "2025-08-02",
-    "playerCount": 3
   }
 ]

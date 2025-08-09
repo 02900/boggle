@@ -134,24 +134,26 @@ export const GameControls = () => {
 
           {gameState.gameState === "finished" &&
             modalType === ModalType.MaxScore && (
-              <button
-                onClick={() => setModalType(ModalType.MaxScore)}
-                disabled={!isConnected}
-                className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-              >
-                <span>🏆</span>
-                <span>Puntuación Máxima</span>
-              </button>
-            )}
+              <>
+                <button
+                  onClick={() => setModalType(ModalType.MaxScore)}
+                  disabled={!isConnected}
+                  className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <span>🏆</span>
+                  <span>Puntuación Máxima</span>
+                </button>
 
-          <button
-            onClick={resetGame}
-            disabled={!isConnected}
-            className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-          >
-            <span>♾️</span>
-            <span>Reiniciar</span>
-          </button>
+                <button
+                  onClick={resetGame}
+                  disabled={!isConnected}
+                  className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <span>♾️</span>
+                  <span>Reiniciar</span>
+                </button>
+              </>
+            )}
         </div>
       </div>
 
