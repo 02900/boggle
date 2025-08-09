@@ -4,6 +4,9 @@ export interface Player {
   score: number;
   wordsFound: string[];
   eliminatedWords?: string[];
+  isConnected?: boolean;
+  joinedAt?: number;
+  disconnectedAt?: number;
 }
 
 export interface DiceRoll {
@@ -20,6 +23,7 @@ export interface GameState {
   gameState: 'waiting' | 'playing' | 'finished';
   timeLeft: number;
   diceRolls?: DiceRoll[];
+  allParticipants?: Player[]; // Incluye todos los participantes (conectados y desconectados)
 }
 
 export interface WordResult {

@@ -20,14 +20,26 @@ export const PlayersList = () => {
     return 11; // 8+ letras
   };
 
+  // Función para obtener todos los participantes (conectados y desconectados)
+  const getAllParticipants = () => {
+    if (gameState.gameState === "finished" && gameState.allParticipants) {
+      // Al final del juego, mostrar todos los participantes
+      return gameState.allParticipants;
+    } else {
+      // Durante el juego, mostrar solo jugadores conectados
+      return gameState.players;
+    }
+  };
+
   // Función para ordenar jugadores
   const getSortedPlayers = () => {
+    const participants = getAllParticipants();
     if (shouldShowScores) {
       // Si se muestran puntuaciones, ordenar por puntuación
-      return gameState.players.sort((a, b) => b.score - a.score);
+      return participants.sort((a, b) => b.score - a.score);
     } else {
       // Si no se muestran puntuaciones, ordenar por nombre para mantener consistencia
-      return gameState.players.sort((a, b) => a.name.localeCompare(b.name));
+      return participants.sort((a, b) => a.name.localeCompare(b.name));
     }
   };
 
@@ -35,10 +47,21 @@ export const PlayersList = () => {
     <div className="bg-white rounded-lg shadow-md p-4">
       <h3 className="text-xl font-bold mb-3 flex items-center">
         <span className="mr-2">👥</span>
-        Jugadores ({gameState.players.length})
+        {gameState.gameState === "finished" && gameState.allParticipants ? (
+          <>
+            Participantes ({gameState.allParticipants.length})
+            {gameState.allParticipants.length > gameState.players.length && (
+              <span className="ml-2 text-sm text-gray-500 font-normal">
+                ({gameState.allParticipants.length - gameState.players.length} desconectados)
+              </span>
+            )}
+          </>
+        ) : (
+          `Jugadores (${gameState.players.length})`
+        )}
       </h3>
 
-      {gameState.players.length > 0 ? (
+      {getAllParticipants().length > 0 ? (
         <div className="space-y-2">
           {getSortedPlayers().map((player, index) => (
             <div
@@ -48,12 +71,14 @@ export const PlayersList = () => {
                   ${
                     player.id === currentPlayerId
                       ? "bg-blue-100 border-2 border-blue-300"
+                      : player.isConnected === false
+                      ? "bg-red-50 border border-red-200 opacity-75"
                       : "bg-gray-50 hover:bg-gray-100"
                   }
                   ${
                     shouldShowScores &&
                     index === 0 &&
-                    gameState.players.length > 1
+                    getAllParticipants().length > 1
                       ? "ring-2 ring-yellow-300"
                       : ""
                   }
@@ -62,7 +87,7 @@ export const PlayersList = () => {
               <div className="flex items-center space-x-2">
                 {shouldShowScores &&
                   index === 0 &&
-                  gameState.players.length > 1 && (
+                  getAllParticipants().length > 1 && (
                     <span className="text-yellow-500 text-lg">👑</span>
                   )}
                 <div>
@@ -70,6 +95,11 @@ export const PlayersList = () => {
                     {player.name}
                     {player.id === currentPlayerId && (
                       <span className="text-xs text-blue-600 ml-1">(Tú)</span>
+                    )}
+                    {player.isConnected === false && (
+                      <span className="text-xs text-red-600 ml-1">
+                        (Desconectado)
+                      </span>
                     )}
                   </span>
                   <div className="text-xs text-gray-500">
