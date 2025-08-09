@@ -1,224 +1,41 @@
-const { createServer } = require("http");
-const { parse } = require("url");
-const next = require("next");
-const { Server } = require("socket.io");
-const fs = require("fs");
-const path = require("path");
+import fs from 'fs';
+import path from 'path';
+import { TIME_LIMIT, ROTATION_COOLDOWN } from '../config/constants.js';
+import { RANDOM_NAMES } from '../utils/names.js';
+import { getDiceConfiguration, calculateWordPoints } from './gameConfig.js';
+import { updateScoreboard } from '../utils/scoreboard.js';
+import { debugLog } from '../utils/debug.js';
 
-const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
-const port = process.env.PORT || 3000;
-
-// Debug mode - cambiar a true para activar logs de eventos
-const DEBUG_MODE = true;
-
-// Función de debug para imprimir logs solo cuando DEBUG_MODE está activo
-function debugLog(event, data = null, socketId = null) {
-  if (!DEBUG_MODE) return;
-
-  const timestamp = new Date().toISOString();
-  const socketInfo = socketId
-    ? ` [Socket: ${socketId.substring(0, 8)}...]`
-    : "";
-
-  if (data) {
-    console.log(`🔍 [${timestamp}] ${event}${socketInfo}:`, data);
-  } else {
-    console.log(`🔍 [${timestamp}] ${event}${socketInfo}`);
-  }
-}
-
-// Archivo para persistir el scoreboard
-const SCOREBOARD_FILE = path.join(__dirname, "scoreboard.json");
-
-const app = next({ dev, hostname, port });
-const handler = app.getRequestHandler();
-
-const TIME_LIMIT = 188; // 3 minutos + 8 segundos de animación inicial
-
-// Lista de nombres predefinidos
-const RANDOM_NAMES = [
-  "ShadowHunter",
-  "StormRider",
-  "FireWolf",
-  "IceBreaker",
-  "ThunderBolt",
-  "NightCrawler",
-  "BlazeFury",
-  "FrostBite",
-  "WindWalker",
-  "EarthShaker",
-  "VoidStrike",
-  "FlameGuard",
-  "MistWalker",
-  "RockSlide",
-  "LightBringer",
-  "DarkViper",
-  "SteelClaw",
-  "GhostRider",
-  "StarGazer",
-  "MoonBeam",
-  "SunFlare",
-  "SkySword",
-  "DeepDiver",
-  "HighFlyer",
-  "FastTrack",
-  "QuickShot",
-  "SharpEye",
-  "BoldMove",
-  "WildCard",
-  "FreeSpirit",
-  "BraveHeart",
-  "TrueAim",
-  "SwiftArrow",
-  "StrongArm",
-  "ClearMind",
-  "PureSoul",
-  "WiseOwl",
-  "CleverFox",
-  "MightyLion",
-  "FierceTiger",
-  "GentleGiant",
-  "SilentNinja",
-  "LoudThunder",
-  "CalmStorm",
-  "WarmIce",
-  "ColdFire",
-  "BrightDark",
-  "SoftSteel",
-  "HardCloud",
-  "LightShadow",
-  "HeavyFeather",
-  "SlowFlash",
-  "QuietRoar",
-  "TallShort",
-  "BigSmall",
-  "OldNew",
-  "FarNear",
-  "UpDown",
-  "LeftRight",
-  "InOut",
-  "YesNo",
-  "OnOff",
-  "HotCold",
-  "WetDry",
-  "LoudQuiet",
-  "FastSlow",
-  "HighLow",
-  "BigLittle",
-  "LongShort",
-  "WideNarrow",
-  "ThickThin",
-  "HeavyLight",
-  "HardSoft",
-  "RoughSmooth",
-  "SharpDull",
-  "BrightDim",
-  "ClearBlur",
-  "CleanDirty",
-  "FreshStale",
-  "NewOld",
-  "YoungOld",
-  "StrongWeak",
-  "RichPoor",
-  "FullEmpty",
-  "OpenClosed",
-  "FreeTrapped",
-  "SafeDanger",
-  "GoodBad",
-  "RightWrong",
-  "TrueFalse",
-  "RealFake",
-  "LiveDead",
-  "HealthySick",
-  "HappySad",
-  "LoveLate",
-  "PeaceWar",
-  "HopeHear",
-  "FaithDoubt",
-  "TrustLie",
-  "KindMean",
-];
-
-// Funciones para manejar el scoreboard persistente
-function loadScoreboard() {
-  try {
-    if (fs.existsSync(SCOREBOARD_FILE)) {
-      const data = fs.readFileSync(SCOREBOARD_FILE, "utf8");
-      return JSON.parse(data);
-    } else {
-      // Si el archivo no existe, crearlo con un array vacío
-      const emptyScoreboard = [];
-      fs.writeFileSync(
-        SCOREBOARD_FILE,
-        JSON.stringify(emptyScoreboard, null, 2)
-      );
-      console.log("Archivo de scoreboard creado:", SCOREBOARD_FILE);
-      return emptyScoreboard;
-    }
-  } catch (error) {
-    console.error("Error al cargar scoreboard:", error);
-  }
-  return [];
-}
-
-function saveScoreboard(scoreboard) {
-  try {
-    fs.writeFileSync(SCOREBOARD_FILE, JSON.stringify(scoreboard, null, 2));
-  } catch (error) {
-    console.error("Error al guardar scoreboard:", error);
-  }
-}
-
-function updateScoreboard(playerScores, playerCount) {
-  const scoreboard = loadScoreboard();
-  const currentDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-  // Agregar nuevos puntajes
-  playerScores.forEach(({ name, score }) => {
-    if (score > 0) {
-      // Solo agregar si el puntaje es mayor a 0
-      scoreboard.push({
-        name,
-        score,
-        date: currentDate,
-        playerCount, // Agregar número de jugadores
-      });
-    }
-  });
-
-  // Ordenar por puntaje descendente y mantener solo los top 50 para permitir más variedad
-  scoreboard.sort((a, b) => b.score - a.score);
-  const top50 = scoreboard.slice(0, 50);
-
-  saveScoreboard(top50);
-  return top50;
-}
-
-// Lógica del juego de Boggle
-class BoggleGame {
+/**
+ * Clase principal que maneja toda la lógica del juego Boggle
+ */
+export class BoggleGame {
   constructor() {
     this.board = [];
     this.players = new Map();
     this.gameState = "waiting"; // esperando, jugando, terminado
-    this.timeLeft = TIME_LIMIT; // 3 minutos
+    this.timeLeft = TIME_LIMIT;
     this.timer = null; // Timer interno para decrementar timeLeft
     this.updateTimer = null; // Timer para enviar actualizaciones a los clientes
     this.io = null; // Referencia al socket.io server para enviar actualizaciones
-    this.words = new Set(); // Palabras válidas del diccionario (simplificado para demo)
+    this.words = new Set(); // Palabras válidas del diccionario
     this.lastRotationTime = 0; // Timestamp de la última rotación
-    this.rotationCooldown = 30000; // 30 segundos en milisegundos
+    this.rotationCooldown = ROTATION_COOLDOWN;
     this.availableNames = [...RANDOM_NAMES]; // Copia de nombres disponibles
     this.eliminateCommonWords = true; // Configuración para eliminar palabras comunes
     this.initializeDictionary();
   }
 
-  // Método para configurar la referencia a socket.io server
+  /**
+   * Método para configurar la referencia a socket.io server
+   */
   setIO(io) {
     this.io = io;
   }
 
-  // Métodos para limpiar timers
+  /**
+   * Limpia todos los timers activos
+   */
   clearTimers() {
     this.clearInternalTimer();
     this.clearUpdateTimer();
@@ -238,10 +55,13 @@ class BoggleGame {
     }
   }
 
+  /**
+   * Inicializa el diccionario de palabras válidas desde el archivo
+   */
   initializeDictionary() {
     try {
       // Leer el archivo de palabras completo en español
-      const dictionaryPath = path.join(__dirname, "file-2017.txt");
+      const dictionaryPath = path.join(process.cwd(), "file-2017.txt");
       const fileContent = fs.readFileSync(dictionaryPath, "utf8");
 
       // Dividir por líneas y filtrar palabras válidas
@@ -263,53 +83,18 @@ class BoggleGame {
       console.error("Error al cargar el diccionario:", error);
       // Fallback a diccionario básico si hay error
       const basicWords = [
-        "gato",
-        "perro",
-        "casa",
-        "mesa",
-        "silla",
-        "agua",
-        "fuego",
-        "tierra",
-        "aire",
-        "amor",
-        "tiempo",
-        "lugar",
-        "cosa",
-        "persona",
-        "animal",
-        "planta",
-        "comida",
+        "gato", "perro", "casa", "mesa", "silla", "agua", "fuego", "tierra",
+        "aire", "amor", "tiempo", "lugar", "cosa", "persona", "animal", "planta", "comida",
       ];
       this.words = new Set(basicWords);
     }
   }
 
-  // Configuración de los 16 dados de Boggle
-  getDiceConfiguration() {
-    return [
-      ["A", "E", "O", "S", "N", "R"],
-      ["A", "E", "I", "O", "U", "L"],
-      ["D", "E", "R", "L", "A", "S"],
-      ["N", "C", "I", "O", "E", "T"],
-      ["B", "U", "M", "A", "R", "O"],
-      ["QU", "E", "I", "T", "A", "S"],
-      ["G", "L", "E", "A", "N", "O"],
-      ["CH", "A", "R", "E", "I", "S"],
-      ["P", "O", "L", "A", "S", "U"],
-      ["V", "E", "R", "A", "I", "D"],
-      ["M", "E", "N", "T", "O", "A"],
-      ["Z", "A", "QU", "U", "E", "N"],
-      ["H", "O", "S", "T", "I", "A"],
-      ["F", "A", "L", "D", "E", "I"],
-      ["LL", "A", "O", "R", "I", "S"],
-      ["Ñ", "C", "E", "A", "N", "O"],
-    ];
-  }
-
-  // Lanzar los dados y generar el tablero
+  /**
+   * Lanza los dados y genera un nuevo tablero 4x4
+   */
   generateBoard() {
-    const dice = this.getDiceConfiguration();
+    const dice = getDiceConfiguration();
     const diceRolls = [];
 
     // Mezclar los dados para posiciones aleatorias
@@ -344,7 +129,9 @@ class BoggleGame {
     return diceRolls;
   }
 
-  // Obtener un nombre aleatorio único de la lista disponible
+  /**
+   * Obtiene un nombre aleatorio único de la lista disponible
+   */
   getRandomName() {
     if (this.availableNames.length === 0) {
       // Si se agotaron los nombres, reiniciar la lista
@@ -360,7 +147,9 @@ class BoggleGame {
     return selectedName;
   }
 
-  // Liberar un nombre cuando un jugador se desconecta
+  /**
+   * Libera un nombre cuando un jugador se desconecta
+   */
   releaseName(playerName) {
     if (
       RANDOM_NAMES.includes(playerName) &&
@@ -370,15 +159,22 @@ class BoggleGame {
     }
   }
 
+  /**
+   * Añade un jugador al juego
+   */
   addPlayer(playerId, playerName) {
     this.players.set(playerId, {
       id: playerId,
       name: playerName,
       score: 0,
       wordsFound: [],
+      eliminatedWords: [], // Inicializar array de palabras eliminadas
     });
   }
 
+  /**
+   * Remueve un jugador del juego
+   */
   removePlayer(playerId) {
     const player = this.players.get(playerId);
     if (player) {
@@ -388,6 +184,9 @@ class BoggleGame {
     }
   }
 
+  /**
+   * Inicia una nueva partida
+   */
   startGame() {
     if (this.players.size < 1) return false;
 
@@ -421,20 +220,37 @@ class BoggleGame {
     return { success: true, diceRolls };
   }
 
+  /**
+   * Termina la partida actual
+   */
   endGame() {
     this.gameState = "finished";
-    
-    // Enviar notificación de fin de juego ANTES de limpiar los timers
-    if (this.io) {
-      this.io.emit("game-ended", this.getGameState());
-    }
     
     // Limpiar ambos timers usando el método centralizado
     this.clearTimers();
 
     // Eliminar palabras comunes si la opción está activada
+    debugLog("ENDGAME: Verificando eliminación de palabras comunes", { 
+      eliminateCommonWords: this.eliminateCommonWords 
+    });
+    
     if (this.eliminateCommonWords) {
       this.eliminateCommonWordsFromPlayers();
+      
+      // Enviar estado actualizado después de eliminar palabras comunes
+      if (this.io) {
+        debugLog("EMIT: game-state (after eliminating common words)", {
+          playersCount: this.players.size
+        });
+        this.io.emit("game-state", this.getGameState());
+      }
+    } else {
+      debugLog("ENDGAME: Eliminación de palabras comunes deshabilitada");
+    }
+    
+    // Enviar notificación de fin de juego DESPUÉS de actualizar el estado
+    if (this.io) {
+      this.io.emit("game-ended", this.getGameState());
     }
 
     // Actualizar scoreboard con los puntajes de esta partida
@@ -447,9 +263,13 @@ class BoggleGame {
     updateScoreboard(playerScores, playerCount);
   }
 
+  /**
+   * Procesa la submisión de una palabra por un jugador
+   */
   submitWord(playerId, word, path) {
     if (this.gameState !== "playing")
       return { valid: false, reason: "Juego no activo" };
+    
     const player = this.players.get(playerId);
     if (!player) return { valid: false, reason: "Jugador no encontrado" };
 
@@ -477,12 +297,15 @@ class BoggleGame {
 
     // Agregar palabra y calcular puntuación
     player.wordsFound.push(word);
-    const points = this.calculatePoints(word);
+    const points = calculateWordPoints(word);
     player.score += points;
 
     return { valid: true, points, word };
   }
 
+  /**
+   * Valida que un camino en el tablero forme la palabra especificada
+   */
   isValidPath(path, word) {
     // Construir la palabra desde el path para manejar dígrafos
     let pathWord = "";
@@ -519,15 +342,9 @@ class BoggleGame {
     return pathWord === word.toLowerCase();
   }
 
-  calculatePoints(word) {
-    const length = word.length;
-    if (length <= 4) return 1;
-    if (length === 5) return 2;
-    if (length === 6) return 3;
-    if (length === 7) return 5;
-    return 11; // 8+ letters
-  }
-
+  /**
+   * Obtiene el estado actual del juego
+   */
   getGameState() {
     return {
       board: this.board,
@@ -538,6 +355,9 @@ class BoggleGame {
     };
   }
 
+  /**
+   * Reinicia el juego manteniendo los jugadores
+   */
   resetGame() {
     this.board = [];
     this.gameState = "waiting";
@@ -549,22 +369,33 @@ class BoggleGame {
     for (const player of this.players.values()) {
       player.score = 0;
       player.wordsFound = [];
-      player.eliminatedWords = []; // Reset eliminated words
+      // Asegurar que eliminatedWords existe antes de resetear
+      player.eliminatedWords = player.eliminatedWords || [];
+      player.eliminatedWords.length = 0; // Reset eliminated words
     }
 
     // Reset max score data
     this.maxScoreData = null;
   }
 
-  // Configurar eliminación de palabras comunes
+  /**
+   * Configura si se eliminan palabras comunes al final del juego
+   */
   setEliminateCommonWords(enabled) {
     this.eliminateCommonWords = enabled;
   }
 
-  // Eliminar palabras comunes entre jugadores
+  /**
+   * Elimina palabras comunes entre jugadores y recalcula puntuaciones
+   */
   eliminateCommonWordsFromPlayers() {
     const players = Array.from(this.players.values());
-    if (players.length < 2) return; // No hay suficientes jugadores
+    if (players.length < 2) {
+      debugLog("ELIMINATE_COMMON_WORDS: Skipping - menos de 2 jugadores", { playerCount: players.length });
+      return; // No hay suficientes jugadores
+    }
+
+    debugLog("ELIMINATE_COMMON_WORDS: Iniciando eliminación", { playerCount: players.length });
 
     // Crear un mapa de palabras y los jugadores que las encontraron
     const wordToPlayers = new Map();
@@ -586,8 +417,18 @@ class BoggleGame {
       }
     });
 
+    debugLog("ELIMINATE_COMMON_WORDS: Palabras comunes encontradas", { 
+      commonWordsCount: commonWords.size,
+      commonWords: Array.from(commonWords) 
+    });
+
     // Eliminar palabras comunes y recalcular puntuaciones
     players.forEach((player) => {
+      // Asegurar que el jugador tenga la propiedad eliminatedWords (para jugadores existentes)
+      if (!player.eliminatedWords) {
+        player.eliminatedWords = [];
+      }
+
       const originalWords = [...player.wordsFound];
       const eliminatedWords = [];
       const validWords = [];
@@ -605,13 +446,27 @@ class BoggleGame {
       player.eliminatedWords = eliminatedWords;
 
       // Recalcular puntuación solo con palabras válidas
+      const oldScore = player.score;
       player.score = validWords.reduce((total, word) => {
-        return total + this.calculatePoints(word);
+        return total + calculateWordPoints(word);
       }, 0);
+
+      debugLog("ELIMINATE_COMMON_WORDS: Jugador procesado", {
+        playerName: player.name,
+        originalWords: originalWords.length,
+        validWords: validWords.length,
+        eliminatedWords: eliminatedWords.length,
+        oldScore,
+        newScore: player.score
+      });
     });
+
+    debugLog("ELIMINATE_COMMON_WORDS: Proceso completado");
   }
 
-  // Rotar el tablero 90 grados en sentido horario
+  /**
+   * Rota el tablero 90 grados en sentido horario
+   */
   rotateBoard() {
     const now = Date.now();
 
@@ -650,7 +505,9 @@ class BoggleGame {
     return { success: true, cooldownTime: this.rotationCooldown / 1000 };
   }
 
-  // Encontrar todas las palabras posibles en el tablero y calcular puntuación máxima
+  /**
+   * Encuentra todas las palabras posibles en el tablero actual
+   */
   findAllPossibleWords() {
     const allWords = [];
     const visited = Array(4)
@@ -672,7 +529,7 @@ class BoggleGame {
         allWords.push({
           word: currentWord,
           path: [...currentPath],
-          points: this.calculatePoints(currentWord),
+          points: calculateWordPoints(currentWord),
         });
       }
 
@@ -735,190 +592,3 @@ class BoggleGame {
     };
   }
 }
-
-app.prepare().then(() => {
-  const httpServer = createServer(handler);
-  const io = new Server(httpServer);
-
-  const game = new BoggleGame();
-  // Configurar la referencia a io en el objeto game para que pueda enviar actualizaciones
-  game.setIO(io);
-
-  io.on("connection", (socket) => {
-    debugLog("EVENT: connection", null, socket.id);
-
-    socket.on("join-game", (playerName) => {
-      debugLog("EVENT: join-game", { playerName }, socket.id);
-      // Si no se proporciona nombre o está vacío, asignar uno aleatorio
-      const finalName =
-        playerName && playerName.trim()
-          ? playerName.trim()
-          : game.getRandomName();
-
-      game.addPlayer(socket.id, finalName);
-      debugLog(
-        "EMIT: game-state (after join)",
-        { playerCount: game.players.size, finalName },
-        socket.id
-      );
-      socket.emit("game-state", game.getGameState());
-      debugLog("BROADCAST: player-joined", { finalName }, socket.id);
-      socket.broadcast.emit("player-joined", {
-        playerId: socket.id,
-        playerName: finalName,
-      });
-    });
-
-    socket.on("start-game", () => {
-      debugLog("EVENT: start-game", null, socket.id);
-      const result = game.startGame();
-      if (result.success) {
-        debugLog("EMIT: dice-rolling (game started)", {
-          diceCount: result.diceRolls.length,
-        });
-        // Primero enviar la información de los dados para la animación
-        io.emit("dice-rolling", result.diceRolls);
-
-        // Después de un breve delay, enviar el estado del juego iniciado
-        setTimeout(() => {
-          io.emit("game-started", game.getGameState());
-        }, 3000); // 3 segundos para la animación de dados
-
-        // El timer de actualizaciones ahora está manejado internamente por la clase BoggleGame
-      }
-    });
-
-    socket.on("submit-word", ({ word, path }) => {
-      debugLog(
-        "EVENT: submit-word",
-        { word, pathLength: path?.length },
-        socket.id
-      );
-      const result = game.submitWord(socket.id, word, path);
-      debugLog(
-        "EMIT: word-result",
-        {
-          valid: result.valid,
-          word: result.word,
-          points: result.points,
-          reason: result.reason,
-        },
-        socket.id
-      );
-      socket.emit("word-result", result);
-
-      if (result.valid) {
-        debugLog(
-          "BROADCAST: player-scored",
-          { word: result.word, points: result.points },
-          socket.id
-        );
-        socket.broadcast.emit("player-scored", {
-          playerId: socket.id,
-          word: result.word,
-          points: result.points,
-        });
-        debugLog("EMIT: game-state (after valid word)");
-        io.emit("game-state", game.getGameState());
-      }
-    });
-
-    socket.on("reset-game", () => {
-      debugLog("EVENT: reset-game", null, socket.id);
-      game.resetGame();
-      io.emit("game-reset", game.getGameState());
-    });
-
-    socket.on("rotate-board", () => {
-      debugLog("EVENT: rotate-board", null, socket.id);
-      const result = game.rotateBoard();
-      if (result.success) {
-        debugLog("EMIT: board-rotated", { cooldownTime: result.cooldownTime });
-        // Enviar el tablero rotado a todos los jugadores
-        io.emit("board-rotated", {
-          board: game.board,
-          cooldownTime: result.cooldownTime,
-        });
-      } else {
-        debugLog("EMIT: rotation-error", { reason: result.reason }, socket.id);
-        // Enviar mensaje de error solo al jugador que intentó rotar
-        socket.emit("rotation-error", {
-          message: result.reason,
-        });
-      }
-    });
-
-    socket.on("get-scoreboard", () => {
-      debugLog("EVENT: get-scoreboard", null, socket.id);
-      const scoreboard = loadScoreboard();
-      debugLog(
-        "EMIT: scoreboard-data",
-        { count: scoreboard.length },
-        socket.id
-      );
-      socket.emit("scoreboard-data", scoreboard);
-    });
-
-    socket.on("get-max-score", () => {
-      debugLog("EVENT: get-max-score", null, socket.id);
-      // Solo calcular si hay un tablero válido
-      if (
-        game.board &&
-        game.board.length === 4 &&
-        game.board[0] &&
-        game.board[0].length === 4
-      ) {
-        const maxScoreData = game.findAllPossibleWords();
-        debugLog(
-          "EMIT: max-score-data",
-          {
-            totalWords: maxScoreData.totalWords,
-            maxScore: maxScoreData.maxScore,
-          },
-          socket.id
-        );
-        socket.emit("max-score-data", maxScoreData);
-      } else {
-        debugLog(
-          "EMIT: max-score-data (empty - no valid board)",
-          null,
-          socket.id
-        );
-        // Si no hay tablero válido, enviar datos vacíos
-        socket.emit("max-score-data", {
-          words: [],
-          maxScore: 0,
-          totalWords: 0,
-        });
-      }
-    });
-
-    socket.on("toggle-eliminate-common-words", (enabled) => {
-      debugLog("EVENT: toggle-eliminate-common-words", { enabled }, socket.id);
-      game.setEliminateCommonWords(enabled);
-      debugLog("EMIT: eliminate-common-words-changed", {
-        enabled,
-        eliminateCommonWords: game.eliminateCommonWords,
-      });
-      io.emit("eliminate-common-words-changed", {
-        enabled: enabled,
-        eliminateCommonWords: game.eliminateCommonWords,
-      });
-    });
-
-    socket.on("disconnect", () => {
-      debugLog("EVENT: disconnect", null, socket.id);
-      game.removePlayer(socket.id);
-      socket.broadcast.emit("player-left", socket.id);
-    });
-  });
-
-  httpServer
-    .once("error", (err) => {
-      console.error(err);
-      process.exit(1);
-    })
-    .listen(port, () => {
-      console.log(`> Ready on http://${hostname}:${port}`);
-    });
-});

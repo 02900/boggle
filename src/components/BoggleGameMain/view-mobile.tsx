@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
+import { useSocket } from "@/hooks/useSocket";
 import { useGameLogicStore } from "@/stores/game-logic.store";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { DiceRollingAnimation } from "../DiceRollingAnimation";
 import { GameBoard } from "../GameBoard";
-import { useBoggleGameMainStore } from "./boogle-game.main.store";
+import { useBoggleGameMainStore } from "./boogle-game-main.store";
 import { useBoggleGameMain } from "./use-boggle-game-main";
 
 export const ViewMobile = () => {
@@ -14,16 +15,16 @@ export const ViewMobile = () => {
   const { gameState, rotationCooldown, rotationMessage, currentPlayerId } =
     useBoggleGameMainStore();
 
-  const { getWordScore, startGame, rotateBoard, resetGame } =
-    useBoggleGameMain();
+  const { getWordScore } = useBoggleGameMain();
+  const { startGame, rotateBoard, resetGame } = useSocket();
 
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Animación de lanzamiento de dados */}
       <DiceRollingAnimation />
 
       {/* Header compacto con tiempo y puntos */}
-      <div className="flex-shrink-0 bg-white shadow-sm p-3">
+      <div className="bg-white shadow-sm p-3">
         <div className="flex justify-between items-center">
           <div className="text-lg font-bold text-gray-800">🎲 Boggle</div>
 
@@ -266,7 +267,7 @@ export const ViewMobile = () => {
 
       {/* Footer con palabra actual y últimas palabras encontradas */}
       {gameState.gameState === "playing" && (
-        <div className="flex-shrink-0 bg-white shadow-sm p-3 border-t">
+        <div className="bg-white shadow-sm p-3 border-t">
           {currentWord && (
             <div className="text-center mb-2">
               <span className="text-lg font-bold text-blue-600">

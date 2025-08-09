@@ -1,4 +1,4 @@
-import { useBoggleGameMainStore } from '@/components/BoggleGameMain/boogle-game.main.store';
+import { useBoggleGameMainStore } from '@/components/BoggleGameMain/boogle-game-main.store';
 
 const HIGHLIGHT_DURATION = 400;
 

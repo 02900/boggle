@@ -2,10 +2,13 @@
   "name": "boggle-game",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "node server.js",
+    "dev": "node server-refactored.js",
+    "dev-original": "node server.js",
     "build": "next build",
-    "start": "NODE_ENV=production node server.js",
+    "start": "NODE_ENV=production node server-refactored.js",
+    "start-original": "NODE_ENV=production node server.js",
     "lint": "next lint"
   },
   "dependencies": {
