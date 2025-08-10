@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
+import { PlayersList } from "@/components/PlayersList";
 import { DiceRollingAnimation } from "../../DiceRollingAnimation";
 import { GameBoard } from "../../GameBoard";
 import { useBoggleGameMainStore } from "../boogle-game-main.store";
-import { MobileHeader } from "./MobileHeader";
 import { MobileFooter } from "./mobile-footer";
-import { MobileResults } from "./mobile-results";
+import { MobileHeader } from "./MobileHeader";
 
 export const ViewMobile = () => {
   const { gameState } = useBoggleGameMainStore();
@@ -15,7 +15,8 @@ export const ViewMobile = () => {
     <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       <DiceRollingAnimation />
       <MobileHeader />
-      {gameState.gameState === "finished" ? <MobileResults /> : <GameBoard />}
+      <GameBoard />
+      {gameState.gameState === "finished" && <PlayersList />}
       <MobileFooter />
     </div>
   );
