@@ -1,14 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import { useViewportStore } from "@/stores/viewport.store";
 import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
 
 export const PlayersList = () => {
   const { gameState, currentPlayerId } = useBoggleGameMainStore();
-  const { isMobile } = useViewportStore();
 
   // Determinar si se deben mostrar las puntuaciones
-  const shouldShowScores = gameState.gameState === "finished" || isMobile;
+  const shouldShowScores = gameState.gameState === "finished";
 
   // Función para calcular el puntaje de una palabra
   const getWordScore = (word: string): number => {
@@ -86,11 +84,17 @@ export const PlayersList = () => {
                 `}
             >
               <div className="flex items-center space-x-2">
-                {shouldShowScores &&
-                  index === 0 &&
-                  getAllParticipants().length > 1 && (
-                    <span className="text-yellow-500 text-lg">👑</span>
-                  )}
+                {shouldShowScores && getAllParticipants().length > 1 && (
+                  <span className="text-xl">
+                    {index === 0
+                      ? "🥇"
+                      : index === 1
+                      ? "🥈"
+                      : index === 2
+                      ? "🥉"
+                      : `${index + 1}º`}
+                  </span>
+                )}
                 <div>
                   <span className="font-medium text-gray-800">
                     {player.name}
@@ -124,56 +128,71 @@ export const PlayersList = () => {
                   {/* Mostrar palabras cuando el juego ha terminado */}
                   {gameState.gameState === "finished" && (
                     <div className="mt-2 space-y-1">
-                      {/* Palabras válidas */}
+                      {/* Palabras válidas ordenadas por puntaje */}
                       {player.wordsFound.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {player.wordsFound.map((word, wordIndex) => {
-                            const raeUrl = `https://dle.rae.es/${encodeURIComponent(
-                              word.toLowerCase()
-                            )}?m=form`;
-                            return (
-                              <Link
-                                key={`valid-${wordIndex}`}
-                                href={raeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800 hover:bg-green-200 hover:no-underline transition-colors"
-                                title="Clic para ver definición RAE"
-                              >
-                                {word}
-                                <span className="ml-1 text-green-600 font-medium text-xs">
-                                  +{getWordScore(word)}
-                                </span>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Palabras eliminadas */}
-                      {player.eliminatedWords &&
-                        player.eliminatedWords.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {player.eliminatedWords.map((word, wordIndex) => {
+                        <div className="flex flex-wrap gap-2">
+                          {[...player.wordsFound]
+                            .map((word) => ({ word, score: getWordScore(word) }))
+                            .sort((a, b) => b.score - a.score)
+                            .map(({ word, score }, wordIndex) => {
                               const raeUrl = `https://dle.rae.es/${encodeURIComponent(
                                 word.toLowerCase()
                               )}?m=form`;
                               return (
                                 <Link
-                                  key={`eliminated-${wordIndex}`}
+                                  key={`valid-${wordIndex}`}
                                   href={raeUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-800 line-through hover:bg-red-200 hover:no-underline transition-colors"
+                                  className={`
+                                    inline-flex items-center px-2 py-1 rounded-full text-xs font-medium hover:no-underline transition-colors
+                                    ${
+                                      score >= 5
+                                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                        : score >= 3
+                                        ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                    }
+                                  `}
                                   title="Clic para ver definición RAE"
                                 >
                                   {word}
-                                  <span className="ml-1 text-red-600 font-medium text-xs">
-                                    -{getWordScore(word)}
+                                  <span className="ml-1 text-xs opacity-75">
+                                    +{score}pts
                                   </span>
                                 </Link>
                               );
                             })}
+                        </div>
+                      )}
+
+                      {/* Palabras eliminadas ordenadas por puntaje */}
+                      {player.eliminatedWords &&
+                        player.eliminatedWords.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {[...player.eliminatedWords]
+                              .map((word) => ({ word, score: getWordScore(word) }))
+                              .sort((a, b) => b.score - a.score)
+                              .map(({ word, score }, wordIndex) => {
+                                const raeUrl = `https://dle.rae.es/${encodeURIComponent(
+                                  word.toLowerCase()
+                                )}?m=form`;
+                                return (
+                                  <Link
+                                    key={`eliminated-${wordIndex}`}
+                                    href={raeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 line-through hover:bg-red-200 hover:no-underline transition-colors"
+                                    title="Clic para ver definición RAE"
+                                  >
+                                    {word}
+                                    <span className="ml-1 text-xs opacity-75">
+                                      -{score}pts
+                                    </span>
+                                  </Link>
+                                );
+                              })}
                           </div>
                         )}
                     </div>

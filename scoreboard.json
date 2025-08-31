@@ -1,15 +1,45 @@
 [
   {
     "name": "TeruMaster",
+    "score": 118,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 108,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
     "score": 105,
     "date": "2025-08-02",
     "playerCount": 3
+  },
+  {
+    "name": "juan",
+    "score": 93,
+    "date": "2025-08-11",
+    "playerCount": 4
   },
   {
     "name": "TeruMaster",
     "score": 87,
     "date": "2025-08-09",
     "playerCount": 2
+  },
+  {
+    "name": "TeruMaster",
+    "score": 79,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "WetDry",
+    "score": 78,
+    "date": "2025-08-11",
+    "playerCount": 3
   },
   {
     "name": "TeruMaster",
@@ -24,9 +54,45 @@
     "playerCount": 3
   },
   {
+    "name": "juan",
+    "score": 66,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 60,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
     "name": "TeruMaster",
     "score": 51,
     "date": "2025-08-02",
+    "playerCount": 3
+  },
+  {
+    "name": "juan",
+    "score": 51,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 50,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 49,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 49,
+    "date": "2025-08-25",
     "playerCount": 3
   },
   {
@@ -34,6 +100,12 @@
     "score": 48,
     "date": "2025-08-02",
     "playerCount": 1
+  },
+  {
+    "name": "FarNear",
+    "score": 48,
+    "date": "2025-08-25",
+    "playerCount": 3
   },
   {
     "name": "TeruMaster",
@@ -54,6 +126,60 @@
     "playerCount": 2
   },
   {
+    "name": "TeruMaster",
+    "score": 44,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "juan",
+    "score": 43,
+    "date": "2025-08-11",
+    "playerCount": 4
+  },
+  {
+    "name": "juan",
+    "score": 43,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 42,
+    "date": "2025-08-11",
+    "playerCount": 4
+  },
+  {
+    "name": "juan",
+    "score": 42,
+    "date": "2025-08-11",
+    "playerCount": 4
+  },
+  {
+    "name": "TeruMaster",
+    "score": 41,
+    "date": "2025-08-11",
+    "playerCount": 4
+  },
+  {
+    "name": "juan",
+    "score": 41,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "juan",
+    "score": 41,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "FarNear",
+    "score": 41,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
     "name": "EarthShaker",
     "score": 40,
     "date": "2025-08-02",
@@ -63,6 +189,48 @@
     "name": "TeruMaster",
     "score": 40,
     "date": "2025-08-02",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 40,
+    "date": "2025-08-11",
+    "playerCount": 4
+  },
+  {
+    "name": "TeruMaster",
+    "score": 40,
+    "date": "2025-08-11",
+    "playerCount": 4
+  },
+  {
+    "name": "TeruMaster",
+    "score": 40,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 40,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "FarNear",
+    "score": 40,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 39,
+    "date": "2025-08-11",
+    "playerCount": 4
+  },
+  {
+    "name": "Terpodia",
+    "score": 39,
+    "date": "2025-08-11",
     "playerCount": 3
   },
   {
@@ -78,225 +246,57 @@
     "playerCount": 3
   },
   {
-    "name": "TeruMaster",
-    "score": 36,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 36,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 34,
-    "date": "2025-08-02",
-    "playerCount": 2
-  },
-  {
-    "name": "TeruMaster",
-    "score": 34,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 33,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 32,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Peano",
-    "score": 32,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 30,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 29,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "ColdFire",
-    "score": 28,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Peano",
-    "score": 28,
-    "date": "2025-08-02",
-    "playerCount": 4
-  },
-  {
-    "name": "TeruMaster",
-    "score": 28,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "ColdFire",
-    "score": 27,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 26,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Jota",
-    "score": 26,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "FullEmpty",
-    "score": 25,
-    "date": "2025-08-01",
-    "playerCount": 1
-  },
-  {
-    "name": "TeruMaster",
-    "score": 25,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "EarthShaker",
-    "score": 24,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 24,
-    "date": "2025-08-02",
-    "playerCount": 4
-  },
-  {
-    "name": "Jota",
-    "score": 23,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 22,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 22,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 22,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Jota",
-    "score": 22,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Jota",
-    "score": 22,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "GentleGiant",
-    "score": 21,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Peano",
-    "score": 21,
-    "date": "2025-08-02",
-    "playerCount": 2
-  },
-  {
-    "name": "Jota",
-    "score": 21,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "GentleGiant",
-    "score": 20,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 20,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 20,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Peano",
-    "score": 20,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "ColdFire",
-    "score": 19,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 19,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Jota",
-    "score": 19,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
-    "name": "Jota",
-    "score": 17,
-    "date": "2025-08-02",
-    "playerCount": 3
-  },
-  {
     "name": "Terpodia",
-    "score": 17,
-    "date": "2025-08-07",
+    "score": 37,
+    "date": "2025-08-11",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 37,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 37,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 36,
+    "date": "2025-08-02",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 36,
+    "date": "2025-08-02",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 36,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "FarNear",
+    "score": 35,
+    "date": "2025-08-25",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 34,
+    "date": "2025-08-02",
     "playerCount": 2
+  },
+  {
+    "name": "TeruMaster",
+    "score": 34,
+    "date": "2025-08-02",
+    "playerCount": 3
   }
 ]
