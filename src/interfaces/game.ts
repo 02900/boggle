@@ -54,6 +54,7 @@ export interface GameEvents {
     enabled: boolean;
     eliminateCommonWords: boolean;
   }) => void;
+  "join-confirmed": (data: { playerName: string; playerId: string }) => void;
 }
 
 export interface ClientEvents {

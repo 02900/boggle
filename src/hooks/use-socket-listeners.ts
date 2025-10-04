@@ -201,6 +201,12 @@ export const useSocketListeners = () => {
       }
     });
 
+    newSocket.on("join-confirmed", ({ playerName }) => {
+      // Guardar el nombre asignado (aleatorio o personalizado) en localStorage
+      localStorage.setItem("boggle-player-name", playerName);
+      console.log("JOIN_CONFIRMED: Nombre guardado en localStorage", { playerName });
+    });
+
     newSocket.on("player-joined", ({ playerName }) => {
       setMessage(`¡${playerName} se unió al juego!`);
     });

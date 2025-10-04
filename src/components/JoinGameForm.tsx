@@ -28,12 +28,11 @@ export const JoinGameForm = () => {
     setIsLoading(true);
     try {
       if (useRandomName || !playerName.trim()) {
-        // Usar nombre aleatorio (el servidor lo asignará)
+        // Usar nombre aleatorio (el servidor lo asignará y se guardará automáticamente)
         handleJoinGame("");
       } else {
-        // Usar nombre personalizado
+        // Usar nombre personalizado (se guardará cuando el servidor confirme)
         const trimmedName = playerName.trim();
-        localStorage.setItem("boggle-player-name", trimmedName);
         handleJoinGame(trimmedName);
       }
     } finally {
@@ -43,10 +42,7 @@ export const JoinGameForm = () => {
 
   const handleNameChange = (newName: string) => {
     setPlayerName(newName);
-    // Guardar inmediatamente en localStorage cuando se edita
-    if (newName.trim()) {
-      localStorage.setItem("boggle-player-name", newName.trim());
-    }
+    // No guardamos en localStorage aquí, esperamos la confirmación del servidor
   };
 
   return (
