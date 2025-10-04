@@ -112,6 +112,12 @@ export const useSocket = () => {
     }
   };
 
+  const toggleClientSideValidation = (enabled: boolean) => {
+    if (socket) {
+      socket.emit("toggle-client-side-validation", enabled);
+    }
+  };
+
   return {
     connectSocket,
     joinGame,
@@ -125,5 +131,6 @@ export const useSocket = () => {
     playErrorSound,
     playSkipSound,
     toggleEliminateCommonWords,
+    toggleClientSideValidation,
   };
 };

@@ -61,22 +61,31 @@ export const useSocketListeners = () => {
     newSocket.on("disconnect", () => {
       setIsConnected(false);
     });
-
     // Game events
     newSocket.on("dice-rolling", (diceRolls: DiceRoll[]) => {
       setDiceRolling(diceRolls);
     });
 
-    newSocket.on(
-      "eliminate-common-words-changed",
-      (data: { enabled: boolean; eliminateCommonWords: boolean }) => {
-        setEliminateCommonWords(data.eliminateCommonWords);
+    newSocket.on("eliminate-common-words-changed", ({ enabled, eliminateCommonWords }) => {
+      // Actualizar el estado local si es necesario
+      console.log("Elimminate common words changed:", { enabled, eliminateCommonWords });
+    });
+
+    newSocket.on("client-side-validation-changed", ({ enabled }) => {
+      // Actualizar el estado del feature flag en el store
+      setGameState((prev) => ({ ...prev, clientSideValidation: enabled }));
+      console.log("Client-side validation changed:", { enabled });
+    });
+
+    newSocket.on("words-revalidated", ({ totalWordsRemoved, affectedPlayers, summary }) => {
+      if (totalWordsRemoved > 0) {
+        setMessage(`🔍 Revalidación: ${totalWordsRemoved} palabras removidas de ${affectedPlayers} jugadores`);
+        console.log("Words revalidated:", { totalWordsRemoved, affectedPlayers, summary });
       }
-    );
+    });
 
     newSocket.on("game-state", (state: GameState) => {
       setGameState(state);
-
       // Si estábamos en proceso de reconexión automática y recibimos un estado válido,
       // significa que la reconexión fue exitosa
       if (isReconnectingRef.current) {

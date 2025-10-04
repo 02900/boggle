@@ -99,31 +99,34 @@ export function setupSocketHandlers(io, game) {
           word,
           pathLength: path?.length,
           clientRotationVersion: rotationVersion,
-          serverRotationVersion: game.rotationVersion,
         },
         socket.id
       );
+
+      if (!word || !path || rotationVersion === undefined) {
+        debugLog(
+          "ERROR: submit-word - parámetros faltantes",
+          { word: !!word, path: !!path, rotationVersion },
+          socket.id
+        );
+        return;
+      }
 
       const result = game.submitWord(socket.id, word, path, rotationVersion);
 
-      debugLog(
-        "EMIT: word-result",
-        {
-          valid: result.valid,
-          word: result.word,
-          points: result.points,
-          reason: result.reason,
-        },
-        socket.id
-      );
-
-      socket.emit("word-result", result);
+      // Si la validación del cliente está habilitada, no enviar word-result
+      // (el cliente ya mostró feedback inmediato)
+      if (!game.getClientSideValidation()) {
+        debugLog("EMIT: word-result (server validation mode)", result, socket.id);
+        socket.emit("word-result", result);
+      } else {
+        debugLog("SKIP: word-result (client validation mode)", result, socket.id);
+      }
 
       if (result.valid) {
         debugLog(
           "BROADCAST: player-scored",
           { word: result.word, points: result.points },
-          socket.id
         );
         socket.broadcast.emit("player-scored", {
           playerId: socket.id,
@@ -236,6 +239,19 @@ export function setupSocketHandlers(io, game) {
       io.emit("eliminate-common-words-changed", {
         enabled: enabled,
         eliminateCommonWords: game.eliminateCommonWords,
+      });
+    });
+
+    // Configurar validación del cliente (feature flag)
+    socket.on("toggle-client-side-validation", (enabled) => {
+      debugLog("EVENT: toggle-client-side-validation", { enabled }, socket.id);
+
+      game.setClientSideValidation(enabled);
+
+      debugLog("EMIT: client-side-validation-changed", { enabled });
+
+      io.emit("client-side-validation-changed", {
+        enabled: enabled,
       });
     });
 

@@ -126,9 +126,27 @@
     "playerCount": 3
   },
   {
+    "name": "TeruMaster",
+    "score": 84,
+    "date": "2025-10-04",
+    "playerCount": 2
+  },
+  {
+    "name": "TeruMaster",
+    "score": 84,
+    "date": "2025-10-04",
+    "playerCount": 3
+  },
+  {
     "name": "YesNo",
     "score": 83,
     "date": "2025-10-02",
+    "playerCount": 2
+  },
+  {
+    "name": "JuanPa",
+    "score": 83,
+    "date": "2025-10-04",
     "playerCount": 2
   },
   {
@@ -193,6 +211,12 @@
   },
   {
     "name": "TeruMaster",
+    "score": 73,
+    "date": "2025-10-04",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
     "score": 71,
     "date": "2025-10-02",
     "playerCount": 2
@@ -208,6 +232,12 @@
     "score": 70,
     "date": "2025-10-01",
     "playerCount": 2
+  },
+  {
+    "name": "TeruMaster",
+    "score": 70,
+    "date": "2025-10-04",
+    "playerCount": 5
   },
   {
     "name": "HeavyFeather",
@@ -268,35 +298,5 @@
     "score": 64,
     "date": "2025-09-28",
     "playerCount": 15
-  },
-  {
-    "name": "TeruMaster",
-    "score": 64,
-    "date": "2025-10-02",
-    "playerCount": 2
-  },
-  {
-    "name": "Juan",
-    "score": 63,
-    "date": "2025-09-28",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 62,
-    "date": "2025-10-01",
-    "playerCount": 2
-  },
-  {
-    "name": "TeruMaster",
-    "score": 60,
-    "date": "2025-08-25",
-    "playerCount": 3
-  },
-  {
-    "name": "RockSlide",
-    "score": 60,
-    "date": "2025-09-27",
-    "playerCount": 3
   }
 ]

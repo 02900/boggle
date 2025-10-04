@@ -8,5 +8,40 @@
     "wins": 2,
     "lastWinTime": 1759596208552,
     "sessionStartTime": 1759595767094
+  },
+  "FullEmpty": {
+    "wins": 1,
+    "lastWinTime": 1759598676095,
+    "sessionStartTime": 1759598676095
+  },
+  "QuietRoar": {
+    "wins": 1,
+    "lastWinTime": 1759601006563,
+    "sessionStartTime": 1759601006563
+  },
+  "FreeTrapped": {
+    "wins": 1,
+    "lastWinTime": 1759601661328,
+    "sessionStartTime": 1759601661328
+  },
+  "TeruMaster": {
+    "wins": 9,
+    "lastWinTime": 1759608414277,
+    "sessionStartTime": 1759602403898
+  },
+  "DeepDiver": {
+    "wins": 1,
+    "lastWinTime": 1759605132606,
+    "sessionStartTime": 1759605132606
+  },
+  "WildCard": {
+    "wins": 1,
+    "lastWinTime": 1759606370282,
+    "sessionStartTime": 1759606370282
+  },
+  "JuanPa": {
+    "wins": 3,
+    "lastWinTime": 1759608149967,
+    "sessionStartTime": 1759607322179
   }
 }

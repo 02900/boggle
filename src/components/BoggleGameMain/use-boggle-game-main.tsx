@@ -5,10 +5,21 @@ import { useGameLogic } from "@/hooks/useGameLogic";
 import { useGameLogicStore } from "@/stores/game-logic.store";
 import { setLastSubmittedRefGlobal } from "@/stores/last-submitted-ref.store";
 import { useBoggleGameMainStore } from "./boogle-game-main.store";
+import { useClientWordValidation } from "@/hooks/useClientWordValidation";
+import { useHighlightManager } from "@/hooks/use-highlight-manager";
 
 export const useBoggleGameMain = () => {
   const { isSelecting, setMessage } = useGameLogicStore();
-  const { joinGame, submitWord, playErrorSound } = useSocket();
+  const { 
+    joinGame, 
+    submitWord, 
+    playErrorSound, 
+    playSuccessSound, 
+    playSkipSound,
+    triggerVibration 
+  } = useSocket();
+  const { submitWordWithClientValidation, isClientValidationEnabled } = useClientWordValidation();
+  const { showHighlight } = useHighlightManager();
 
   const {
     handleCellMouseDown,
@@ -16,6 +27,7 @@ export const useBoggleGameMain = () => {
     handleMouseUp,
     isCellSelected,
     resetSelection,
+    addFoundWord,
   } = useGameLogic();
 
   const { setSelectedPath } = useGameLogicStore();
@@ -53,7 +65,50 @@ export const useBoggleGameMain = () => {
     // Actualizar AMBOS: store global (síncrono) y estado Zustand (asíncrono)
     const submittedData = { path: [...path], word };
     setLastSubmittedRefGlobal(submittedData); // ✅ Actualización síncrona global
-    submitWord(word, path);
+    
+    // Usar validación del cliente si está habilitada, sino usar método tradicional
+    if (isClientValidationEnabled) {
+      submitWordWithClientValidation(word, path, (result) => {
+        // Feedback inmediato basado en validación del cliente
+        if (result.valid) {
+          // ✅ Palabra válida - aplicar feedback completo como en el servidor
+          addFoundWord(result.word || word);
+          setMessage(`¡Excelente! "${word}" vale ${result.points} puntos!`);
+          
+          // Mostrar highlight de éxito (verde)
+          showHighlight(path, "success");
+          
+          // Activar sonido y vibración
+          triggerVibration();
+          playSuccessSound();
+        } else {
+          // ❌ Palabra inválida - manejar diferentes tipos de error
+          if (result.reason === "Ya encontraste esta palabra") {
+            // 🟠 Palabra repetida - mostrar en naranja
+            setMessage(`"${word}" - ${result.reason}`);
+            showHighlight(path, "skip");
+            playSkipSound();
+            // Resetear selección después de un delay
+            setTimeout(() => resetSelection(), 100);
+          } else {
+            // 🔴 Otros errores - mostrar en rojo
+            setMessage(`"${word}" - ${result.reason || "Palabra inválida"}`);
+            
+            // Mostrar highlight de error (rojo)
+            showHighlight(path, "error");
+            
+            // Sonido de error
+            playErrorSound();
+            
+            // Resetear selección después de un delay
+            setTimeout(() => resetSelection(), 100);
+          }
+        }
+      });
+    } else {
+      // Modo tradicional: enviar y esperar respuesta del servidor
+      submitWord(word, path);
+    }
   };
 
   const handleMouseUpWrapper = () => {

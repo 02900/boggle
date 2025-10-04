@@ -4,6 +4,7 @@ import { GameStatus } from "@/interfaces/game";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
+import { ClientValidationToggle } from "./ClientValidationToggle";
 
 export const GameControls = () => {
   const { isConnected } = useSocketsStore();
@@ -186,6 +187,11 @@ export const GameControls = () => {
           </div>
         </div>
       )}
+
+      {/* Feature Flag: Validación del Cliente */}
+      <div className="mt-4">
+        <ClientValidationToggle />
+      </div>
     </div>
   );
 };

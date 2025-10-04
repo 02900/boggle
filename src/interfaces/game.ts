@@ -26,6 +26,7 @@ export interface GameState {
   allParticipants?: Player[]; // Incluye todos los participantes (conectados y desconectados)
   playerStreaks?: Record<string, number>; // Total de victorias en las últimas 6 horas por nombre de jugador
   rotationVersion: number; // Versión actual del tablero (incrementa con cada rotación)
+  clientSideValidation?: boolean; // Feature flag: validación del cliente habilitada
 }
 
 export interface WordResult {
@@ -54,6 +55,12 @@ export interface GameEvents {
     enabled: boolean;
     eliminateCommonWords: boolean;
   }) => void;
+  "client-side-validation-changed": (data: { enabled: boolean }) => void;
+  "words-revalidated": (data: { 
+    totalWordsRemoved: number; 
+    affectedPlayers: number; 
+    summary: string; 
+  }) => void;
   "join-confirmed": (data: { playerName: string; playerId: string }) => void;
 }
 
@@ -67,6 +74,7 @@ export interface ClientEvents {
   }) => void;
   "reset-game": () => void;
   "toggle-eliminate-common-words": (enabled: boolean) => void;
+  "toggle-client-side-validation": (enabled: boolean) => void;
 }
 
 export type GameStatus = "waiting" | "playing" | "finished";
