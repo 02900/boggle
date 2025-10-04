@@ -20,10 +20,11 @@ export interface DiceRoll {
 export interface GameState {
   board: string[][];
   players: Player[];
-  gameState: 'waiting' | 'playing' | 'finished';
+  gameState: "waiting" | "playing" | "finished";
   timeLeft: number;
   diceRolls?: DiceRoll[];
   allParticipants?: Player[]; // Incluye todos los participantes (conectados y desconectados)
+  playerStreaks?: Record<string, number>; // Total de victorias en las últimas 6 horas por nombre de jugador
 }
 
 export interface WordResult {
@@ -34,28 +35,35 @@ export interface WordResult {
 }
 
 export interface GameEvents {
-  'game-state': (state: GameState) => void;
-  'game-started': (state: GameState) => void;
-  'dice-rolling': (diceRolls: DiceRoll[]) => void;
-  'timer-update': (timeLeft: number) => void;
-  'game-ended': (state: GameState) => void;
-  'word-result': (result: WordResult) => void;
-  'player-joined': (data: { playerName: string; playerId: string }) => void;
-  'player-left': (playerId: string) => void;
-  'player-scored': (data: { playerId: string; word: string; points: number }) => void;
-  'game-reset': (state: GameState) => void;
-  'eliminate-common-words-changed': (data: { enabled: boolean; eliminateCommonWords: boolean }) => void;
+  "game-state": (state: GameState) => void;
+  "game-started": (state: GameState) => void;
+  "dice-rolling": (diceRolls: DiceRoll[]) => void;
+  "timer-update": (timeLeft: number) => void;
+  "game-ended": (state: GameState) => void;
+  "word-result": (result: WordResult) => void;
+  "player-joined": (data: { playerName: string; playerId: string }) => void;
+  "player-left": (playerId: string) => void;
+  "player-scored": (data: {
+    playerId: string;
+    word: string;
+    points: number;
+  }) => void;
+  "game-reset": (state: GameState) => void;
+  "eliminate-common-words-changed": (data: {
+    enabled: boolean;
+    eliminateCommonWords: boolean;
+  }) => void;
 }
 
 export interface ClientEvents {
-  'join-game': (playerName: string) => void;
-  'start-game': () => void;
-  'submit-word': (data: { word: string; path: [number, number][] }) => void;
-  'reset-game': () => void;
-  'toggle-eliminate-common-words': (enabled: boolean) => void;
+  "join-game": (playerName: string) => void;
+  "start-game": () => void;
+  "submit-word": (data: { word: string; path: [number, number][] }) => void;
+  "reset-game": () => void;
+  "toggle-eliminate-common-words": (enabled: boolean) => void;
 }
 
-export type GameStatus = 'waiting' | 'playing' | 'finished';
+export type GameStatus = "waiting" | "playing" | "finished";
 
 export interface BoardCell {
   letter: string;
