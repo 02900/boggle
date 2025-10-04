@@ -31,6 +31,10 @@ export class BoggleGame {
     this.boardHistory = new Map(); // Historial de tableros por versión (últimas 5 rotaciones)
     this.maxBoardHistory = 5; // Máximo número de versiones a mantener en memoria
 
+    // Feature flag: Validación del cliente
+    this.clientSideValidation = true; // Si está habilitado, el cliente valida palabras localmente
+    this.pendingClientWords = new Map(); // Palabras pendientes de revalidación del servidor (playerId -> Set<word>)
+
     this.initializeDictionary();
   }
 
@@ -356,6 +360,11 @@ export class BoggleGame {
     // Limpiar ambos timers usando el método centralizado
     this.clearTimers();
 
+    // Si la validación del cliente estaba habilitada, revalidar todas las palabras
+    if (this.clientSideValidation) {
+      this.revalidateClientWords();
+    }
+
     // Eliminar palabras comunes si la opción está activada
     debugLog("ENDGAME: Verificando eliminación de palabras comunes", {
       eliminateCommonWords: this.eliminateCommonWords,
@@ -569,6 +578,7 @@ export class BoggleGame {
       timeLeft: this.timeLeft,
       diceRolls: this.lastDiceRolls || [],
       rotationVersion: this.rotationVersion,
+      clientSideValidation: this.clientSideValidation,
     };
 
     // Si el juego ha terminado, incluir las rachas de todos los participantes
@@ -617,16 +627,139 @@ export class BoggleGame {
       connectedPlayers: this.players.size,
       totalParticipants: this.gameHistory.size,
     });
-
-    // Reset max score data
-    this.maxScoreData = null;
   }
 
   /**
-   * Configura si se eliminan palabras comunes al final del juego
+   * Configura si se deben eliminar palabras comunes al final del juego
    */
   setEliminateCommonWords(enabled) {
     this.eliminateCommonWords = enabled;
+    debugLog("ELIMINATE_COMMON_WORDS: Configuración actualizada", {
+      enabled: this.eliminateCommonWords,
+    });
+  }
+
+  /**
+   * Configura el feature flag de validación del cliente
+   */
+  setClientSideValidation(enabled) {
+    this.clientSideValidation = enabled;
+    debugLog("CLIENT_SIDE_VALIDATION: Feature flag actualizado", {
+      enabled: this.clientSideValidation,
+    });
+  }
+
+  /**
+   * Obtiene el estado del feature flag de validación del cliente
+   */
+  getClientSideValidation() {
+    return this.clientSideValidation;
+  }
+
+  /**
+   * Revalida todas las palabras de los jugadores con el servidor al finalizar la partida
+   * Solo se ejecuta si la validación del cliente estaba habilitada
+   */
+  revalidateClientWords() {
+    debugLog("REVALIDATION: Iniciando revalidación de palabras del cliente");
+    
+    let totalWordsRevalidated = 0;
+    let totalWordsRemoved = 0;
+    const revalidationResults = {};
+
+    // Revalidar palabras de todos los participantes (conectados y desconectados)
+    for (const [playerId, player] of this.gameHistory) {
+      const originalWordsCount = player.wordsFound.length;
+      const validWords = [];
+      const invalidWords = [];
+
+      debugLog("REVALIDATION: Revalidando jugador", {
+        playerId,
+        playerName: player.name,
+        originalWordsCount
+      });
+
+      // Revalidar cada palabra con la lógica del servidor
+      for (const word of player.wordsFound) {
+        // Verificar longitud mínima
+        if (word.length < 3) {
+          invalidWords.push({ word, reason: "Palabra muy corta" });
+          continue;
+        }
+
+        // Verificar diccionario
+        if (!this.words.has(word.toLowerCase())) {
+          invalidWords.push({ word, reason: "No está en el diccionario" });
+          continue;
+        }
+
+        // La palabra es válida según el servidor
+        validWords.push(word);
+        totalWordsRevalidated++;
+      }
+
+      // Actualizar las palabras del jugador con solo las válidas
+      player.wordsFound = validWords;
+      
+      // Recalcular puntuación
+      const oldScore = player.score;
+      player.score = validWords.reduce((total, word) => {
+        return total + this.calculateWordPoints(word);
+      }, 0);
+
+      const wordsRemoved = originalWordsCount - validWords.length;
+      totalWordsRemoved += wordsRemoved;
+
+      revalidationResults[playerId] = {
+        playerName: player.name,
+        originalWords: originalWordsCount,
+        validWords: validWords.length,
+        invalidWords: invalidWords.length,
+        wordsRemoved,
+        oldScore,
+        newScore: player.score,
+        scoreChange: player.score - oldScore,
+        removedWords: invalidWords
+      };
+
+      // También actualizar el jugador conectado si existe
+      const connectedPlayer = this.players.get(playerId);
+      if (connectedPlayer) {
+        connectedPlayer.wordsFound = [...validWords];
+        connectedPlayer.score = player.score;
+      }
+
+      debugLog("REVALIDATION: Jugador revalidado", revalidationResults[playerId]);
+    }
+
+    debugLog("REVALIDATION: Revalidación completada", {
+      totalWordsRevalidated,
+      totalWordsRemoved,
+      playersProcessed: Object.keys(revalidationResults).length,
+      revalidationResults
+    });
+
+    // Emitir evento de revalidación si hay cambios significativos
+    if (totalWordsRemoved > 0 && this.io) {
+      this.io.emit("words-revalidated", {
+        totalWordsRemoved,
+        affectedPlayers: Object.keys(revalidationResults).length,
+        summary: "Algunas palabras fueron removidas tras la revalidación del servidor"
+      });
+    }
+  }
+
+  /**
+   * Calcula los puntos de una palabra (método auxiliar para revalidación)
+   */
+  calculateWordPoints(word) {
+    const length = word.length;
+    if (length < 3) return 0;
+    if (length === 3 || length === 4) return 1;
+    if (length === 5) return 2;
+    if (length === 6) return 3;
+    if (length === 7) return 5;
+    return 11; // 8+ letras
   }
 
   /**

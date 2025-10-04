@@ -55,6 +55,7 @@ export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
     timeLeft: 180,
     diceRolls: [],
     rotationVersion: 0,
+    clientSideValidation: true,
   },
   setGameState: (gameState: GameState | ((prev: GameState) => GameState)) =>
     set((state) => ({
