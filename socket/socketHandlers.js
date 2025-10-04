@@ -30,6 +30,13 @@ export function setupSocketHandlers(io, game) {
 
       socket.emit("game-state", game.getGameState());
 
+      // Confirmar unión al cliente con el nombre final asignado
+      debugLog("EMIT: join-confirmed", { finalName }, socket.id);
+      socket.emit("join-confirmed", {
+        playerId: socket.id,
+        playerName: finalName,
+      });
+
       // Sincronizar configuración de eliminateCommonWords al cliente
       debugLog(
         "EMIT: eliminate-common-words-changed (initial sync)",
