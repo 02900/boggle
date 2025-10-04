@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { useBoggleGameMainStore } from "./BoggleGameMain/boogle-game-main.store";
+import { Player } from "@/interfaces/game";
 
 export const PlayersList = () => {
   const { gameState, currentPlayerId } = useBoggleGameMainStore();
@@ -37,15 +38,76 @@ export const PlayersList = () => {
     }
   };
 
+  // Función para fusionar jugadores con el mismo nombre
+  const mergePlayersByName = (players: Player[]) => {
+    const playerMap = new Map<string, Player>();
+
+    players.forEach((player) => {
+      const existingPlayer = playerMap.get(player.name);
+
+      if (existingPlayer) {
+        // Fusionar datos del jugador existente con el nuevo
+        const mergedPlayer: Player = {
+          ...existingPlayer,
+          // Priorizar el ID del jugador actual si coincide, sino el conectado
+          id:
+            player.id === currentPlayerId
+              ? player.id
+              : existingPlayer.id === currentPlayerId
+              ? existingPlayer.id
+              : player.isConnected !== false
+              ? player.id
+              : existingPlayer.id,
+          // Un jugador está conectado si al menos una sesión está conectada
+          isConnected:
+            existingPlayer.isConnected !== false ||
+            player.isConnected !== false,
+          // Combinar palabras encontradas (sin duplicados)
+          wordsFound: [
+            ...new Set([...existingPlayer.wordsFound, ...player.wordsFound]),
+          ],
+          // Combinar palabras eliminadas (sin duplicados)
+          eliminatedWords: [
+            ...new Set([
+              ...(existingPlayer.eliminatedWords || []),
+              ...(player.eliminatedWords || []),
+            ]),
+          ],
+          // Recalcular puntuación basada en palabras únicas (evita doble conteo)
+          score: 0, // Se recalculará después
+        };
+
+        // Recalcular puntuación basada en palabras encontradas únicas
+        mergedPlayer.score = mergedPlayer.wordsFound.reduce((total, word) => {
+          return total + getWordScore(word);
+        }, 0);
+
+        playerMap.set(player.name, mergedPlayer);
+      } else {
+        // Primer jugador con este nombre
+        playerMap.set(player.name, {
+          ...player,
+          eliminatedWords: player.eliminatedWords || [],
+        });
+      }
+    });
+
+    return Array.from(playerMap.values());
+  };
+
   // Función para obtener todos los participantes (conectados y desconectados)
   const getAllParticipants = () => {
+    let participants;
     if (gameState.gameState === "finished" && gameState.allParticipants) {
       // Al final del juego, mostrar todos los participantes
-      return gameState.allParticipants;
+      participants = gameState.allParticipants;
     } else {
       // Durante el juego, mostrar solo jugadores conectados
-      return gameState.players;
+      participants = gameState.players;
     }
+
+    // Fusionar jugadores con el mismo nombre
+    return mergePlayersByName(participants);
   };
 
   // Función para ordenar jugadores
@@ -66,16 +128,15 @@ export const PlayersList = () => {
         <span className="mr-2">👥</span>
         {gameState.gameState === "finished" && gameState.allParticipants ? (
           <>
-            Participantes ({gameState.allParticipants.length})
-            {gameState.allParticipants.length > gameState.players.length && (
+            Participantes ({getAllParticipants().length})
+            {gameState.allParticipants.length > getAllParticipants().length && (
               <span className="ml-2 text-sm text-gray-500 font-normal">
-                ({gameState.allParticipants.length - gameState.players.length}{" "}
-                desconectados)
+                (fusionados de {gameState.allParticipants.length} sesiones)
               </span>
             )}
           </>
         ) : (
-          `Jugadores (${gameState.players.length})`
+          `Jugadores (${getAllParticipants().length})`
         )}
       </h3>
 
@@ -231,8 +292,7 @@ export const PlayersList = () => {
                       gameState.playerStreaks &&
                       gameState.playerStreaks[player.name] > 0 && (
                         <div className="text-xs text-orange-600 font-medium mt-1">
-                          🏆 {gameState.playerStreaks[player.name]} victoria
-                          {gameState.playerStreaks[player.name] > 1 ? "s" : ""} (6h)
+                          🏆 {gameState.playerStreaks[player.name]}
                         </div>
                       )}
                   </>
