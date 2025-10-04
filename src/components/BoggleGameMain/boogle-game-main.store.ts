@@ -54,6 +54,7 @@ export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
     gameState: "waiting",
     timeLeft: 180,
     diceRolls: [],
+    rotationVersion: 0,
   },
   setGameState: (gameState: GameState | ((prev: GameState) => GameState)) =>
     set((state) => ({
@@ -136,5 +137,5 @@ export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
     set((state) => ({
       isJoined:
         typeof isJoined === "function" ? isJoined(state.isJoined) : isJoined,
-    }))
+    })),
 }));

@@ -76,21 +76,21 @@ export const useSocketListeners = () => {
 
     newSocket.on("game-state", (state: GameState) => {
       setGameState(state);
-      
+
       // Si estábamos en proceso de reconexión automática y recibimos un estado válido,
       // significa que la reconexión fue exitosa
       if (isReconnectingRef.current) {
         isReconnectingRef.current = false;
-        
+
         // Limpiar el timeout de respaldo
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
         }
-        
+
         // Mostrar mensaje de reconexión exitosa
         setMessage("¡Reconexión exitosa! Continuando partida...");
-        
+
         // Limpiar el mensaje después de un momento
         setTimeout(() => {
           setMessage("");
@@ -149,12 +149,14 @@ export const useSocketListeners = () => {
           // Sesión perdida - intentar reconectar automáticamente
           setMessage("Sesión perdida. Reconectando automáticamente...");
           isReconnectingRef.current = true;
-          
+
           // Configurar timeout de respaldo (si no se reconecta en 5 segundos, ir al formulario)
           reconnectTimeoutRef.current = setTimeout(() => {
             if (isReconnectingRef.current) {
               isReconnectingRef.current = false;
-              setMessage("No se pudo reconectar. Redirigiendo al menú principal...");
+              setMessage(
+                "No se pudo reconectar. Redirigiendo al menú principal..."
+              );
               setTimeout(() => {
                 setIsJoined(false);
                 resetFoundWords();
@@ -162,7 +164,7 @@ export const useSocketListeners = () => {
               }, 2000);
             }
           }, 5000);
-          
+
           // Intentar reconexión automática con nombre aleatorio
           setTimeout(() => {
             if (newSocket && newSocket.connected && isReconnectingRef.current) {
@@ -207,13 +209,10 @@ export const useSocketListeners = () => {
       setMessage("Un jugador abandonó el juego.");
     });
 
-    newSocket.on(
-      "player-scored",
-      ({ playerId: _playerId, word: _word, points: _points }) => {
-        // No mostrar mensaje a otros jugadores para no revelar palabras válidas
-        // Solo se actualiza el estado del juego automáticamente
-      }
-    );
+    newSocket.on("player-scored", () => {
+      // No mostrar mensaje a otros jugadores para no revelar palabras válidas
+      // Solo se actualiza el estado del juego automáticamente
+    });
 
     newSocket.on("game-reset", (state: GameState) => {
       setGameState(state);
@@ -222,21 +221,24 @@ export const useSocketListeners = () => {
       setMessage("¡El juego ha sido reiniciado!");
     });
 
-    newSocket.on("board-rotated", ({ board, cooldownTime }) => {
-      setGameState((prev) => ({ ...prev, board }));
-      setMessage("¡Tablero rotado 90°!");
-      setRotationCooldown(cooldownTime);
+    newSocket.on(
+      "board-rotated",
+      ({ board, cooldownTime, rotationVersion }) => {
+        setGameState((prev) => ({ ...prev, board, rotationVersion }));
+        setMessage("¡Tablero rotado 90°!");
+        setRotationCooldown(cooldownTime);
 
-      // Iniciar countdown del cooldown
-      let countdown = cooldownTime;
-      const cooldownInterval = setInterval(() => {
-        countdown--;
-        setRotationCooldown(countdown);
-        if (countdown <= 0) {
-          clearInterval(cooldownInterval);
-        }
-      }, 1000);
-    });
+        // Iniciar countdown del cooldown
+        let countdown = cooldownTime;
+        const cooldownInterval = setInterval(() => {
+          countdown--;
+          setRotationCooldown(countdown);
+          if (countdown <= 0) {
+            clearInterval(cooldownInterval);
+          }
+        }, 1000);
+      }
+    );
 
     newSocket.on("rotation-error", ({ message }) => {
       setRotationMessage(message);
@@ -266,7 +268,7 @@ export const useSocketListeners = () => {
         clearTimeout(reconnectTimeoutRef.current);
       }
       isReconnectingRef.current = false;
-      
+
       newSocket.close();
     };
   }, []);
