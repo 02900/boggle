@@ -1,10 +1,11 @@
-import fs from 'fs';
-import path from 'path';
-import { TIME_LIMIT, ROTATION_COOLDOWN } from '../config/constants.js';
-import { RANDOM_NAMES } from '../utils/names.js';
-import { getDiceConfiguration, calculateWordPoints } from './gameConfig.js';
-import { updateScoreboard } from '../utils/scoreboard.js';
-import { debugLog } from '../utils/debug.js';
+import fs from "fs";
+import path from "path";
+import { TIME_LIMIT, ROTATION_COOLDOWN } from "../config/constants.js";
+import { RANDOM_NAMES } from "../utils/names.js";
+import { getDiceConfiguration, calculateWordPoints } from "./gameConfig.js";
+import { updateScoreboard } from "../utils/scoreboard.js";
+import { debugLog } from "../utils/debug.js";
+import { streakTracker } from "../utils/streakTracker.js";
 
 /**
  * Clase principal que maneja toda la lógica del juego Boggle
@@ -84,8 +85,23 @@ export class BoggleGame {
       console.error("Error al cargar el diccionario:", error);
       // Fallback a diccionario básico si hay error
       const basicWords = [
-        "gato", "perro", "casa", "mesa", "silla", "agua", "fuego", "tierra",
-        "aire", "amor", "tiempo", "lugar", "cosa", "persona", "animal", "planta", "comida",
+        "gato",
+        "perro",
+        "casa",
+        "mesa",
+        "silla",
+        "agua",
+        "fuego",
+        "tierra",
+        "aire",
+        "amor",
+        "tiempo",
+        "lugar",
+        "cosa",
+        "persona",
+        "animal",
+        "planta",
+        "comida",
       ];
       this.words = new Set(basicWords);
     }
@@ -175,15 +191,15 @@ export class BoggleGame {
     };
 
     this.players.set(playerId, playerData);
-    
+
     // También agregar al historial de la partida actual
     this.gameHistory.set(playerId, { ...playerData });
-    
+
     debugLog("PLAYER_ADDED: Jugador agregado al juego y historial", {
       playerId,
       playerName,
       connectedPlayers: this.players.size,
-      totalParticipants: this.gameHistory.size
+      totalParticipants: this.gameHistory.size,
     });
   }
 
@@ -203,18 +219,21 @@ export class BoggleGame {
         historyPlayer.disconnectedAt = Date.now();
       }
 
-      debugLog("PLAYER_REMOVED: Jugador desconectado pero mantenido en historial", {
-        playerId,
-        playerName: player.name,
-        finalScore: player.score,
-        wordsFound: player.wordsFound.length,
-        connectedPlayers: this.players.size - 1,
-        totalParticipants: this.gameHistory.size
-      });
+      debugLog(
+        "PLAYER_REMOVED: Jugador desconectado pero mantenido en historial",
+        {
+          playerId,
+          playerName: player.name,
+          finalScore: player.score,
+          wordsFound: player.wordsFound.length,
+          connectedPlayers: this.players.size - 1,
+          totalParticipants: this.gameHistory.size,
+        }
+      );
 
       // Liberar el nombre para que pueda ser reutilizado
       this.releaseName(player.name);
-      
+
       // Remover del mapa de jugadores activos, pero mantener en historial
       this.players.delete(playerId);
     }
@@ -261,60 +280,81 @@ export class BoggleGame {
    */
   endGame() {
     this.gameState = "finished";
-    
+
     // Limpiar ambos timers usando el método centralizado
     this.clearTimers();
 
     // Eliminar palabras comunes si la opción está activada
-    debugLog("ENDGAME: Verificando eliminación de palabras comunes", { 
-      eliminateCommonWords: this.eliminateCommonWords 
+    debugLog("ENDGAME: Verificando eliminación de palabras comunes", {
+      eliminateCommonWords: this.eliminateCommonWords,
     });
-    
+
     if (this.eliminateCommonWords) {
       this.eliminateCommonWordsFromPlayers();
-      
-      // Enviar estado actualizado después de eliminar palabras comunes
-      if (this.io) {
-        debugLog("EMIT: game-state (after eliminating common words)", {
-          playersCount: this.players.size
-        });
-        this.io.emit("game-state", this.getGameState());
-      }
     } else {
       debugLog("ENDGAME: Eliminación de palabras comunes deshabilitada");
     }
-    
-    // Enviar notificación de fin de juego DESPUÉS de actualizar el estado
-    // Incluir TODOS los participantes (conectados y desconectados) en el estado final
-    if (this.io) {
-      const finalGameState = this.getGameState();
-      // Agregar todos los participantes al estado final
-      finalGameState.allParticipants = Array.from(this.gameHistory.values());
-      
-      debugLog("EMIT: game-ended (con todos los participantes)", {
-        connectedPlayers: finalGameState.players.length,
-        totalParticipants: finalGameState.allParticipants.length,
-        disconnectedPlayers: finalGameState.allParticipants.length - finalGameState.players.length
-      });
-      
-      this.io.emit("game-ended", finalGameState);
-    }
 
     // Actualizar scoreboard con los puntajes de TODOS los participantes
-    const allParticipantScores = Array.from(this.gameHistory.values()).map((player) => ({
-      name: player.name,
-      score: player.score,
-      isConnected: player.isConnected,
-    }));
+    const allParticipantScores = Array.from(this.gameHistory.values()).map(
+      (player) => ({
+        name: player.name,
+        score: player.score,
+        isConnected: player.isConnected,
+      })
+    );
     const totalParticipants = this.gameHistory.size;
 
     debugLog("SCOREBOARD_UPDATE: Actualizando con todos los participantes", {
       totalParticipants,
       connectedPlayers: this.players.size,
-      disconnectedPlayers: totalParticipants - this.players.size
+      disconnectedPlayers: totalParticipants - this.players.size,
     });
 
     updateScoreboard(allParticipantScores, totalParticipants);
+
+    // Actualizar rachas de victorias ANTES de emitir game-ended - solo si hay más de 1 participante
+    if (totalParticipants > 1) {
+      // Encontrar el/los ganador(es) (máximo puntaje)
+      const maxScore = Math.max(...allParticipantScores.map((p) => p.score));
+      const winners = allParticipantScores.filter(
+        (p) => p.score === maxScore && p.score > 0
+      );
+
+      if (winners.length > 0) {
+        debugLog("STREAK_UPDATE: Actualizando rachas de ganadores", {
+          winners: winners.map((w) => w.name),
+          maxScore,
+        });
+
+        // Registrar victoria para cada ganador
+        winners.forEach((winner) => {
+          const updatedStreak = streakTracker.recordWin(winner.name);
+          debugLog("STREAK_UPDATE: Racha actualizada", {
+            playerName: winner.name,
+            newStreak: updatedStreak.wins,
+          });
+        });
+      }
+    }
+
+    // Enviar notificación de fin de juego DESPUÉS de actualizar rachas
+    // Incluir TODOS los participantes (conectados y desconectados) en el estado final
+    if (this.io) {
+      const finalGameState = this.getGameState();
+      // Agregar todos los participantes al estado final
+      finalGameState.allParticipants = Array.from(this.gameHistory.values());
+
+      debugLog("EMIT: game-ended (con rachas actualizadas)", {
+        connectedPlayers: finalGameState.players.length,
+        totalParticipants: finalGameState.allParticipants.length,
+        disconnectedPlayers:
+          finalGameState.allParticipants.length - finalGameState.players.length,
+        playerStreaks: finalGameState.playerStreaks,
+      });
+
+      this.io.emit("game-ended", finalGameState);
+    }
   }
 
   /**
@@ -323,7 +363,7 @@ export class BoggleGame {
   submitWord(playerId, word, path) {
     if (this.gameState !== "playing")
       return { valid: false, reason: "Juego no activo" };
-    
+
     const player = this.players.get(playerId);
     if (!player) return { valid: false, reason: "Jugador no encontrado" };
 
@@ -407,13 +447,27 @@ export class BoggleGame {
    * Obtiene el estado actual del juego
    */
   getGameState() {
-    return {
+    const gameState = {
       board: this.board,
       players: Array.from(this.players.values()),
       gameState: this.gameState,
       timeLeft: this.timeLeft,
       diceRolls: this.lastDiceRolls || [],
     };
+
+    // Si el juego ha terminado, incluir las rachas de todos los participantes
+    if (this.gameState === "finished") {
+      const allParticipants = Array.from(this.gameHistory.values());
+      const playerNames = allParticipants.map((p) => p.name);
+      gameState.playerStreaks = streakTracker.getPlayersStreaks(playerNames);
+      
+      debugLog("GET_GAME_STATE: Incluyendo rachas en estado final", {
+        playerNames,
+        playerStreaks: gameState.playerStreaks
+      });
+    }
+
+    return gameState;
   }
 
   /**
@@ -445,7 +499,7 @@ export class BoggleGame {
 
     debugLog("GAME_RESET: Juego reiniciado y historial limpiado", {
       connectedPlayers: this.players.size,
-      totalParticipants: this.gameHistory.size
+      totalParticipants: this.gameHistory.size,
     });
 
     // Reset max score data
@@ -466,16 +520,16 @@ export class BoggleGame {
     // Usar TODOS los jugadores que participaron (conectados y desconectados)
     const allParticipants = Array.from(this.gameHistory.values());
     if (allParticipants.length < 2) {
-      debugLog("ELIMINATE_COMMON_WORDS: Skipping - menos de 2 participantes", { 
-        participantCount: allParticipants.length 
+      debugLog("ELIMINATE_COMMON_WORDS: Skipping - menos de 2 participantes", {
+        participantCount: allParticipants.length,
       });
       return; // No hay suficientes participantes
     }
 
-    debugLog("ELIMINATE_COMMON_WORDS: Iniciando eliminación", { 
+    debugLog("ELIMINATE_COMMON_WORDS: Iniciando eliminación", {
       participantCount: allParticipants.length,
       connectedPlayers: this.players.size,
-      disconnectedPlayers: allParticipants.length - this.players.size
+      disconnectedPlayers: allParticipants.length - this.players.size,
     });
 
     // Crear un mapa de palabras y los jugadores que las encontraron
@@ -498,9 +552,9 @@ export class BoggleGame {
       }
     });
 
-    debugLog("ELIMINATE_COMMON_WORDS: Palabras comunes encontradas", { 
+    debugLog("ELIMINATE_COMMON_WORDS: Palabras comunes encontradas", {
       commonWordsCount: commonWords.size,
-      commonWords: Array.from(commonWords) 
+      commonWords: Array.from(commonWords),
     });
 
     // Eliminar palabras comunes y recalcular puntuaciones para TODOS los participantes
@@ -547,7 +601,7 @@ export class BoggleGame {
         validWords: validWords.length,
         eliminatedWords: eliminatedWords.length,
         oldScore,
-        newScore: historyPlayer.score
+        newScore: historyPlayer.score,
       });
     });
 

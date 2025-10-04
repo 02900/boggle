@@ -19,6 +19,24 @@ export const PlayersList = () => {
     return 11; // 8+ letras
   };
 
+  // Mapea la categoría de puntos a una paleta de colores distinta
+  const getScoreBadgeClass = (score: number): string => {
+    switch (score) {
+      case 1:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+      case 2:
+        return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200";
+      case 3:
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
+      case 5:
+        return "bg-purple-100 text-purple-800 hover:bg-purple-200";
+      case 11:
+        return "bg-orange-100 text-orange-800 hover:bg-orange-200";
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+    }
+  };
+
   // Función para obtener todos los participantes (conectados y desconectados)
   const getAllParticipants = () => {
     if (gameState.gameState === "finished" && gameState.allParticipants) {
@@ -51,7 +69,8 @@ export const PlayersList = () => {
             Participantes ({gameState.allParticipants.length})
             {gameState.allParticipants.length > gameState.players.length && (
               <span className="ml-2 text-sm text-gray-500 font-normal">
-                ({gameState.allParticipants.length - gameState.players.length} desconectados)
+                ({gameState.allParticipants.length - gameState.players.length}{" "}
+                desconectados)
               </span>
             )}
           </>
@@ -132,7 +151,10 @@ export const PlayersList = () => {
                       {player.wordsFound.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                           {[...player.wordsFound]
-                            .map((word) => ({ word, score: getWordScore(word) }))
+                            .map((word) => ({
+                              word,
+                              score: getWordScore(word),
+                            }))
                             .sort((a, b) => b.score - a.score)
                             .map(({ word, score }, wordIndex) => {
                               const raeUrl = `https://dle.rae.es/${encodeURIComponent(
@@ -146,13 +168,7 @@ export const PlayersList = () => {
                                   rel="noopener noreferrer"
                                   className={`
                                     inline-flex items-center px-2 py-1 rounded-full text-xs font-medium hover:no-underline transition-colors
-                                    ${
-                                      score >= 5
-                                        ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                        : score >= 3
-                                        ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    }
+                                    ${getScoreBadgeClass(score)}
                                   `}
                                   title="Clic para ver definición RAE"
                                 >
@@ -171,7 +187,10 @@ export const PlayersList = () => {
                         player.eliminatedWords.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {[...player.eliminatedWords]
-                              .map((word) => ({ word, score: getWordScore(word) }))
+                              .map((word) => ({
+                                word,
+                                score: getWordScore(word),
+                              }))
                               .sort((a, b) => b.score - a.score)
                               .map(({ word, score }, wordIndex) => {
                                 const raeUrl = `https://dle.rae.es/${encodeURIComponent(
@@ -207,6 +226,15 @@ export const PlayersList = () => {
                       {player.score}
                     </div>
                     <div className="text-xs text-gray-500">puntos</div>
+                    {/* Mostrar total de victorias en las últimas 6 horas */}
+                    {shouldShowScores &&
+                      gameState.playerStreaks &&
+                      gameState.playerStreaks[player.name] > 0 && (
+                        <div className="text-xs text-orange-600 font-medium mt-1">
+                          🏆 {gameState.playerStreaks[player.name]} victoria
+                          {gameState.playerStreaks[player.name] > 1 ? "s" : ""} (6h)
+                        </div>
+                      )}
                   </>
                 ) : (
                   <div className="text-sm text-gray-400">

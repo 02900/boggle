@@ -1,9 +1,21 @@
 [
   {
+    "name": "TeruMaster",
+    "score": 189,
+    "date": "2025-10-04",
+    "playerCount": 3
+  },
+  {
     "name": "FastSlow",
     "score": 130,
     "date": "2025-10-02",
     "playerCount": 2
+  },
+  {
+    "name": "ClearBlur",
+    "score": 126,
+    "date": "2025-10-04",
+    "playerCount": 3
   },
   {
     "name": "TeruMaster",
@@ -79,6 +91,12 @@
   },
   {
     "name": "TeruMaster",
+    "score": 88,
+    "date": "2025-10-04",
+    "playerCount": 2
+  },
+  {
+    "name": "TeruMaster",
     "score": 87,
     "date": "2025-08-09",
     "playerCount": 2
@@ -88,6 +106,12 @@
     "score": 86,
     "date": "2025-09-28",
     "playerCount": 3
+  },
+  {
+    "name": "ClearBlur",
+    "score": 86,
+    "date": "2025-10-04",
+    "playerCount": 2
   },
   {
     "name": "FastSlow",
@@ -120,6 +144,12 @@
     "playerCount": 3
   },
   {
+    "name": "Peano",
+    "score": 79,
+    "date": "2025-10-04",
+    "playerCount": 3
+  },
+  {
     "name": "WetDry",
     "score": 78,
     "date": "2025-08-11",
@@ -130,6 +160,18 @@
     "score": 78,
     "date": "2025-10-02",
     "playerCount": 2
+  },
+  {
+    "name": "SharpEye",
+    "score": 78,
+    "date": "2025-10-04",
+    "playerCount": 3
+  },
+  {
+    "name": "TeruMaster",
+    "score": 77,
+    "date": "2025-10-04",
+    "playerCount": 3
   },
   {
     "name": "FastSlow",
@@ -256,47 +298,5 @@
     "score": 60,
     "date": "2025-09-27",
     "playerCount": 3
-  },
-  {
-    "name": "HeavyFeather",
-    "score": 60,
-    "date": "2025-10-01",
-    "playerCount": 2
-  },
-  {
-    "name": "TeruMaster",
-    "score": 60,
-    "date": "2025-10-02",
-    "playerCount": 3
-  },
-  {
-    "name": "MistWalker",
-    "score": 60,
-    "date": "2025-10-02",
-    "playerCount": 3
-  },
-  {
-    "name": "MistWalker",
-    "score": 60,
-    "date": "2025-10-02",
-    "playerCount": 3
-  },
-  {
-    "name": "InOut",
-    "score": 59,
-    "date": "2025-08-31",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 59,
-    "date": "2025-09-01",
-    "playerCount": 3
-  },
-  {
-    "name": "TeruMaster",
-    "score": 59,
-    "date": "2025-10-02",
-    "playerCount": 2
   }
 ]
