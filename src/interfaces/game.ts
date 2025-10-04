@@ -25,6 +25,7 @@ export interface GameState {
   diceRolls?: DiceRoll[];
   allParticipants?: Player[]; // Incluye todos los participantes (conectados y desconectados)
   playerStreaks?: Record<string, number>; // Total de victorias en las últimas 6 horas por nombre de jugador
+  rotationVersion: number; // Versión actual del tablero (incrementa con cada rotación)
 }
 
 export interface WordResult {
@@ -58,7 +59,11 @@ export interface GameEvents {
 export interface ClientEvents {
   "join-game": (playerName: string) => void;
   "start-game": () => void;
-  "submit-word": (data: { word: string; path: [number, number][] }) => void;
+  "submit-word": (data: {
+    word: string;
+    path: [number, number][];
+    rotationVersion: number;
+  }) => void;
   "reset-game": () => void;
   "toggle-eliminate-common-words": (enabled: boolean) => void;
 }

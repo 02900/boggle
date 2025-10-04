@@ -1,5 +1,5 @@
-import { debugLog } from '../utils/debug.js';
-import { loadScoreboard } from '../utils/scoreboard.js';
+import { debugLog } from "../utils/debug.js";
+import { loadScoreboard } from "../utils/scoreboard.js";
 
 /**
  * Configura todos los manejadores de eventos de Socket.IO
@@ -13,7 +13,7 @@ export function setupSocketHandlers(io, game) {
     // Jugador se une al juego
     socket.on("join-game", (playerName) => {
       debugLog("EVENT: join-game", { playerName }, socket.id);
-      
+
       // Si no se proporciona nombre o está vacío, asignar uno aleatorio
       const finalName =
         playerName && playerName.trim()
@@ -21,24 +21,28 @@ export function setupSocketHandlers(io, game) {
           : game.getRandomName();
 
       game.addPlayer(socket.id, finalName);
-      
+
       debugLog(
         "EMIT: game-state (after join)",
         { playerCount: game.players.size, finalName },
         socket.id
       );
-      
+
       socket.emit("game-state", game.getGameState());
-      
+
       // Sincronizar configuración de eliminateCommonWords al cliente
-      debugLog("EMIT: eliminate-common-words-changed (initial sync)", { 
-        eliminateCommonWords: game.eliminateCommonWords 
-      }, socket.id);
+      debugLog(
+        "EMIT: eliminate-common-words-changed (initial sync)",
+        {
+          eliminateCommonWords: game.eliminateCommonWords,
+        },
+        socket.id
+      );
       socket.emit("eliminate-common-words-changed", {
         enabled: game.eliminateCommonWords,
         eliminateCommonWords: game.eliminateCommonWords,
       });
-      
+
       debugLog("BROADCAST: player-joined", { finalName }, socket.id);
       socket.broadcast.emit("player-joined", {
         playerId: socket.id,
@@ -49,13 +53,13 @@ export function setupSocketHandlers(io, game) {
     // Iniciar nueva partida
     socket.on("start-game", () => {
       debugLog("EVENT: start-game", null, socket.id);
-      
+
       const result = game.startGame();
       if (result.success) {
         debugLog("EMIT: dice-rolling (game started)", {
           diceCount: result.diceRolls.length,
         });
-        
+
         // Primero enviar la información de los dados para la animación
         io.emit("dice-rolling", result.diceRolls);
 
@@ -67,15 +71,34 @@ export function setupSocketHandlers(io, game) {
     });
 
     // Enviar una palabra
-    socket.on("submit-word", ({ word, path }) => {
+    socket.on("submit-word", ({ word, path, rotationVersion }) => {
+      // Validar que rotationVersion esté presente
+      if (typeof rotationVersion !== "number") {
+        debugLog(
+          "ERROR: submit-word sin rotationVersion",
+          { word, rotationVersion },
+          socket.id
+        );
+        socket.emit("word-result", {
+          valid: false,
+          reason: "Error de sincronización del tablero",
+        });
+        return;
+      }
+
       debugLog(
         "EVENT: submit-word",
-        { word, pathLength: path?.length },
+        {
+          word,
+          pathLength: path?.length,
+          clientRotationVersion: rotationVersion,
+          serverRotationVersion: game.rotationVersion,
+        },
         socket.id
       );
-      
-      const result = game.submitWord(socket.id, word, path);
-      
+
+      const result = game.submitWord(socket.id, word, path, rotationVersion);
+
       debugLog(
         "EMIT: word-result",
         {
@@ -86,7 +109,7 @@ export function setupSocketHandlers(io, game) {
         },
         socket.id
       );
-      
+
       socket.emit("word-result", result);
 
       if (result.valid) {
@@ -100,7 +123,7 @@ export function setupSocketHandlers(io, game) {
           word: result.word,
           points: result.points,
         });
-        
+
         debugLog("EMIT: game-state (after valid word)");
         io.emit("game-state", game.getGameState());
       }
@@ -116,14 +139,18 @@ export function setupSocketHandlers(io, game) {
     // Rotar el tablero
     socket.on("rotate-board", () => {
       debugLog("EVENT: rotate-board", null, socket.id);
-      
+
       const result = game.rotateBoard();
       if (result.success) {
-        debugLog("EMIT: board-rotated", { cooldownTime: result.cooldownTime });
+        debugLog("EMIT: board-rotated", {
+          cooldownTime: result.cooldownTime,
+          newRotationVersion: result.rotationVersion,
+        });
         // Enviar el tablero rotado a todos los jugadores
         io.emit("board-rotated", {
           board: game.board,
           cooldownTime: result.cooldownTime,
+          rotationVersion: result.rotationVersion,
         });
       } else {
         debugLog("EMIT: rotation-error", { reason: result.reason }, socket.id);
@@ -137,22 +164,22 @@ export function setupSocketHandlers(io, game) {
     // Obtener scoreboard
     socket.on("get-scoreboard", () => {
       debugLog("EVENT: get-scoreboard", null, socket.id);
-      
+
       const scoreboard = loadScoreboard();
-      
+
       debugLog(
         "EMIT: scoreboard-data",
         { count: scoreboard.length },
         socket.id
       );
-      
+
       socket.emit("scoreboard-data", scoreboard);
     });
 
     // Obtener puntuación máxima posible
     socket.on("get-max-score", () => {
       debugLog("EVENT: get-max-score", null, socket.id);
-      
+
       // Solo calcular si hay un tablero válido
       if (
         game.board &&
@@ -161,7 +188,7 @@ export function setupSocketHandlers(io, game) {
         game.board[0].length === 4
       ) {
         const maxScoreData = game.findAllPossibleWords();
-        
+
         debugLog(
           "EMIT: max-score-data",
           {
@@ -170,7 +197,7 @@ export function setupSocketHandlers(io, game) {
           },
           socket.id
         );
-        
+
         socket.emit("max-score-data", maxScoreData);
       } else {
         debugLog(
@@ -178,7 +205,7 @@ export function setupSocketHandlers(io, game) {
           null,
           socket.id
         );
-        
+
         // Si no hay tablero válido, enviar datos vacíos
         socket.emit("max-score-data", {
           words: [],
@@ -191,14 +218,14 @@ export function setupSocketHandlers(io, game) {
     // Configurar eliminación de palabras comunes
     socket.on("toggle-eliminate-common-words", (enabled) => {
       debugLog("EVENT: toggle-eliminate-common-words", { enabled }, socket.id);
-      
+
       game.setEliminateCommonWords(enabled);
-      
+
       debugLog("EMIT: eliminate-common-words-changed", {
         enabled,
         eliminateCommonWords: game.eliminateCommonWords,
       });
-      
+
       io.emit("eliminate-common-words-changed", {
         enabled: enabled,
         eliminateCommonWords: game.eliminateCommonWords,
@@ -208,7 +235,7 @@ export function setupSocketHandlers(io, game) {
     // Jugador se desconecta
     socket.on("disconnect", () => {
       debugLog("EVENT: disconnect", null, socket.id);
-      
+
       game.removePlayer(socket.id);
       socket.broadcast.emit("player-left", socket.id);
     });

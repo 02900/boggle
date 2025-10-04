@@ -1,12 +1,23 @@
 import { useCallback } from "react";
+import { io } from "socket.io-client";
+import { useBoggleGameMainStore } from "@/components/BoggleGameMain/boogle-game-main.store";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useViewportStore } from "@/stores/viewport.store";
 
 export const useSocket = () => {
-  const { socket, setDiceRolling } = useSocketsStore();
+  const { socket, setSocket } = useSocketsStore();
+  const { setDiceRolling } = useSocketsStore();
   const { isMobile } = useViewportStore();
 
-  // Función para vibrar en móviles
+  const connectSocket = useCallback(() => {
+    if (!socket) {
+      const newSocket = io("https://boogle-game-server.herokuapp.com/", {
+        withCredentials: true,
+      });
+      setSocket(newSocket);
+    }
+  }, [socket, setSocket]);
+
   const triggerVibration = useCallback(() => {
     if (isMobile && "vibrate" in navigator) {
       navigator.vibrate(200); // Vibración de 200ms
@@ -72,7 +83,14 @@ export const useSocket = () => {
 
   const submitWord = (word: string, path: [number, number][]) => {
     if (socket) {
-      socket.emit("submit-word", { word, path });
+      // Obtener la versión de rotación actual del cliente
+      const currentRotationVersion =
+        useBoggleGameMainStore.getState().gameState.rotationVersion;
+      socket.emit("submit-word", {
+        word,
+        path,
+        rotationVersion: currentRotationVersion,
+      });
     }
   };
 
@@ -95,6 +113,7 @@ export const useSocket = () => {
   };
 
   return {
+    connectSocket,
     joinGame,
     startGame,
     submitWord,

@@ -25,6 +25,12 @@ export class BoggleGame {
     this.availableNames = [...RANDOM_NAMES]; // Copia de nombres disponibles
     this.eliminateCommonWords = true; // Configuración para eliminar palabras comunes
     this.gameHistory = new Map(); // Historial de TODOS los jugadores que participaron en la partida actual
+
+    // Sistema de versionado de rotación para manejar concurrencia
+    this.rotationVersion = 0; // Versión actual del tablero (incrementa con cada rotación)
+    this.boardHistory = new Map(); // Historial de tableros por versión (últimas 5 rotaciones)
+    this.maxBoardHistory = 5; // Máximo número de versiones a mantener en memoria
+
     this.initializeDictionary();
   }
 
@@ -108,6 +114,66 @@ export class BoggleGame {
   }
 
   /**
+   * Guarda el estado actual del tablero en el historial
+   */
+  saveBoardToHistory() {
+    // Crear una copia profunda del tablero actual
+    const boardCopy = this.board.map((row) => [...row]);
+    this.boardHistory.set(this.rotationVersion, boardCopy);
+
+    // Limpiar versiones antiguas si excedemos el límite
+    if (this.boardHistory.size > this.maxBoardHistory) {
+      const oldestVersion = Math.min(...this.boardHistory.keys());
+      this.boardHistory.delete(oldestVersion);
+    }
+
+    debugLog("BOARD_HISTORY: Tablero guardado", {
+      version: this.rotationVersion,
+      historySize: this.boardHistory.size,
+      availableVersions: Array.from(this.boardHistory.keys()),
+    });
+  }
+
+  /**
+   * Obtiene un tablero de una versión específica
+   */
+  getBoardByVersion(version) {
+    if (version === this.rotationVersion) {
+      return this.board;
+    }
+    return this.boardHistory.get(version) || null;
+  }
+
+  /**
+   * Transforma coordenadas entre versiones de rotación
+   */
+  transformCoordinates(path, fromVersion, toVersion) {
+    if (fromVersion === toVersion) {
+      return path;
+    }
+
+    // Calcular cuántas rotaciones de diferencia hay
+    const rotationDiff = (toVersion - fromVersion) % 4;
+    if (rotationDiff === 0) {
+      return path;
+    }
+
+    return path.map(([row, col]) => {
+      let newRow = row;
+      let newCol = col;
+
+      // Aplicar rotaciones (cada rotación es 90° horaria)
+      for (let i = 0; i < rotationDiff; i++) {
+        const temp = newRow;
+        newRow = newCol;
+        newCol = 3 - temp;
+      }
+
+      return [newRow, newCol];
+    });
+  }
+
+  /**
    * Lanza los dados y genera un nuevo tablero 4x4
    */
   generateBoard() {
@@ -143,6 +209,12 @@ export class BoggleGame {
 
     // Guardar información del lanzamiento para enviar a los clientes
     this.lastDiceRolls = diceRolls;
+
+    // Reiniciar versión de rotación y limpiar historial para nuevo tablero
+    this.rotationVersion = 0;
+    this.boardHistory.clear();
+    this.saveBoardToHistory(); // Guardar el tablero inicial como versión 0
+
     return diceRolls;
   }
 
@@ -360,7 +432,7 @@ export class BoggleGame {
   /**
    * Procesa la submisión de una palabra por un jugador
    */
-  submitWord(playerId, word, path) {
+  submitWord(playerId, word, path, clientRotationVersion) {
     if (this.gameState !== "playing")
       return { valid: false, reason: "Juego no activo" };
 
@@ -384,8 +456,8 @@ export class BoggleGame {
       return { valid: false, reason: "Palabra no está en el diccionario" };
     }
 
-    // Validar ruta en el tablero
-    if (!this.isValidPath(path, word)) {
+    // Validar ruta en el tablero (con soporte para versiones de rotación)
+    if (!this.isValidPath(path, word, clientRotationVersion)) {
       return { valid: false, reason: "Ruta inválida en el tablero" };
     }
 
@@ -406,8 +478,51 @@ export class BoggleGame {
 
   /**
    * Valida que un camino en el tablero forme la palabra especificada
+   * Soporta validación con versiones anteriores del tablero para manejar concurrencia de rotación
    */
-  isValidPath(path, word) {
+  isValidPath(path, word, clientRotationVersion) {
+    let boardToUse = this.board;
+    let pathToUse = path;
+
+    // Si el cliente tiene una versión de rotación diferente, manejar la diferencia
+    if (clientRotationVersion !== this.rotationVersion) {
+      debugLog("PATH_VALIDATION: Detectada diferencia de versión de rotación", {
+        clientVersion: clientRotationVersion,
+        serverVersion: this.rotationVersion,
+        word,
+        originalPath: path,
+      });
+
+      // Opción 1: Usar tablero histórico si está disponible
+      const historicalBoard = this.getBoardByVersion(clientRotationVersion);
+      if (historicalBoard) {
+        boardToUse = historicalBoard;
+        debugLog("PATH_VALIDATION: Usando tablero histórico", {
+          version: clientRotationVersion,
+        });
+      } else {
+        // Opción 2: Transformar coordenadas al tablero actual
+        pathToUse = this.transformCoordinates(
+          path,
+          clientRotationVersion,
+          this.rotationVersion
+        );
+        debugLog("PATH_VALIDATION: Transformando coordenadas", {
+          originalPath: path,
+          transformedPath: pathToUse,
+          fromVersion: clientRotationVersion,
+          toVersion: this.rotationVersion,
+        });
+      }
+    }
+
+    return this.validatePathOnBoard(pathToUse, word, boardToUse);
+  }
+
+  /**
+   * Valida un path específico en un tablero específico
+   */
+  validatePathOnBoard(path, word, board) {
     // Construir la palabra desde el path para manejar dígrafos
     let pathWord = "";
     const used = new Set();
@@ -424,7 +539,7 @@ export class BoggleGame {
       used.add(cellKey);
 
       // Agregar la letra/dígrafo de esta celda a la palabra del path
-      const cellLetter = this.board[row][col].toLowerCase();
+      const cellLetter = board[row][col].toLowerCase();
       pathWord += cellLetter;
 
       // Check adjacency (except for first cell)
@@ -453,6 +568,7 @@ export class BoggleGame {
       gameState: this.gameState,
       timeLeft: this.timeLeft,
       diceRolls: this.lastDiceRolls || [],
+      rotationVersion: this.rotationVersion,
     };
 
     // Si el juego ha terminado, incluir las rachas de todos los participantes
@@ -460,10 +576,10 @@ export class BoggleGame {
       const allParticipants = Array.from(this.gameHistory.values());
       const playerNames = allParticipants.map((p) => p.name);
       gameState.playerStreaks = streakTracker.getPlayersStreaks(playerNames);
-      
+
       debugLog("GET_GAME_STATE: Incluyendo rachas en estado final", {
         playerNames,
-        playerStreaks: gameState.playerStreaks
+        playerStreaks: gameState.playerStreaks,
       });
     }
 
@@ -643,10 +759,26 @@ export class BoggleGame {
       }
     }
 
+    // Guardar el tablero actual antes de rotarlo
+    this.saveBoardToHistory();
+
+    // Aplicar la rotación
     this.board = rotatedBoard;
     this.lastRotationTime = now;
 
-    return { success: true, cooldownTime: this.rotationCooldown / 1000 };
+    // Incrementar versión de rotación
+    this.rotationVersion++;
+
+    debugLog("BOARD_ROTATED: Nueva versión de tablero", {
+      newVersion: this.rotationVersion,
+      availableVersions: Array.from(this.boardHistory.keys()),
+    });
+
+    return {
+      success: true,
+      cooldownTime: this.rotationCooldown / 1000,
+      rotationVersion: this.rotationVersion,
+    };
   }
 
   /**
