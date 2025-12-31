@@ -150,6 +150,12 @@
     "playerCount": 2
   },
   {
+    "name": "Juancito",
+    "score": 83,
+    "date": "2025-10-05",
+    "playerCount": 3
+  },
+  {
     "name": "HeavyFeather",
     "score": 81,
     "date": "2025-10-01",
@@ -292,11 +298,5 @@
     "score": 66,
     "date": "2025-10-02",
     "playerCount": 2
-  },
-  {
-    "name": "GoodBad",
-    "score": 64,
-    "date": "2025-09-28",
-    "playerCount": 15
   }
 ]
