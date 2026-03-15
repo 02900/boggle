@@ -1,146 +1,37 @@
-import fs from "fs";
-import path from "path";
 import { TIME_LIMIT, ROTATION_COOLDOWN } from "../config/constants.js";
-import { RANDOM_NAMES } from "../utils/names.js";
 import { getDiceConfiguration, calculateWordPoints } from "./gameConfig.js";
-import { updateScoreboard } from "../utils/scoreboard.js";
 import { debugLog } from "../utils/debug.js";
 import { streakTracker } from "../utils/streakTracker.js";
+import { WordGame } from "./WordGame.js";
 
 /**
- * Clase principal que maneja toda la lógica del juego Boggle
+ * Boggle game — 4x4 grid, path-based word selection, real-time multiplayer.
  */
-export class BoggleGame {
+export class BoggleGame extends WordGame {
   constructor() {
+    super({ timeLimit: TIME_LIMIT });
+
     this.board = [];
-    this.players = new Map();
-    this.gameState = "waiting"; // esperando, jugando, terminado
-    this.timeLeft = TIME_LIMIT;
-    this.timer = null; // Timer interno para decrementar timeLeft
-    this.updateTimer = null; // Timer para enviar actualizaciones a los clientes
-    this.io = null; // Referencia al socket.io server para enviar actualizaciones
-    this.words = new Set(); // Palabras válidas del diccionario
-    this.lastRotationTime = 0; // Timestamp de la última rotación
+    this.lastRotationTime = 0;
     this.rotationCooldown = ROTATION_COOLDOWN;
-    this.availableNames = [...RANDOM_NAMES]; // Copia de nombres disponibles
-    this.eliminateCommonWords = true; // Configuración para eliminar palabras comunes
-    this.gameHistory = new Map(); // Historial de TODOS los jugadores que participaron en la partida actual
-
-    // Sistema de versionado de rotación para manejar concurrencia
-    this.rotationVersion = 0; // Versión actual del tablero (incrementa con cada rotación)
-    this.boardHistory = new Map(); // Historial de tableros por versión (últimas 5 rotaciones)
-    this.maxBoardHistory = 5; // Máximo número de versiones a mantener en memoria
-
-    // Feature flag: Validación del cliente
-    this.clientSideValidation = true; // Si está habilitado, el cliente valida palabras localmente
-    this.pendingClientWords = new Map(); // Palabras pendientes de revalidación del servidor (playerId -> Set<word>)
-
-    this.initializeDictionary();
+    this.rotationVersion = 0;
+    this.boardHistory = new Map();
+    this.maxBoardHistory = 5;
+    this.pendingClientWords = new Map();
   }
 
-  /**
-   * Método para configurar la referencia a socket.io server
-   */
-  setIO(io) {
-    this.io = io;
-  }
+  // --- Board history (rotation versioning) ---
 
-  /**
-   * Limpia todos los timers activos
-   */
-  clearTimers() {
-    this.clearInternalTimer();
-    this.clearUpdateTimer();
-  }
-
-  clearInternalTimer() {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-  }
-
-  clearUpdateTimer() {
-    if (this.updateTimer) {
-      clearInterval(this.updateTimer);
-      this.updateTimer = null;
-    }
-  }
-
-  /**
-   * Inicializa el diccionario de palabras válidas desde el archivo
-   */
-  initializeDictionary() {
-    try {
-      // Leer el archivo de palabras completo en español
-      const dictionaryPath = path.join(process.cwd(), "file-2017.txt");
-      const fileContent = fs.readFileSync(dictionaryPath, "utf8");
-
-      // Dividir por líneas y filtrar palabras válidas
-      const allWords = fileContent
-        .split("\n")
-        .map((word) => word.trim().toLowerCase())
-        .filter((word) => {
-          // Filtrar palabras de 3 o más caracteres para Boggle
-          return (
-            word.length >= 3 &&
-            word.length <= 16 &&
-            /^[a-záéíóúñü]+$/.test(word)
-          );
-        });
-
-      this.words = new Set(allWords);
-      console.log(`Diccionario cargado: ${this.words.size} palabras válidas`);
-    } catch (error) {
-      console.error("Error al cargar el diccionario:", error);
-      // Fallback a diccionario básico si hay error
-      const basicWords = [
-        "gato",
-        "perro",
-        "casa",
-        "mesa",
-        "silla",
-        "agua",
-        "fuego",
-        "tierra",
-        "aire",
-        "amor",
-        "tiempo",
-        "lugar",
-        "cosa",
-        "persona",
-        "animal",
-        "planta",
-        "comida",
-      ];
-      this.words = new Set(basicWords);
-    }
-  }
-
-  /**
-   * Guarda el estado actual del tablero en el historial
-   */
   saveBoardToHistory() {
-    // Crear una copia profunda del tablero actual
     const boardCopy = this.board.map((row) => [...row]);
     this.boardHistory.set(this.rotationVersion, boardCopy);
 
-    // Limpiar versiones antiguas si excedemos el límite
     if (this.boardHistory.size > this.maxBoardHistory) {
       const oldestVersion = Math.min(...this.boardHistory.keys());
       this.boardHistory.delete(oldestVersion);
     }
-
-    debugLog("BOARD_HISTORY: Tablero guardado", {
-      version: this.rotationVersion,
-      historySize: this.boardHistory.size,
-      availableVersions: Array.from(this.boardHistory.keys()),
-    });
   }
 
-  /**
-   * Obtiene un tablero de una versión específica
-   */
   getBoardByVersion(version) {
     if (version === this.rotationVersion) {
       return this.board;
@@ -148,43 +39,29 @@ export class BoggleGame {
     return this.boardHistory.get(version) || null;
   }
 
-  /**
-   * Transforma coordenadas entre versiones de rotación
-   */
   transformCoordinates(path, fromVersion, toVersion) {
-    if (fromVersion === toVersion) {
-      return path;
-    }
+    if (fromVersion === toVersion) return path;
 
-    // Calcular cuántas rotaciones de diferencia hay
     const rotationDiff = (toVersion - fromVersion) % 4;
-    if (rotationDiff === 0) {
-      return path;
-    }
+    if (rotationDiff === 0) return path;
 
     return path.map(([row, col]) => {
       let newRow = row;
       let newCol = col;
-
-      // Aplicar rotaciones (cada rotación es 90° horaria)
       for (let i = 0; i < rotationDiff; i++) {
         const temp = newRow;
         newRow = newCol;
         newCol = 3 - temp;
       }
-
       return [newRow, newCol];
     });
   }
 
-  /**
-   * Lanza los dados y genera un nuevo tablero 4x4
-   */
+  // --- Board generation ---
+
   generateBoard() {
     const dice = getDiceConfiguration();
     const diceRolls = [];
-
-    // Mezclar los dados para posiciones aleatorias
     const shuffledDice = [...dice].sort(() => Math.random() - 0.5);
 
     this.board = [];
@@ -205,130 +82,30 @@ export class BoggleGame {
           rolledFace: rolledFace,
           letter: letter,
         });
-
         diceIndex++;
       }
       this.board.push(row);
     }
 
-    // Guardar información del lanzamiento para enviar a los clientes
     this.lastDiceRolls = diceRolls;
-
-    // Reiniciar versión de rotación y limpiar historial para nuevo tablero
     this.rotationVersion = 0;
     this.boardHistory.clear();
-    this.saveBoardToHistory(); // Guardar el tablero inicial como versión 0
+    this.saveBoardToHistory();
 
     return diceRolls;
   }
 
-  /**
-   * Obtiene un nombre aleatorio único de la lista disponible
-   */
-  getRandomName() {
-    if (this.availableNames.length === 0) {
-      // Si se agotaron los nombres, reiniciar la lista
-      this.availableNames = [...RANDOM_NAMES];
-    }
+  // --- Game lifecycle ---
 
-    const randomIndex = Math.floor(Math.random() * this.availableNames.length);
-    const selectedName = this.availableNames[randomIndex];
-
-    // Remover el nombre de la lista de disponibles
-    this.availableNames.splice(randomIndex, 1);
-
-    return selectedName;
-  }
-
-  /**
-   * Libera un nombre cuando un jugador se desconecta
-   */
-  releaseName(playerName) {
-    if (
-      RANDOM_NAMES.includes(playerName) &&
-      !this.availableNames.includes(playerName)
-    ) {
-      this.availableNames.push(playerName);
-    }
-  }
-
-  /**
-   * Añade un jugador al juego
-   */
-  addPlayer(playerId, playerName) {
-    const playerData = {
-      id: playerId,
-      name: playerName,
-      score: 0,
-      wordsFound: [],
-      eliminatedWords: [], // Inicializar array de palabras eliminadas
-      isConnected: true,
-      joinedAt: Date.now(),
-    };
-
-    this.players.set(playerId, playerData);
-
-    // También agregar al historial de la partida actual
-    this.gameHistory.set(playerId, { ...playerData });
-
-    debugLog("PLAYER_ADDED: Jugador agregado al juego y historial", {
-      playerId,
-      playerName,
-      connectedPlayers: this.players.size,
-      totalParticipants: this.gameHistory.size,
-    });
-  }
-
-  /**
-   * Remueve un jugador del juego (marca como desconectado pero mantiene historial)
-   */
-  removePlayer(playerId) {
-    const player = this.players.get(playerId);
-    if (player) {
-      // Actualizar el historial con los datos finales antes de desconectar
-      const historyPlayer = this.gameHistory.get(playerId);
-      if (historyPlayer) {
-        historyPlayer.score = player.score;
-        historyPlayer.wordsFound = [...player.wordsFound];
-        historyPlayer.eliminatedWords = [...player.eliminatedWords];
-        historyPlayer.isConnected = false;
-        historyPlayer.disconnectedAt = Date.now();
-      }
-
-      debugLog(
-        "PLAYER_REMOVED: Jugador desconectado pero mantenido en historial",
-        {
-          playerId,
-          playerName: player.name,
-          finalScore: player.score,
-          wordsFound: player.wordsFound.length,
-          connectedPlayers: this.players.size - 1,
-          totalParticipants: this.gameHistory.size,
-        }
-      );
-
-      // Liberar el nombre para que pueda ser reutilizado
-      this.releaseName(player.name);
-
-      // Remover del mapa de jugadores activos, pero mantener en historial
-      this.players.delete(playerId);
-    }
-  }
-
-  /**
-   * Inicia una nueva partida
-   */
   startGame() {
     if (this.players.size < 1) return false;
 
-    // Limpiar cualquier timer existente antes de iniciar uno nuevo
     this.clearTimers();
 
     const diceRolls = this.generateBoard();
     this.gameState = "playing";
-    this.timeLeft = TIME_LIMIT;
+    this.timeLeft = this.timeLimit;
 
-    // Timer interno para decrementar el tiempo
     this.timer = setInterval(() => {
       this.timeLeft--;
       if (this.timeLeft <= 0) {
@@ -336,13 +113,11 @@ export class BoggleGame {
       }
     }, 1000);
 
-    // Timer para enviar actualizaciones a los clientes
     if (this.io) {
       this.updateTimer = setInterval(() => {
         if (this.gameState === "playing") {
           this.io.emit("timer-update", this.timeLeft);
         } else {
-          // Si el juego ya no está en curso, limpiar este timer
           this.clearUpdateTimer();
         }
       }, 1000);
@@ -351,96 +126,26 @@ export class BoggleGame {
     return { success: true, diceRolls };
   }
 
-  /**
-   * Termina la partida actual
-   */
   endGame() {
-    this.gameState = "finished";
+    this.finalizeGame();
 
-    // Limpiar ambos timers usando el método centralizado
-    this.clearTimers();
-
-    // Si la validación del cliente estaba habilitada, revalidar todas las palabras
-    if (this.clientSideValidation) {
-      this.revalidateClientWords();
-    }
-
-    // Eliminar palabras comunes si la opción está activada
-    debugLog("ENDGAME: Verificando eliminación de palabras comunes", {
-      eliminateCommonWords: this.eliminateCommonWords,
-    });
-
-    if (this.eliminateCommonWords) {
-      this.eliminateCommonWordsFromPlayers();
-    } else {
-      debugLog("ENDGAME: Eliminación de palabras comunes deshabilitada");
-    }
-
-    // Actualizar scoreboard con los puntajes de TODOS los participantes
-    const allParticipantScores = Array.from(this.gameHistory.values()).map(
-      (player) => ({
-        name: player.name,
-        score: player.score,
-        isConnected: player.isConnected,
-      })
-    );
-    const totalParticipants = this.gameHistory.size;
-
-    debugLog("SCOREBOARD_UPDATE: Actualizando con todos los participantes", {
-      totalParticipants,
-      connectedPlayers: this.players.size,
-      disconnectedPlayers: totalParticipants - this.players.size,
-    });
-
-    updateScoreboard(allParticipantScores, totalParticipants);
-
-    // Actualizar rachas de victorias ANTES de emitir game-ended - solo si hay más de 1 participante
-    if (totalParticipants > 1) {
-      // Encontrar el/los ganador(es) (máximo puntaje)
-      const maxScore = Math.max(...allParticipantScores.map((p) => p.score));
-      const winners = allParticipantScores.filter(
-        (p) => p.score === maxScore && p.score > 0
-      );
-
-      if (winners.length > 0) {
-        debugLog("STREAK_UPDATE: Actualizando rachas de ganadores", {
-          winners: winners.map((w) => w.name),
-          maxScore,
-        });
-
-        // Registrar victoria para cada ganador
-        winners.forEach((winner) => {
-          const updatedStreak = streakTracker.recordWin(winner.name);
-          debugLog("STREAK_UPDATE: Racha actualizada", {
-            playerName: winner.name,
-            newStreak: updatedStreak.wins,
-          });
-        });
-      }
-    }
-
-    // Enviar notificación de fin de juego DESPUÉS de actualizar rachas
-    // Incluir TODOS los participantes (conectados y desconectados) en el estado final
     if (this.io) {
       const finalGameState = this.getGameState();
-      // Agregar todos los participantes al estado final
       finalGameState.allParticipants = Array.from(this.gameHistory.values());
-
-      debugLog("EMIT: game-ended (con rachas actualizadas)", {
-        connectedPlayers: finalGameState.players.length,
-        totalParticipants: finalGameState.allParticipants.length,
-        disconnectedPlayers:
-          finalGameState.allParticipants.length - finalGameState.players.length,
-        playerStreaks: finalGameState.playerStreaks,
-      });
-
       this.io.emit("game-ended", finalGameState);
     }
   }
 
-  /**
-   * Procesa la submisión de una palabra por un jugador
-   */
+  resetGame() {
+    this.board = [];
+    this.gameState = "waiting";
+    this.timeLeft = this.timeLimit;
+    this.clearTimers();
+    this.resetPlayers();
+  }
+
+  // --- Word submission ---
+
   submitWord(playerId, word, path, clientRotationVersion) {
     if (this.gameState !== "playing")
       return { valid: false, reason: "Juego no activo" };
@@ -450,32 +155,26 @@ export class BoggleGame {
 
     word = word.toLowerCase();
 
-    // Verificar si la palabra ya fue encontrada por este jugador
     if (player.wordsFound.includes(word)) {
       return { valid: false, reason: "Palabra ya encontrada" };
     }
 
-    // Verificar longitud mínima
     if (word.length < 3) {
       return { valid: false, reason: "Palabra muy corta" };
     }
 
-    // Verificar si la palabra está en el diccionario
     if (!this.words.has(word)) {
       return { valid: false, reason: "Palabra no está en el diccionario" };
     }
 
-    // Validar ruta en el tablero (con soporte para versiones de rotación)
     if (!this.isValidPath(path, word, clientRotationVersion)) {
       return { valid: false, reason: "Ruta inválida en el tablero" };
     }
 
-    // Agregar palabra y calcular puntuación
     player.wordsFound.push(word);
     const points = calculateWordPoints(word);
     player.score += points;
 
-    // También actualizar el historial
     const historyPlayer = this.gameHistory.get(playerId);
     if (historyPlayer) {
       historyPlayer.wordsFound = [...player.wordsFound];
@@ -485,73 +184,44 @@ export class BoggleGame {
     return { valid: true, points, word };
   }
 
-  /**
-   * Valida que un camino en el tablero forme la palabra especificada
-   * Soporta validación con versiones anteriores del tablero para manejar concurrencia de rotación
-   */
+  // --- Path validation ---
+
   isValidPath(path, word, clientRotationVersion) {
     let boardToUse = this.board;
     let pathToUse = path;
 
-    // Si el cliente tiene una versión de rotación diferente, manejar la diferencia
     if (clientRotationVersion !== this.rotationVersion) {
-      debugLog("PATH_VALIDATION: Detectada diferencia de versión de rotación", {
-        clientVersion: clientRotationVersion,
-        serverVersion: this.rotationVersion,
-        word,
-        originalPath: path,
-      });
-
-      // Opción 1: Usar tablero histórico si está disponible
       const historicalBoard = this.getBoardByVersion(clientRotationVersion);
       if (historicalBoard) {
         boardToUse = historicalBoard;
-        debugLog("PATH_VALIDATION: Usando tablero histórico", {
-          version: clientRotationVersion,
-        });
       } else {
-        // Opción 2: Transformar coordenadas al tablero actual
         pathToUse = this.transformCoordinates(
           path,
           clientRotationVersion,
           this.rotationVersion
         );
-        debugLog("PATH_VALIDATION: Transformando coordenadas", {
-          originalPath: path,
-          transformedPath: pathToUse,
-          fromVersion: clientRotationVersion,
-          toVersion: this.rotationVersion,
-        });
       }
     }
 
     return this.validatePathOnBoard(pathToUse, word, boardToUse);
   }
 
-  /**
-   * Valida un path específico en un tablero específico
-   */
   validatePathOnBoard(path, word, board) {
-    // Construir la palabra desde el path para manejar dígrafos
     let pathWord = "";
     const used = new Set();
 
     for (let i = 0; i < path.length; i++) {
       const [row, col] = path[i];
 
-      // Check bounds
       if (row < 0 || row >= 4 || col < 0 || col >= 4) return false;
 
-      // Check if cell already used
       const cellKey = `${row},${col}`;
       if (used.has(cellKey)) return false;
       used.add(cellKey);
 
-      // Agregar la letra/dígrafo de esta celda a la palabra del path
       const cellLetter = board[row][col].toLowerCase();
       pathWord += cellLetter;
 
-      // Check adjacency (except for first cell)
       if (i > 0) {
         const [prevRow, prevCol] = path[i - 1];
         const rowDiff = Math.abs(row - prevRow);
@@ -563,13 +233,11 @@ export class BoggleGame {
       }
     }
 
-    // Comparar la palabra construida desde el path con la palabra enviada
     return pathWord === word.toLowerCase();
   }
 
-  /**
-   * Obtiene el estado actual del juego
-   */
+  // --- Game state ---
+
   getGameState() {
     const gameState = {
       board: this.board,
@@ -581,289 +249,20 @@ export class BoggleGame {
       clientSideValidation: this.clientSideValidation,
     };
 
-    // Si el juego ha terminado, incluir las rachas de todos los participantes
     if (this.gameState === "finished") {
       const allParticipants = Array.from(this.gameHistory.values());
       const playerNames = allParticipants.map((p) => p.name);
       gameState.playerStreaks = streakTracker.getPlayersStreaks(playerNames);
-
-      debugLog("GET_GAME_STATE: Incluyendo rachas en estado final", {
-        playerNames,
-        playerStreaks: gameState.playerStreaks,
-      });
     }
 
     return gameState;
   }
 
-  /**
-   * Reinicia el juego manteniendo los jugadores
-   */
-  resetGame() {
-    this.board = [];
-    this.gameState = "waiting";
-    this.timeLeft = TIME_LIMIT;
-    // Limpiar todos los timers usando el método centralizado
-    this.clearTimers();
+  // --- Board rotation ---
 
-    // Reset player scores but keep players
-    for (const player of this.players.values()) {
-      player.score = 0;
-      player.wordsFound = [];
-      // Asegurar que eliminatedWords existe antes de resetear
-      player.eliminatedWords = player.eliminatedWords || [];
-      player.eliminatedWords.length = 0; // Reset eliminated words
-      player.isConnected = true; // Resetear estado de conexión
-      player.joinedAt = Date.now(); // Actualizar tiempo de unión
-    }
-
-    // Limpiar el historial de la partida anterior y reiniciar con jugadores actuales
-    this.gameHistory.clear();
-    for (const [playerId, player] of this.players) {
-      this.gameHistory.set(playerId, { ...player });
-    }
-
-    debugLog("GAME_RESET: Juego reiniciado y historial limpiado", {
-      connectedPlayers: this.players.size,
-      totalParticipants: this.gameHistory.size,
-    });
-  }
-
-  /**
-   * Configura si se deben eliminar palabras comunes al final del juego
-   */
-  setEliminateCommonWords(enabled) {
-    this.eliminateCommonWords = enabled;
-    debugLog("ELIMINATE_COMMON_WORDS: Configuración actualizada", {
-      enabled: this.eliminateCommonWords,
-    });
-  }
-
-  /**
-   * Configura el feature flag de validación del cliente
-   */
-  setClientSideValidation(enabled) {
-    this.clientSideValidation = enabled;
-    debugLog("CLIENT_SIDE_VALIDATION: Feature flag actualizado", {
-      enabled: this.clientSideValidation,
-    });
-  }
-
-  /**
-   * Obtiene el estado del feature flag de validación del cliente
-   */
-  getClientSideValidation() {
-    return this.clientSideValidation;
-  }
-
-  /**
-   * Revalida todas las palabras de los jugadores con el servidor al finalizar la partida
-   * Solo se ejecuta si la validación del cliente estaba habilitada
-   */
-  revalidateClientWords() {
-    debugLog("REVALIDATION: Iniciando revalidación de palabras del cliente");
-    
-    let totalWordsRevalidated = 0;
-    let totalWordsRemoved = 0;
-    const revalidationResults = {};
-
-    // Revalidar palabras de todos los participantes (conectados y desconectados)
-    for (const [playerId, player] of this.gameHistory) {
-      const originalWordsCount = player.wordsFound.length;
-      const validWords = [];
-      const invalidWords = [];
-
-      debugLog("REVALIDATION: Revalidando jugador", {
-        playerId,
-        playerName: player.name,
-        originalWordsCount
-      });
-
-      // Revalidar cada palabra con la lógica del servidor
-      for (const word of player.wordsFound) {
-        // Verificar longitud mínima
-        if (word.length < 3) {
-          invalidWords.push({ word, reason: "Palabra muy corta" });
-          continue;
-        }
-
-        // Verificar diccionario
-        if (!this.words.has(word.toLowerCase())) {
-          invalidWords.push({ word, reason: "No está en el diccionario" });
-          continue;
-        }
-
-        // La palabra es válida según el servidor
-        validWords.push(word);
-        totalWordsRevalidated++;
-      }
-
-      // Actualizar las palabras del jugador con solo las válidas
-      player.wordsFound = validWords;
-      
-      // Recalcular puntuación
-      const oldScore = player.score;
-      player.score = validWords.reduce((total, word) => {
-        return total + this.calculateWordPoints(word);
-      }, 0);
-
-      const wordsRemoved = originalWordsCount - validWords.length;
-      totalWordsRemoved += wordsRemoved;
-
-      revalidationResults[playerId] = {
-        playerName: player.name,
-        originalWords: originalWordsCount,
-        validWords: validWords.length,
-        invalidWords: invalidWords.length,
-        wordsRemoved,
-        oldScore,
-        newScore: player.score,
-        scoreChange: player.score - oldScore,
-        removedWords: invalidWords
-      };
-
-      // También actualizar el jugador conectado si existe
-      const connectedPlayer = this.players.get(playerId);
-      if (connectedPlayer) {
-        connectedPlayer.wordsFound = [...validWords];
-        connectedPlayer.score = player.score;
-      }
-
-      debugLog("REVALIDATION: Jugador revalidado", revalidationResults[playerId]);
-    }
-
-    debugLog("REVALIDATION: Revalidación completada", {
-      totalWordsRevalidated,
-      totalWordsRemoved,
-      playersProcessed: Object.keys(revalidationResults).length,
-      revalidationResults
-    });
-
-    // Emitir evento de revalidación si hay cambios significativos
-    if (totalWordsRemoved > 0 && this.io) {
-      this.io.emit("words-revalidated", {
-        totalWordsRemoved,
-        affectedPlayers: Object.keys(revalidationResults).length,
-        summary: "Algunas palabras fueron removidas tras la revalidación del servidor"
-      });
-    }
-  }
-
-  /**
-   * Calcula los puntos de una palabra (método auxiliar para revalidación)
-   */
-  calculateWordPoints(word) {
-    const length = word.length;
-    if (length < 3) return 0;
-    if (length === 3 || length === 4) return 1;
-    if (length === 5) return 2;
-    if (length === 6) return 3;
-    if (length === 7) return 5;
-    return 11; // 8+ letras
-  }
-
-  /**
-   * Elimina palabras comunes entre jugadores y recalcula puntuaciones
-   */
-  eliminateCommonWordsFromPlayers() {
-    // Usar TODOS los jugadores que participaron (conectados y desconectados)
-    const allParticipants = Array.from(this.gameHistory.values());
-    if (allParticipants.length < 2) {
-      debugLog("ELIMINATE_COMMON_WORDS: Skipping - menos de 2 participantes", {
-        participantCount: allParticipants.length,
-      });
-      return; // No hay suficientes participantes
-    }
-
-    debugLog("ELIMINATE_COMMON_WORDS: Iniciando eliminación", {
-      participantCount: allParticipants.length,
-      connectedPlayers: this.players.size,
-      disconnectedPlayers: allParticipants.length - this.players.size,
-    });
-
-    // Crear un mapa de palabras y los jugadores que las encontraron
-    const wordToPlayers = new Map();
-
-    allParticipants.forEach((player) => {
-      player.wordsFound.forEach((word) => {
-        if (!wordToPlayers.has(word)) {
-          wordToPlayers.set(word, []);
-        }
-        wordToPlayers.get(word).push(player.id);
-      });
-    });
-
-    // Encontrar palabras comunes (encontradas por 2 o más jugadores)
-    const commonWords = new Set();
-    wordToPlayers.forEach((playerIds, word) => {
-      if (playerIds.length > 1) {
-        commonWords.add(word);
-      }
-    });
-
-    debugLog("ELIMINATE_COMMON_WORDS: Palabras comunes encontradas", {
-      commonWordsCount: commonWords.size,
-      commonWords: Array.from(commonWords),
-    });
-
-    // Eliminar palabras comunes y recalcular puntuaciones para TODOS los participantes
-    allParticipants.forEach((historyPlayer) => {
-      // Asegurar que el jugador tenga la propiedad eliminatedWords
-      if (!historyPlayer.eliminatedWords) {
-        historyPlayer.eliminatedWords = [];
-      }
-
-      const originalWords = [...historyPlayer.wordsFound];
-      const eliminatedWords = [];
-      const validWords = [];
-
-      originalWords.forEach((word) => {
-        if (commonWords.has(word)) {
-          eliminatedWords.push(word);
-        } else {
-          validWords.push(word);
-        }
-      });
-
-      // Actualizar palabras encontradas y agregar información de eliminadas
-      historyPlayer.wordsFound = validWords;
-      historyPlayer.eliminatedWords = eliminatedWords;
-
-      // Recalcular puntuación solo con palabras válidas
-      const oldScore = historyPlayer.score;
-      historyPlayer.score = validWords.reduce((total, word) => {
-        return total + calculateWordPoints(word);
-      }, 0);
-
-      // Si el jugador está actualmente conectado, también actualizar su data activa
-      const activePlayer = this.players.get(historyPlayer.id);
-      if (activePlayer) {
-        activePlayer.wordsFound = validWords;
-        activePlayer.eliminatedWords = eliminatedWords;
-        activePlayer.score = historyPlayer.score;
-      }
-
-      debugLog("ELIMINATE_COMMON_WORDS: Participante procesado", {
-        playerName: historyPlayer.name,
-        isConnected: historyPlayer.isConnected,
-        originalWords: originalWords.length,
-        validWords: validWords.length,
-        eliminatedWords: eliminatedWords.length,
-        oldScore,
-        newScore: historyPlayer.score,
-      });
-    });
-
-    debugLog("ELIMINATE_COMMON_WORDS: Proceso completado");
-  }
-
-  /**
-   * Rota el tablero 90 grados en sentido horario
-   */
   rotateBoard() {
     const now = Date.now();
 
-    // Verificar cooldown
     if (now - this.lastRotationTime < this.rotationCooldown) {
       const remainingTime = Math.ceil(
         (this.rotationCooldown - (now - this.lastRotationTime)) / 1000
@@ -874,7 +273,6 @@ export class BoggleGame {
       };
     }
 
-    // Solo permitir rotación durante el juego
     if (this.gameState !== "playing") {
       return {
         success: false,
@@ -882,30 +280,18 @@ export class BoggleGame {
       };
     }
 
-    // Crear nuevo tablero rotado 90 grados en sentido horario
     const rotatedBoard = [];
     for (let i = 0; i < 4; i++) {
       rotatedBoard[i] = [];
       for (let j = 0; j < 4; j++) {
-        // Para rotar 90° horario: nuevo[i][j] = original[4-1-j][i]
         rotatedBoard[i][j] = this.board[4 - 1 - j][i];
       }
     }
 
-    // Guardar el tablero actual antes de rotarlo
     this.saveBoardToHistory();
-
-    // Aplicar la rotación
     this.board = rotatedBoard;
     this.lastRotationTime = now;
-
-    // Incrementar versión de rotación
     this.rotationVersion++;
-
-    debugLog("BOARD_ROTATED: Nueva versión de tablero", {
-      newVersion: this.rotationVersion,
-      availableVersions: Array.from(this.boardHistory.keys()),
-    });
 
     return {
       success: true,
@@ -914,26 +300,21 @@ export class BoggleGame {
     };
   }
 
-  /**
-   * Encuentra todas las palabras posibles en el tablero actual
-   */
+  // --- Find all possible words (DFS) ---
+
   findAllPossibleWords() {
     const allWords = [];
     const visited = Array(4)
       .fill()
       .map(() => Array(4).fill(false));
 
-    // Función recursiva para explorar todos los caminos posibles
     const dfs = (row, col, currentWord, currentPath) => {
-      // Marcar celda como visitada
       visited[row][col] = true;
 
-      // Agregar letra actual a la palabra
       const cellLetter = this.board[row][col].toLowerCase();
       currentWord += cellLetter;
       currentPath.push([row, col]);
 
-      // Si la palabra tiene 3+ letras y está en el diccionario, agregarla
       if (currentWord.length >= 3 && this.words.has(currentWord)) {
         allWords.push({
           word: currentWord,
@@ -942,15 +323,11 @@ export class BoggleGame {
         });
       }
 
-      // Explorar celdas adyacentes
       for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
-          if (dr === 0 && dc === 0) continue; // Skip current cell
-
+          if (dr === 0 && dc === 0) continue;
           const newRow = row + dr;
           const newCol = col + dc;
-
-          // Verificar límites y que no esté visitada
           if (
             newRow >= 0 &&
             newRow < 4 &&
@@ -963,19 +340,16 @@ export class BoggleGame {
         }
       }
 
-      // Desmarcar celda (backtrack)
       visited[row][col] = false;
       currentPath.pop();
     };
 
-    // Iniciar búsqueda desde cada celda del tablero
     for (let row = 0; row < 4; row++) {
       for (let col = 0; col < 4; col++) {
         dfs(row, col, "", []);
       }
     }
 
-    // Remover duplicados (misma palabra puede encontrarse por diferentes caminos)
     const uniqueWords = new Map();
     allWords.forEach((wordData) => {
       if (

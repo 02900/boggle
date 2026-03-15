@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Boggle - Juego de Palabras",
-  description: "Juego multijugador de Boggle en tiempo real con validación inteligente de palabras",
+  title: "Word Games - Boggle & Scrabble",
+  description: "Real-time multiplayer word games with Spanish dictionary validation",
 };
 
 export default function RootLayout({
