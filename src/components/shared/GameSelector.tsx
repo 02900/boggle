@@ -5,6 +5,7 @@ const games = [
     name: "Boggle",
     href: "/boggle",
     description: "Encuentra palabras en un tablero 4x4. Multijugador en tiempo real.",
+    details: "3 minutos por ronda",
     color: "from-blue-600 to-blue-800",
     hoverColor: "hover:from-blue-500 hover:to-blue-700",
   },
@@ -12,9 +13,9 @@ const games = [
     name: "Scrabble",
     href: "/scrabble",
     description: "Coloca fichas para formar palabras. Por turnos, multijugador.",
+    details: "2 minutos por turno",
     color: "from-green-600 to-green-800",
     hoverColor: "hover:from-green-500 hover:to-green-700",
-    badge: "Proximamente",
   },
 ];
 
@@ -33,15 +34,13 @@ export function GameSelector() {
             <Link
               key={game.name}
               href={game.href}
-              className={`relative block rounded-xl bg-gradient-to-br ${game.color} ${game.hoverColor} p-6 text-white transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105`}
+              className={`block rounded-xl bg-gradient-to-br ${game.color} ${game.hoverColor} p-6 text-white transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105`}
             >
-              {game.badge && (
-                <span className="absolute top-3 right-3 text-xs bg-white/20 rounded-full px-2 py-0.5">
-                  {game.badge}
-                </span>
-              )}
               <h2 className="text-2xl font-bold mb-2">{game.name}</h2>
-              <p className="text-sm opacity-80">{game.description}</p>
+              <p className="text-sm opacity-80 mb-3">{game.description}</p>
+              <span className="inline-block text-xs bg-white/20 rounded-full px-3 py-1">
+                {game.details}
+              </span>
             </Link>
           ))}
         </div>
