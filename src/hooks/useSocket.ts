@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { io } from "socket.io-client";
-import { useBoggleGameMainStore } from "@/components/BoggleGameMain/boogle-game-main.store";
+import { useBoggleGameMainStore } from "@/components/boggle/BoggleGameMain/boogle-game-main.store";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useViewportStore } from "@/stores/viewport.store";
 

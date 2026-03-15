@@ -1,4 +1,4 @@
-import { BoggleGameMain } from "@/components/BoggleGameMain";
+import { BoggleGameMain } from "@/components/boggle/BoggleGameMain";
 
 export default function BogglePage() {
   return <BoggleGameMain />;

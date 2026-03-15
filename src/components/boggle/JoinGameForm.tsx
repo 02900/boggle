@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useBoggleGameMain } from "./BoggleGameMain/use-boggle-game-main";
-import { Scoreboard } from "./Scoreboard";
+import { Scoreboard } from "../shared/Scoreboard";
 
 export const JoinGameForm = () => {
   const { isConnected } = useSocketsStore();
