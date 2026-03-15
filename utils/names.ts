@@ -1,5 +1,4 @@
-// Lista de nombres predefinidos para jugadores anónimos
-export const RANDOM_NAMES = [
+export const RANDOM_NAMES: readonly string[] = [
   "ShadowHunter",
   "StormRider",
   "FireWolf",

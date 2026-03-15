@@ -36,6 +36,23 @@ export interface WordResult {
   word?: string;
 }
 
+export interface ScoreboardEntry {
+  name: string;
+  score: number;
+  date: string;
+  playerCount: number;
+}
+
+export interface MaxScoreData {
+  words: Array<{
+    word: string;
+    path: [number, number][];
+    points: number;
+  }>;
+  maxScore: number;
+  totalWords: number;
+}
+
 export interface GameEvents {
   "game-state": (state: GameState) => void;
   "game-started": (state: GameState) => void;
@@ -56,12 +73,16 @@ export interface GameEvents {
     eliminateCommonWords: boolean;
   }) => void;
   "client-side-validation-changed": (data: { enabled: boolean }) => void;
-  "words-revalidated": (data: { 
-    totalWordsRemoved: number; 
-    affectedPlayers: number; 
-    summary: string; 
+  "words-revalidated": (data: {
+    totalWordsRemoved: number;
+    affectedPlayers: number;
+    summary: string;
   }) => void;
   "join-confirmed": (data: { playerName: string; playerId: string }) => void;
+  "board-rotated": (data: { board: string[][]; cooldownTime: number; rotationVersion: number }) => void;
+  "rotation-error": (data: { message: string }) => void;
+  "scoreboard-data": (data: ScoreboardEntry[]) => void;
+  "max-score-data": (data: MaxScoreData) => void;
 }
 
 export interface ClientEvents {
@@ -75,6 +96,9 @@ export interface ClientEvents {
   "reset-game": () => void;
   "toggle-eliminate-common-words": (enabled: boolean) => void;
   "toggle-client-side-validation": (enabled: boolean) => void;
+  "rotate-board": () => void;
+  "get-scoreboard": () => void;
+  "get-max-score": () => void;
 }
 
 export type GameStatus = "waiting" | "playing" | "finished";

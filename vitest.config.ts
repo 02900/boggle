@@ -3,12 +3,33 @@ import path from "path";
 
 export default defineConfig({
   test: {
-    environment: "jsdom",
-    setupFiles: ["./src/__tests__/setup.ts"],
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    projects: [
+      {
+        test: {
+          name: "client",
+          environment: "jsdom",
+          include: ["src/**/__tests__/**/*.test.ts"],
+          setupFiles: ["./src/__tests__/setup.ts"],
+        },
+        resolve: {
+          alias: {
+            "@": path.resolve(import.meta.dirname, "./src"),
+          },
+        },
+      },
+      {
+        test: {
+          name: "server",
+          environment: "node",
+          include: [
+            "game/__tests__/**/*.test.ts",
+            "utils/__tests__/**/*.test.ts",
+            "config/__tests__/**/*.test.ts",
+            "socket/__tests__/**/*.test.ts",
+          ],
+          setupFiles: ["./game/__tests__/setup.ts"],
+        },
+      },
+    ],
   },
 });
