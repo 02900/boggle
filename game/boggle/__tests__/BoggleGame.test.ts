@@ -28,7 +28,7 @@ vi.mocked(fs.readFileSync).mockReturnValue(
 import { BoggleGame } from "../BoggleGame";
 import { updateScoreboard } from "../../../utils/scoreboard";
 import { streakTracker } from "../../../utils/streakTracker";
-import { TIME_LIMIT } from "../../../config/constants";
+import { TIME_LIMIT } from "../../../config/boggleConstants";
 import { RANDOM_NAMES } from "../../../utils/names";
 
 // ---- Helpers ----

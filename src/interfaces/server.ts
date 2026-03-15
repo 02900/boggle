@@ -1,19 +1,32 @@
 import type { Server as SocketIOServer, Socket as SocketIOSocket } from "socket.io";
-import type { Player, DiceRoll, GameEvents, ClientEvents, ScoreboardEntry, MaxScoreData } from "./game";
+import type { Player, GameEvents, ClientEvents, ScoreboardEntry, MaxScoreData } from "./game";
 
-// Re-export types that also live in game.ts
+// Re-export shared types from game.ts
 export type { ScoreboardEntry, MaxScoreData };
+
+// Re-export Boggle-specific types from boggle.ts for backward compatibility
+export type {
+  DiceConfiguration,
+  DieFaces,
+  StartGameResult,
+  RotateBoardResult,
+  RevalidationResult,
+} from "./boggle";
 
 // ---- Socket.IO Typed Server & Socket ----
 export type TypedServer = SocketIOServer<ClientEvents, GameEvents>;
 export type TypedSocket = SocketIOSocket<ClientEvents, GameEvents>;
 
-// ---- Board ----
+// ---- Shared types ----
 export type Board = string[][];
-export type DieFaces = string[];
-export type DiceConfiguration = DieFaces[];
 
-// ---- Streak Tracker ----
+export interface PlayerData extends Player {
+  eliminatedWords: string[];
+  isConnected: boolean;
+  joinedAt: number;
+  disconnectedAt?: number;
+}
+
 export interface StreakData {
   wins: number;
   lastWinTime: number;
@@ -27,36 +40,4 @@ export interface SessionStats {
     wins: number;
     sessionDuration: number;
   }>;
-}
-
-// ---- BoggleGame internal types ----
-export interface PlayerData extends Player {
-  eliminatedWords: string[];
-  isConnected: boolean;
-  joinedAt: number;
-  disconnectedAt?: number;
-}
-
-export interface StartGameResult {
-  success: true;
-  diceRolls: DiceRoll[];
-}
-
-export interface RotateBoardResult {
-  success: boolean;
-  reason?: string;
-  cooldownTime?: number;
-  rotationVersion?: number;
-}
-
-export interface RevalidationResult {
-  playerName: string;
-  originalWords: number;
-  validWords: number;
-  invalidWords: number;
-  wordsRemoved: number;
-  oldScore: number;
-  newScore: number;
-  scoreChange: number;
-  removedWords: Array<{ word: string; reason: string }>;
 }

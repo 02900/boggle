@@ -58,7 +58,7 @@ describe("setupSharedHandlers", () => {
 
   describe("join-game", () => {
     it("uses the provided name after trimming whitespace", () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
       socket._trigger("join-game", "  Alice  ");
 
       expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "Alice");
@@ -66,7 +66,7 @@ describe("setupSharedHandlers", () => {
     });
 
     it("falls back to getRandomName when name is empty", () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
       socket._trigger("join-game", "   ");
 
       expect(game.getRandomName).toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe("setupSharedHandlers", () => {
     });
 
     it("emits game-state and join-confirmed to the socket", () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
       socket._trigger("join-game", "Alice");
 
       expect(socket.emit).toHaveBeenCalledWith(
@@ -88,7 +88,7 @@ describe("setupSharedHandlers", () => {
     });
 
     it("broadcasts player-joined to other clients", () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
       socket._trigger("join-game", "Alice");
 
       expect(socket.broadcast.emit).toHaveBeenCalledWith("player-joined", {
@@ -99,14 +99,14 @@ describe("setupSharedHandlers", () => {
 
     it("calls onPlayerJoined hook when provided", () => {
       const onPlayerJoined = vi.fn();
-      setupSharedHandlers(io, socket, game, { onPlayerJoined });
+      setupSharedHandlers(io as any, socket as any, game as any, { onPlayerJoined });
       socket._trigger("join-game", "Alice");
 
       expect(onPlayerJoined).toHaveBeenCalledWith(socket, "Alice");
     });
 
     it("works without hooks (no crash)", () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
 
       expect(() => {
         socket._trigger("join-game", "Alice");
@@ -116,7 +116,7 @@ describe("setupSharedHandlers", () => {
 
   describe("get-scoreboard", () => {
     it("emits scoreboard-data to the socket", async () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
       socket._trigger("get-scoreboard");
 
       // loadScoreboard may be async, allow microtasks to flush
@@ -128,7 +128,7 @@ describe("setupSharedHandlers", () => {
 
   describe("toggle-client-side-validation", () => {
     it("calls setClientSideValidation and emits to all clients", () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
       socket._trigger("toggle-client-side-validation", true);
 
       expect(game.setClientSideValidation).toHaveBeenCalledWith(true);
@@ -141,7 +141,7 @@ describe("setupSharedHandlers", () => {
 
   describe("disconnect", () => {
     it("calls removePlayer and broadcasts player-left", () => {
-      setupSharedHandlers(io, socket, game);
+      setupSharedHandlers(io as any, socket as any, game as any);
       socket._trigger("disconnect");
 
       expect(game.removePlayer).toHaveBeenCalledWith("socket-1");

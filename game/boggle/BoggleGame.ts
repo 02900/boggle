@@ -1,4 +1,4 @@
-import { TIME_LIMIT, ROTATION_COOLDOWN } from "../../config/constants";
+import { TIME_LIMIT, ROTATION_COOLDOWN } from "../../config/boggleConstants";
 import { getDiceConfiguration, calculateWordPoints } from "./boggleConfig";
 import { updateScoreboard } from "../../utils/scoreboard";
 import { debugLog } from "../../utils/debug";
