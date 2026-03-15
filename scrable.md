@@ -1,406 +1,426 @@
-# Plan: Multi-game support — Boggle + Scrabble
+# Plan: Arquitectura multi-juego — Boggle + Scrabble
 
-## Context
+## Contexto
 
-The project currently only supports Boggle. We want to extend it so users can choose between Boggle and classic turn-based Scrabble from a landing page. Both games use the Spanish dictionary. **Scrabble games must be resumable** — players can disconnect and reconnect to an ongoing game in a later session, preserving the full game state. This is a large feature, broken into phases.
+El proyecto actualmente soporta solo Boggle con toda la logica del servidor ya migrada a TypeScript (301 tests, 21 archivos de test). El objetivo es extender el proyecto para soportar Scrabble ademas de Boggle, con un landing page para seleccionar juego, codigo compartido entre ambos juegos, y codigo especifico aislado en su propio directorio. Cada step debe terminar con tests y build pasando.
 
----
-
-## Phase 1: Multi-game architecture + routing
-
-Refactor to support multiple game types without breaking existing Boggle functionality.
-
-### 1.1 Routing (Next.js App Router)
-
-- `/` — Landing page: game selector (Boggle or Scrabble)
-- `/boggle` — Boggle game (move existing `page.tsx` content here)
-- `/scrabble` — Scrabble game (new)
-
-**Files:**
-- `src/app/page.tsx` — Rewrite as landing page with two game cards
-- `src/app/boggle/page.tsx` — New, renders `<BoggleGameMain />`
-- `src/app/scrabble/page.tsx` — New, renders `<ScrabbleGameMain />`
-- `src/app/layout.tsx` — Keep as-is (shared layout)
-
-### 1.2 Backend: Base game class
-
-Extract shared logic from `BoggleGame.js` into a base class.
-
-**New file: `game/WordGame.js`** — Base class with:
-- Player management (addPlayer, removePlayer, getRandomName)
-- Game lifecycle (state machine: waiting → playing → finished)
-- Timer management (configurable time limit)
-- Dictionary loading and word lookup
-- Common word elimination
-- Score persistence (scoreboard)
-- Streak tracking
-- io/socket reference management
-- Feature flags (eliminateCommonWords, clientSideValidation)
-- `getGameState()` — abstract, implemented by subclasses
-
-**Refactor: `game/BoggleGame.js`** — Extends `WordGame`:
-- Keep only: board generation (dice), rotation, path validation, `findAllPossibleWords()`
-- Inherit: player management, timers, dictionary, scoring, etc.
-
-**New file: `game/ScrabbleGame.js`** — Extends `WordGame`:
-- Scrabble-specific logic (see Phase 2)
-
-### 1.3 Backend: Multi-game server
-
-**Refactor: `server.js`**
-- Create one game instance per type: `{ boggle: new BoggleGame(), scrabble: new ScrabbleGame() }`
-- Socket connection includes game type (via query param or namespace)
-- Route socket events to the correct game instance
-
-**Refactor: `socket/socketHandlers.js`**
-- Accept game type parameter
-- Route events to the appropriate game instance
-- Shared events (join, disconnect, scoreboard) work the same
-- Game-specific events (rotate-board for Boggle, place-tiles for Scrabble) dispatched accordingly
-
-### 1.4 Shared frontend interfaces
-
-**Refactor: `src/interfaces/game.ts`**
-- Add `GameType = "boggle" | "scrabble"` type
-- Add Scrabble-specific interfaces (see Phase 2)
-- Keep existing Boggle interfaces as-is
+**Baseline actual:** 301 tests (133 client + 168 server), `pnpm test:run` + `pnpm run build` pasan.
 
 ---
 
-## Phase 2: Scrabble game implementation
-
-### 2.1 Scrabble game config
-
-**New file: `game/scrabbleConfig.js`**
-
-**Board**: 15x15 grid with multiplier squares:
-- TW (Triple Word): 8 squares
-- DW (Double Word): 17 squares (including center star)
-- TL (Triple Letter): 12 squares
-- DL (Double Letter): 24 squares
-
-**Spanish tile distribution (100 tiles):**
-
-| Letter | Count | Points |
-|--------|-------|--------|
-| A | 12 | 1 |
-| E | 12 | 1 |
-| O | 9 | 1 |
-| I | 6 | 1 |
-| S | 6 | 1 |
-| N | 5 | 1 |
-| R | 5 | 1 |
-| L | 4 | 1 |
-| U | 5 | 1 |
-| T | 4 | 1 |
-| D | 5 | 2 |
-| G | 2 | 2 |
-| C | 4 | 3 |
-| B | 2 | 3 |
-| M | 2 | 3 |
-| P | 2 | 3 |
-| H | 2 | 4 |
-| F | 1 | 4 |
-| V | 1 | 4 |
-| Y | 1 | 4 |
-| Q | 1 | 5 |
-| J | 1 | 8 |
-| Ñ | 1 | 8 |
-| X | 1 | 8 |
-| Z | 1 | 10 |
-| Blank | 2 | 0 |
-
-### 2.2 Scrabble backend: `game/ScrabbleGame.js`
-
-**State:**
-- `board`: 15x15 grid (each cell: `{ letter, points, multiplier, placedBy }` or `null`)
-- `tileBag`: Array of remaining tiles
-- `playerRacks`: `Map<playerId, tile[]>` — 7 tiles per player
-- `currentTurnPlayerId`: Who's turn it is
-- `turnTimeLimit`: Seconds per turn (e.g., 120s)
-- `turnTimer`: Timer for current turn
-- `consecutivePasses`: Track for end-game condition
-- `placedTilesThisTurn`: Tiles placed during current turn (before confirmation)
-- `gameId`: Unique game identifier for persistence/reconnection
-- `playerNameToId`: `Map<playerName, socketId>` — maps stable player names to current socket IDs (updated on reconnect)
-
-**Methods:**
-- `startGame()` — Fill all racks from bag, set first player's turn, persist initial state
-- `placeTiles(playerId, tiles[])` — Place tiles on board (tentative, before submit)
-- `submitTurn(playerId)` — Validate placement, score, draw new tiles, next turn, persist state
-- `recallTiles(playerId)` — Remove tentatively placed tiles back to rack
-- `exchangeTiles(playerId, tileIndices[])` — Swap tiles with bag, skip turn, persist state
-- `passTurn(playerId)` — Pass without playing, persist state
-- `validatePlacement(tiles[])`:
-  1. All tiles in same row or same column
-  2. Tiles connected (no gaps)
-  3. At least one tile touches existing tile (or center on first turn)
-  4. All formed words (horizontal + vertical) exist in dictionary
-- `calculateTurnScore(tiles[])`:
-  1. Sum letter values with letter multipliers
-  2. Apply word multipliers
-  3. Multipliers only apply on first use (the turn they're covered)
-  4. 50-point bonus for using all 7 tiles ("bingo")
-- `findAllFormedWords(tiles[])` — Find all words formed by the placement (main word + cross words)
-- `endGame()` — When bag is empty and a player uses all tiles, or all players pass consecutively. Delete persisted state.
-- `getGameState()` — Board, racks (each player sees only theirs), scores, current turn, bag count
-- `serialize()` — Returns full game state as a JSON-serializable object for persistence
-- `static deserialize(data)` — Reconstructs a ScrabbleGame instance from persisted data
-- `reconnectPlayer(playerName, newSocketId)` — Re-maps a player's socket ID, restores their rack, resumes turn if it was theirs
-
-### 2.3 Scrabble socket events
-
-**New client → server events:**
-
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `place-tile` | `{ tileIndex, row, col }` | Place tile from rack onto board |
-| `recall-tiles` | — | Return placed tiles to rack |
-| `submit-turn` | — | Confirm tile placement, end turn |
-| `exchange-tiles` | `{ tileIndices: number[] }` | Exchange tiles with bag |
-| `pass-turn` | — | Pass without playing |
-| `assign-blank` | `{ tileIndex, letter }` | Assign letter to blank tile |
-
-**New server → client events:**
-
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `turn-started` | `{ playerId, timeLeft }` | New turn begins |
-| `tiles-placed` | `{ tiles, playerId }` | Tiles placed (broadcast) |
-| `tiles-recalled` | `{ playerId }` | Tiles recalled (broadcast) |
-| `turn-result` | `{ valid, words[], score, newTiles[] }` | Turn result to player |
-| `rack-update` | `{ rack: tile[] }` | Updated rack (private to player) |
-| `bag-count` | `{ count }` | Remaining tiles in bag |
-| `turn-timeout` | `{ playerId }` | Player's turn timed out (auto-pass) |
-
-### 2.4 Scrabble session persistence & reconnection (essential)
-
-Scrabble games must survive server restarts and player disconnections. Players reconnect by name.
-
-**New file: `utils/gameSessionStore.js`** — Persistence layer:
-- `saveGameSession(gameId, serializedState)` — Writes game state to `data/scrabble-sessions/<gameId>.json`
-- `loadGameSession(gameId)` — Reads and returns a persisted game state
-- `deleteGameSession(gameId)` — Removes a finished/abandoned game
-- `listActiveSessions()` — Returns all active (non-finished) sessions with metadata (gameId, players, created, lastUpdated)
-- `cleanupStaleSessions(maxAgeHours)` — Removes sessions older than threshold (e.g., 72 hours)
-
-**Persistence triggers** (in `ScrabbleGame`):
-- After every state mutation (submitTurn, passTurn, exchangeTiles, player join/leave)
-- Call `serialize()` → `saveGameSession()`
-- On `endGame()`, delete the session file
-
-**Reconnection flow:**
+## Estructura de directorios objetivo
 
 ```
-Player opens /scrabble
-  → Client sends join-game with { playerName, gameId? }
-  → If gameId provided AND session exists:
-      1. Server loads session via deserialize()
-      2. Maps playerName → new socketId
-      3. Sends full game state to reconnected player (including their rack)
-      4. Broadcasts player-reconnected to others
-      5. If it was this player's turn, resumes/restarts their turn timer
-  → If no gameId (or session expired):
-      Normal new game flow
-```
+game/
+  shared/
+    WordGame.ts                    # Clase base abstracta
+    __tests__/
+      WordGame.test.ts
+      setup.ts                     # Setup compartido (console mocking)
+  boggle/
+    BoggleGame.ts                  # Extiende WordGame
+    boggleConfig.ts                # Dados + scoring Boggle
+    __tests__/
+      BoggleGame.test.ts
+      boggleConfig.test.ts
+  scrabble/
+    ScrabbleGame.ts                # Extiende WordGame
+    scrabbleConfig.ts              # Tablero, fichas, scoring Scrabble
+    gameSessionStore.ts            # Persistencia de sesiones
+    __tests__/
+      ScrabbleGame.test.ts
+      scrabbleConfig.test.ts
+      gameSessionStore.test.ts
 
-**Frontend reconnection:**
-- On `/scrabble` page load, check `localStorage` for `scrabble-session-{playerName}` containing `{ gameId, playerName }`
-- If found, auto-attempt reconnection with that `gameId`
-- Show UI: "Reconnecting to game..." or "Game not found, start new"
-- On successful join/reconnect, save `{ gameId, playerName }` to localStorage
-- On game end, clear localStorage entry
+socket/
+  socketHandlers.ts                # Orquestador: rutea a handlers por tipo de juego
+  shared/
+    sharedHandlers.ts              # join-game, disconnect, get-scoreboard
+    __tests__/sharedHandlers.test.ts
+  boggle/
+    boggleHandlers.ts              # rotate-board, submit-word, get-max-score
+    __tests__/boggleHandlers.test.ts
+  scrabble/
+    scrabbleHandlers.ts            # place-tiles, submit-turn, pass-turn, rejoin-game
+    __tests__/scrabbleHandlers.test.ts
 
-**New socket events for reconnection:**
+config/
+  constants.ts                     # Compartidos: DEBUG_MODE, SCOREBOARD_FILE
+  boggleConstants.ts               # TIME_LIMIT, ROTATION_COOLDOWN
+  scrabbleConstants.ts             # TURN_TIME_LIMIT, GRACE_PERIOD, BOARD_SIZE, etc.
 
-| Event | Direction | Payload | Description |
-|-------|-----------|---------|-------------|
-| `rejoin-game` | client → server | `{ playerName, gameId }` | Attempt to rejoin an existing game |
-| `rejoin-success` | server → client | `{ gameState, rack }` | Full state restore on successful rejoin |
-| `rejoin-failed` | server → client | `{ reason }` | Session not found or expired |
-| `player-reconnected` | server → broadcast | `{ playerName }` | Notify others a player returned |
+utils/                             # Todo compartido (sin cambios)
 
-**Disconnection handling:**
-- When a Scrabble player disconnects, do NOT remove them (unlike Boggle)
-- Mark as disconnected but keep their rack and score
-- If it's their turn, start a grace period timer (e.g., 60s). If they don't reconnect, auto-pass
-- Game continues if other players remain connected
-- If ALL players disconnect, game stays persisted on disk — anyone can reconnect later
+src/interfaces/
+  game.ts                          # Compartidos: Player, GameStatus, WordResult, BaseGameState
+  boggle.ts                        # DiceRoll, BoggleGameState, BoggleEvents
+  scrabble.ts                      # ScrabbleTile, ScrabbleBoardCell, ScrabbleGameState, ScrabbleEvents
+  server.ts                        # TypedServer, PlayerData, StreakData (compartidos)
 
-**Data file:** `data/scrabble-sessions/<gameId>.json` containing:
-```json
-{
-  "gameId": "uuid",
-  "createdAt": "ISO timestamp",
-  "lastUpdatedAt": "ISO timestamp",
-  "board": [[...]],
-  "tileBag": [...],
-  "players": [{ "name": "...", "score": 0, "rack": [...], "wordsFound": [...] }],
-  "currentTurnPlayerName": "...",
-  "turnTimeLeft": 120,
-  "consecutivePasses": 0,
-  "gameState": "playing",
-  "moveHistory": [{ "playerName": "...", "tiles": [...], "words": [...], "score": 5 }]
-}
-```
+src/app/
+  page.tsx                         # Landing page (selector de juego)
+  boggle/page.tsx                  # Juego Boggle
+  scrabble/page.tsx                # Juego Scrabble
 
-Note: Players are keyed by **name** (not socket ID) in the persisted state, since socket IDs change on reconnection.
-
-### 2.5 Scrabble frontend types (renumbered from old 2.4)
-
-**New in `src/interfaces/game.ts`:**
-
-```ts
-interface ScrabbleTile {
-  letter: string;
-  points: number;
-  isBlank: boolean;
-  assignedLetter?: string; // For blank tiles
-}
-
-interface ScrabbleBoardCell {
-  tile: ScrabbleTile | null;
-  multiplier: "DL" | "TL" | "DW" | "TW" | null;
-  placedBy: string | null;
-  isNewThisTurn: boolean;
-}
-
-interface ScrabbleGameState {
-  board: ScrabbleBoardCell[][];    // 15x15
-  players: ScrabblePlayer[];
-  gameState: GameStatus;
-  currentTurnPlayerId: string | null;
-  turnTimeLeft: number;
-  bagCount: number;
-  consecutivePasses: number;
-}
-
-interface ScrabblePlayer extends Player {
-  rackSize: number;    // Other players see only count, not letters
-  rack?: ScrabbleTile[]; // Only visible to the player themselves
-}
-```
-
-### 2.6 Scrabble frontend components
-
-**New files:**
-
-| File | Description |
-|------|-------------|
-| `src/components/ScrabbleGameMain/index.tsx` | Main orchestrator (like BoggleGameMain) |
-| `src/components/ScrabbleGameMain/scrabble-game.store.ts` | Zustand store for Scrabble state |
-| `src/components/ScrabbleBoard.tsx` | 15x15 board with multiplier squares, tile drop zones |
-| `src/components/TileRack.tsx` | Player's 7-tile rack with drag source |
-| `src/components/ScrabbleTile.tsx` | Individual tile component (letter + points) |
-| `src/components/ScrabbleControls.tsx` | Submit, Recall, Exchange, Pass buttons |
-| `src/components/TurnIndicator.tsx` | Shows whose turn it is + timer |
-| `src/hooks/useScrabbleGameLogic.ts` | Tile placement, rack management |
-| `src/hooks/useScrabbleSocketListeners.ts` | Scrabble-specific socket listeners |
-
-**Reused from Boggle (shared):**
-- `JoinGameForm.tsx` — Add `gameType` prop
-- `PlayersList.tsx` — Works as-is
-- `Scoreboard.tsx` — Works as-is
-- `GameInstructions.tsx` — Parameterize by game type
-- Stores: `sockets.store.ts`, `viewport.store.ts`, `modal.store.ts`, `scoreboard.store.ts`
-
-### 2.7 Scrabble UI layout
-
-**Desktop:**
-```
-┌─────────────────────────────────────────────────┐
-│  Turn: PlayerName (1:45)    [Pass] [Exchange]   │
-├───────────────────────────┬─────────────────────┤
-│                           │  Players & Scores   │
-│    15x15 Scrabble Board   │  ─────────────────  │
-│    (with multipliers)     │  Current turn: →    │
-│                           │                     │
-├───────────────────────────┤                     │
-│  [A₁][E₁][S₁][T₁][O₁][R₁][_₀]  [Submit]    │
-│  ^^^^^ Your Rack ^^^^^           [Recall]      │
-└─────────────────────────────────────────────────┘
-```
-
-**Tile interaction:** Click tile in rack → click cell on board to place. Click placed tile to recall. No drag-and-drop (simpler to implement, works on mobile).
-
----
-
-## Phase 3: Landing page
-
-### `src/app/page.tsx` — Game selector
-
-Two cards side by side (or stacked on mobile):
-
-```
-┌──────────────────┐  ┌──────────────────┐
-│                  │  │                  │
-│    🎲 BOGGLE     │  │   📝 SCRABBLE    │
-│                  │  │                  │
-│  Find words on   │  │  Place tiles to  │
-│  a 4x4 grid     │  │  build words     │
-│                  │  │                  │
-│  Real-time       │  │  Turn-based      │
-│  multiplayer     │  │  multiplayer     │
-│                  │  │                  │
-│    [ Play ]      │  │    [ Play ]      │
-└──────────────────┘  └──────────────────┘
+src/components/
+  shared/                          # JoinGameForm, PlayersList, Scoreboard
+  boggle/                          # BoggleGameMain/, GameBoard, GameControls, GameInstructions
+  scrabble/                        # ScrabbleGameMain/, ScrabbleBoard, TileRack, ScrabbleControls
 ```
 
 ---
 
-## Implementation order
+## Step 1: Extraer clase base WordGame
 
-1. **Phase 1.1**: Routing — Create landing page + `/boggle` route (move existing game there)
-2. **Phase 1.2-1.3**: Backend refactor — Extract `WordGame` base class, multi-game server
-3. **Phase 1.4**: Frontend interfaces for Scrabble types
-4. **Phase 2.1**: Scrabble config (board layout, tiles)
-5. **Phase 2.2**: ScrabbleGame backend (core game logic)
-6. **Phase 2.3**: Scrabble socket events
-7. **Phase 2.4**: Session persistence & reconnection (gameSessionStore, serialize/deserialize, rejoin flow)
-8. **Phase 2.6-2.7**: Scrabble frontend (components, hooks, store, reconnection UI)
-9. **Phase 3**: Landing page polish
+**Objetivo:** Extraer logica compartida de `BoggleGame` a una clase abstracta `WordGame`. Cero cambios de comportamiento — los 301 tests existentes deben pasar.
 
-## Key files to create
+### Logica que se mueve a WordGame
 
-```
-game/WordGame.js                              # Base class
-game/ScrabbleGame.js                          # Scrabble engine
-game/scrabbleConfig.js                        # Board layout, tiles, scoring
-utils/gameSessionStore.js                     # Scrabble session persistence
-data/scrabble-sessions/                       # Directory for session JSON files
-src/app/page.tsx                              # Landing page (rewrite)
-src/app/boggle/page.tsx                       # Boggle route
-src/app/scrabble/page.tsx                     # Scrabble route
-src/components/ScrabbleGameMain/index.tsx      # Orchestrator
-src/components/ScrabbleGameMain/scrabble-game.store.ts
-src/components/ScrabbleBoard.tsx              # 15x15 board
-src/components/TileRack.tsx                   # Player rack
-src/components/ScrabbleTile.tsx               # Tile component
-src/components/ScrabbleControls.tsx           # Turn actions
-src/components/TurnIndicator.tsx              # Turn + timer display
-src/hooks/useScrabbleGameLogic.ts             # Placement logic
-src/hooks/useScrabbleSocketListeners.ts       # Socket listeners
-```
+**Propiedades:** `players`, `gameState`, `timeLeft`, `timer`, `updateTimer`, `io`, `words`, `availableNames`, `gameHistory`, `clientSideValidation`
 
-## Key files to modify
+**Metodos concretos:** `setIO()`, `clearTimers()`, `clearInternalTimer()`, `clearUpdateTimer()`, `initializeDictionary()`, `getRandomName()`, `releaseName()`, `addPlayer()`, `removePlayer()`, `resetGame()`, `setClientSideValidation()`, `getClientSideValidation()`
 
-```
-server.js                                     # Multi-game instances
-socket/socketHandlers.js                      # Game-type routing
-game/BoggleGame.js                            # Extend WordGame
-src/interfaces/game.ts                        # Scrabble types
-src/components/JoinGameForm.tsx               # gameType prop
-src/components/GameInstructions.tsx            # Game-specific instructions
-```
+**Metodos abstractos:** `startGame()`, `endGame()`, `getGameState()`
 
-## Verification
+**Constructor:** Acepta `config: { timeLimit: number }` para parametrizar `TIME_LIMIT`.
 
-1. `pnpm build` — No TypeScript/ESLint errors
-2. `pnpm test:run` — Existing Boggle tests still pass
-3. Manual: Open `/` → see game selector → click Boggle → full Boggle game works as before
-4. Manual: Open `/` → click Scrabble → join → start game → place tiles → submit turn → scoring works
-5. Manual: Scrabble turn timer, pass, exchange, end game conditions all work
-6. Manual: Mobile layout for both games
-7. Manual: Scrabble reconnection — start game, close browser, reopen `/scrabble` → auto-reconnects with full state (board, rack, scores)
-8. Manual: Scrabble disconnect during turn — other players see grace period, auto-pass after 60s
-9. Verify `data/scrabble-sessions/` files are created during game and deleted after game ends
+### Logica que queda en BoggleGame
+
+**Propiedades:** `board`, `lastRotationTime`, `rotationCooldown`, `eliminateCommonWords`, `rotationVersion`, `boardHistory`, `maxBoardHistory`, `lastDiceRolls`
+
+**Metodos:** `generateBoard()`, `rotateBoard()`, `saveBoardToHistory()`, `getBoardByVersion()`, `transformCoordinates()`, `submitWord()`, `isValidPath()`, `validatePathOnBoard()`, `revalidateClientWords()`, `eliminateCommonWordsFromPlayers()`, `findAllPossibleWords()`, `setEliminateCommonWords()`
+
+### Archivos
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `game/shared/WordGame.ts` |
+| Crear | `game/shared/__tests__/WordGame.test.ts` (~18 tests: constructor, dictionary, addPlayer, removePlayer, getRandomName, releaseName, resetGame, clearTimers, clientSideValidation) |
+| Modificar | `game/BoggleGame.ts` — `extends WordGame`, eliminar metodos extraidos, constructor llama `super({ timeLimit: TIME_LIMIT })` |
+| Modificar | `vitest.config.ts` — server include cambiar a `game/**/__tests__/**/*.test.ts` |
+| Mover | `game/__tests__/setup.ts` → `game/shared/__tests__/setup.ts` |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (301 + ~18 = ~319 tests)
+
+---
+
+## Step 2: Reorganizar directorios de game/
+
+**Objetivo:** Mover BoggleGame y su config a `game/boggle/`. Actualizar imports.
+
+| Origen | Destino |
+|--------|---------|
+| `game/BoggleGame.ts` | `game/boggle/BoggleGame.ts` |
+| `game/gameConfig.ts` | `game/boggle/boggleConfig.ts` |
+| `game/__tests__/BoggleGame.test.ts` | `game/boggle/__tests__/BoggleGame.test.ts` |
+| `game/__tests__/gameConfig.test.ts` | `game/boggle/__tests__/boggleConfig.test.ts` |
+
+**Imports a actualizar:**
+- `game/boggle/BoggleGame.ts` → imports de `../shared/WordGame`, `../../config/constants`, `../../utils/*`, `./boggleConfig`
+- `socket/socketHandlers.ts` → `../game/boggle/BoggleGame`
+- `server.ts` → `./game/boggle/BoggleGame`
+- Todos los test files correspondientes
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~319 tests, +0)
+
+---
+
+## Step 3: Reorganizar socket handlers
+
+**Objetivo:** Separar handlers compartidos de los especificos de Boggle. Crear patron de orquestador.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `socket/shared/sharedHandlers.ts` — `join-game`, `disconnect`, `get-scoreboard`, `toggle-client-side-validation` (usan solo metodos de WordGame) |
+| Crear | `socket/boggle/boggleHandlers.ts` — `start-game`, `submit-word`, `reset-game`, `rotate-board`, `get-max-score`, `toggle-eliminate-common-words` |
+| Modificar | `socket/socketHandlers.ts` — orquestador que llama a ambos |
+| Crear | `socket/shared/__tests__/sharedHandlers.test.ts` (~10 tests) |
+| Crear | `socket/boggle/__tests__/boggleHandlers.test.ts` (~16 tests) |
+| Mantener | `socket/__tests__/socketHandlers.test.ts` como test de integracion (26 tests existentes) |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~319 + ~26 = ~345 tests)
+
+---
+
+## Step 4: Reorganizar config e interfaces
+
+**Objetivo:** Separar constantes y tipos por juego. Preparar interfaces para Scrabble.
+
+### Config
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `config/boggleConstants.ts` — mover `TIME_LIMIT`, `ROTATION_COOLDOWN` |
+| Crear | `config/scrabbleConstants.ts` — `TURN_TIME_LIMIT=120`, `GRACE_PERIOD=30000`, `BOARD_SIZE=15`, `RACK_SIZE=7`, `BINGO_BONUS=50` |
+| Modificar | `config/constants.ts` — dejar solo `DEBUG_MODE`, `SCOREBOARD_FILE` |
+| Crear | `config/__tests__/boggleConstants.test.ts` (~2 tests) |
+| Crear | `config/__tests__/scrabbleConstants.test.ts` (~5 tests) |
+| Modificar | `config/__tests__/constants.test.ts` — solo DEBUG_MODE y SCOREBOARD_FILE (2 tests) |
+
+### Interfaces
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `src/interfaces/boggle.ts` — mover: `DiceRoll`, `BoardCell`, `WordPath`, `DiceConfiguration`, `DieFaces`, `StartGameResult`, `RotateBoardResult`, `MaxScoreData`, `RevalidationResult`. Crear `BoggleGameState`, `BoggleGameEvents`, `BoggleClientEvents` |
+| Crear | `src/interfaces/scrabble.ts` — `ScrabbleTile`, `MultiplierType`, `ScrabbleBoardCell`, `ScrabbleGameState`, `ScrabblePlayer`, `TilePlacement`, `ScrabbleTurnResult`, `ScoredWord`, `ScrabbleGameEvents`, `ScrabbleClientEvents` |
+| Modificar | `src/interfaces/game.ts` — dejar solo compartidos: `Player`, `GameStatus`, `WordResult`, `ScoreboardEntry`, `BaseGameState`. Mantener aliases para backward-compat del cliente |
+| Modificar | `src/interfaces/server.ts` — dejar solo compartidos: `TypedServer`, `TypedSocket`, `Board`, `PlayerData`, `StreakData`, `SessionStats`. Re-exportar desde boggle.ts para compat |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~345 + ~5 = ~350 tests)
+
+---
+
+## Step 5: Servidor multi-juego
+
+**Objetivo:** Soportar multiples instancias de juego, ruteadas por query param `game=boggle|scrabble`.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `game/GameRegistry.ts` — registro de instancias: `registerGame(type, instance)`, `getGame(type)` |
+| Crear | `game/__tests__/GameRegistry.test.ts` (~8 tests) |
+| Modificar | `server.ts` — crear instancia BoggleGame, registrar en GameRegistry, pasar a socket handlers |
+| Modificar | `socket/socketHandlers.ts` — leer `socket.handshake.query.game`, rutear a handlers especificos. Default=`boggle` |
+| Modificar | `socket/__tests__/socketHandlers.test.ts` — agregar tests de ruteo (~4 tests) |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~350 + ~12 = ~362 tests)
+
+---
+
+## Step 6: Routing del cliente + Landing page
+
+**Objetivo:** Crear pagina de seleccion de juego. Mover Boggle a `/boggle`. Crear stub `/scrabble`.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `src/app/boggle/page.tsx` — renderiza `<BoggleGameMain />` |
+| Crear | `src/app/scrabble/page.tsx` — placeholder "Scrabble — Proximamente" |
+| Crear | `src/components/shared/GameSelector.tsx` — dos tarjetas: Boggle y Scrabble |
+| Modificar | `src/app/page.tsx` — reemplazar BoggleGameMain con GameSelector |
+| Modificar | `src/hooks/useSocket.ts` — aceptar `gameType` param, enviar como query: `io({ query: { game: gameType } })` |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~362 tests, +0)
+
+---
+
+## Step 7: Scrabble config
+
+**Objetivo:** Implementar toda la configuracion estatica de Scrabble.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `game/scrabble/scrabbleConfig.ts` |
+
+Contenido:
+- `MULTIPLIER_BOARD: MultiplierType[][]` — layout 15x15 estandar de Scrabble
+- `TILE_DISTRIBUTION: Record<string, { count: number; value: number }>` — distribucion española (100 fichas)
+- `LETTER_VALUES: Record<string, number>` — valor por letra
+- `createEmptyBoard(): ScrabbleBoardCell[][]`
+- `createTileBag(): ScrabbleTile[]` — bolsa mezclada de 100 fichas
+- `calculateWordScore(tiles: TilePlacement[], board: ScrabbleBoardCell[][]): number`
+- `calculateTurnScore(words: ScoredWord[]): number` — incluye bingo bonus (+50 por usar 7 fichas)
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `game/scrabble/__tests__/scrabbleConfig.test.ts` (~28 tests) |
+
+Tests clave: tablero 15x15, multiplicadores correctos (8 TW, 17 DW, 12 TL, 24 DL), centro es DW, simetria, bolsa tiene 100 fichas, conteo correcto por letra, scoring con/sin multiplicadores, bingo bonus.
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~362 + ~28 = ~390 tests)
+
+---
+
+## Step 8: ScrabbleGame — logica core
+
+**Objetivo:** Implementar `ScrabbleGame extends WordGame` con mecanica por turnos.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `game/scrabble/ScrabbleGame.ts` |
+
+**Propiedades adicionales:**
+- `board: ScrabbleBoardCell[][]`
+- `tileBag: ScrabbleTile[]`
+- `playerRacks: Map<string, ScrabbleTile[]>`
+- `playerOrder: string[]`
+- `currentTurnIndex: number`
+- `turnTimer`, `turnTimeLeft`
+- `consecutivePasses: number`
+- `tentativePlacements: Map<string, TilePlacement[]>`
+- `isFirstTurn: boolean`
+- `moveHistory: MoveRecord[]`
+
+**Overrides de WordGame:**
+- `addPlayer()` — super + reparte 7 fichas del bag
+- `removePlayer()` — devuelve fichas al bag + super
+- `startGame()` — prepara tablero, primer turno, timer por turno
+- `endGame()` — scoring final (deducciones por fichas restantes), scoreboard
+- `getGameState()` — oculta racks de otros jugadores
+- `resetGame()` — super + reset tablero/bag
+
+**Metodos nuevos:**
+- `placeTiles(playerId, placements)` — colocar fichas tentativamente
+- `recallTiles(playerId)` — devolver fichas tentativas al rack
+- `submitTurn(playerId)` — validar colocacion + scoring + robar fichas + siguiente turno
+- `passTurn(playerId)` — incrementar pases consecutivos, avanzar turno
+- `exchangeTiles(playerId, tileIds)` — intercambiar fichas con bolsa
+- `advanceTurn()` — siguiente jugador, reset timer
+- `validatePlacement(placements)` — todas en linea, conectadas, sin huecos, tocan ficha existente (o centro en primer turno), todas las palabras formadas existen en diccionario
+- `findFormedWords(placements)` — encontrar todas las palabras formadas (horizontal + vertical)
+- `serialize()` / `static deserialize()` — para persistencia (Step 10)
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `game/scrabble/__tests__/ScrabbleGame.test.ts` (~55 tests) |
+
+Tests clave: constructor, addPlayer reparte 7 fichas, placeTiles valido/invalido, recallTiles, submitTurn con scoring, submitTurn invalido (no conectado, huecos, no toca centro), passTurn avanza turno, pases consecutivos terminan juego, exchangeTiles, timer expira auto-pass, end game deducciones, getGameState oculta racks, ciclo completo de juego.
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~390 + ~55 = ~445 tests)
+
+---
+
+## Step 9: Scrabble socket events
+
+**Objetivo:** Implementar handlers de socket para Scrabble.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `socket/scrabble/scrabbleHandlers.ts` |
+
+**Eventos client → server:**
+- `start-game` — inicia juego Scrabble
+- `place-tiles` `{ placements }` — colocar fichas
+- `recall-tiles` — devolver fichas
+- `submit-turn` — confirmar turno
+- `pass-turn` — pasar turno
+- `exchange-tiles` `{ tileIds }` — intercambiar fichas
+- `reset-game` — reiniciar
+
+**Eventos server → client:**
+- `game-state`, `turn-started`, `turn-timer-update`, `tiles-placed`, `turn-submitted`, `turn-passed`, `tiles-exchanged`, `game-ended`
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `socket/scrabble/__tests__/scrabbleHandlers.test.ts` (~22 tests) |
+| Modificar | `socket/socketHandlers.ts` — agregar ruteo para `game: 'scrabble'` |
+| Modificar | `server.ts` — crear instancia ScrabbleGame, registrar |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~445 + ~22 = ~467 tests)
+
+---
+
+## Step 10: Persistencia de sesiones + reconexion
+
+**Objetivo:** Scrabble games sobreviven reinicios del servidor. Jugadores reconectan por nombre.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `game/scrabble/gameSessionStore.ts` — `saveSession()`, `loadSession()`, `deleteSession()`, `listSessions()`. Archivos en `data/scrabble-sessions/<gameId>.json` |
+| Crear | `game/scrabble/__tests__/gameSessionStore.test.ts` (~14 tests: save/load/delete/list, round-trip preserva estado, load retorna null si no existe) |
+| Modificar | `game/scrabble/ScrabbleGame.ts` — implementar `serialize()` y `static deserialize()` |
+| Modificar | `socket/scrabble/scrabbleHandlers.ts` — agregar evento `rejoin-game` `{ playerName, gameId }`, auto-save despues de cada mutacion |
+| Modificar | `socket/scrabble/__tests__/scrabbleHandlers.test.ts` — agregar tests de rejoin (~5 tests) |
+
+**Flujo de reconexion:**
+1. Cliente abre `/scrabble`, revisa `localStorage` para `scrabble-session-{playerName}`
+2. Si existe `{ gameId, playerName }`, envia `rejoin-game`
+3. Servidor carga sesion, remapea socketId al jugador, envia estado completo
+4. Si no existe o expiro → flujo normal de nuevo juego
+
+**Desconexion:** No se elimina al jugador (a diferencia de Boggle). Si es su turno, grace period de 30s → auto-pass.
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~467 + ~19 = ~486 tests)
+
+---
+
+## Step 11: Frontend Scrabble — stores y hooks
+
+**Objetivo:** Crear la capa de estado y comunicacion para el frontend de Scrabble.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `src/stores/scrabble-game.store.ts` — estado del juego Scrabble, rack, selected tile, tentative placements |
+| Crear | `src/stores/__tests__/scrabble-game.store.test.ts` (~10 tests) |
+| Crear | `src/hooks/use-scrabble-socket.ts` — emitters: placeTiles, recallTiles, submitTurn, passTurn, exchangeTiles, joinGame, rejoinGame |
+| Crear | `src/hooks/use-scrabble-socket-listeners.ts` — listeners para eventos de Scrabble, actualizan store |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~486 + ~10 = ~496 tests)
+
+---
+
+## Step 12: Frontend Scrabble — componentes
+
+**Objetivo:** Construir la UI de Scrabble.
+
+| Accion | Archivo |
+|--------|---------|
+| Crear | `src/components/scrabble/ScrabbleGameMain/index.tsx` — orquestador principal |
+| Crear | `src/components/scrabble/ScrabbleBoard.tsx` — grid 15x15 con colores de multiplicadores |
+| Crear | `src/components/scrabble/TileRack.tsx` — rack de 7 fichas |
+| Crear | `src/components/scrabble/ScrabbleTile.tsx` — componente de ficha (letra + valor) |
+| Crear | `src/components/scrabble/ScrabbleControls.tsx` — Submit Turn, Pass, Exchange, Recall |
+| Crear | `src/components/scrabble/TurnIndicator.tsx` — turno actual + timer |
+| Crear | `src/components/scrabble/ScrabbleInstructions.tsx` — reglas de Scrabble |
+| Modificar | `src/app/scrabble/page.tsx` — reemplazar placeholder con `<ScrabbleGameMain />` |
+
+**Interaccion:** Click ficha en rack → click celda en tablero para colocar. Click ficha colocada para devolver. Sin drag-and-drop (funciona en mobile).
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~496 tests, +0 a +8 de componentes)
+
+---
+
+## Step 13: Extraer componentes compartidos
+
+**Objetivo:** Mover componentes reutilizables al directorio shared.
+
+| Accion | Archivo |
+|--------|---------|
+| Mover | `JoinGameForm.tsx` → `src/components/shared/JoinGameForm.tsx` — parametrizar por `gameType` (icono, titulo, key de localStorage) |
+| Mover | `PlayersList.tsx` → `src/components/shared/PlayersList.tsx` — aceptar `getWordScore` como prop |
+| Mover | `Scoreboard.tsx` → `src/components/shared/Scoreboard.tsx` |
+| Modificar | Imports en `BoggleGameMain` y `ScrabbleGameMain` |
+
+**Verificacion:** `pnpm test:run && pnpm run build` (~496 tests, +0)
+
+---
+
+## Step 14: Landing page y polish final
+
+**Objetivo:** Pulir la pagina de seleccion, navegacion, branding consistente.
+
+| Accion | Archivo |
+|--------|---------|
+| Modificar | `src/app/page.tsx` — landing page final con tarjetas de juego |
+| Modificar | `src/app/layout.tsx` — metadata actualizada ("Juegos de Palabras") |
+| Modificar | `src/components/shared/GameSelector.tsx` — diseño pulido |
+
+**Verificacion final:**
+1. `pnpm test:run` — ~496-504 tests pasan
+2. `pnpm run build` — build exitoso
+3. `pnpm typecheck:server` — 0 errores de tipos
+4. Manual: `/` → selector → Boggle funciona como antes
+5. Manual: `/` → Scrabble → unirse → iniciar → colocar fichas → submit turn → scoring correcto
+6. Manual: Scrabble reconexion → cerrar browser → reabrir `/scrabble` → auto-reconecta con estado completo
+7. Manual: Layout mobile para ambos juegos
+
+---
+
+## Resumen de progresion de tests
+
+| Step | Descripcion | Tests nuevos | Total acumulado |
+|------|-------------|-------------|-----------------|
+| 1 | WordGame base class | +18 | ~319 |
+| 2 | Reorganizar game/ | +0 | ~319 |
+| 3 | Reorganizar socket handlers | +26 | ~345 |
+| 4 | Config e interfaces | +5 | ~350 |
+| 5 | Servidor multi-juego | +12 | ~362 |
+| 6 | Client routing + landing | +0 | ~362 |
+| 7 | Scrabble config | +28 | ~390 |
+| 8 | ScrabbleGame core | +55 | ~445 |
+| 9 | Scrabble socket events | +22 | ~467 |
+| 10 | Persistencia + reconexion | +19 | ~486 |
+| 11 | Frontend stores/hooks | +10 | ~496 |
+| 12 | Frontend componentes | +0-8 | ~496-504 |
+| 13 | Componentes compartidos | +0 | ~496-504 |
+| 14 | Landing page polish | +0 | ~496-504 |
+
+**Total estimado final: ~500 tests** (desde baseline de 301)
