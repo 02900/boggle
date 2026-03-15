@@ -1,20 +1,15 @@
-import { debugLog } from "../utils/debug.js";
-import { loadScoreboard } from "../utils/scoreboard.js";
+import { debugLog } from "../utils/debug";
+import { loadScoreboard } from "../utils/scoreboard";
+import type { BoggleGame } from "../game/BoggleGame";
+import type { TypedServer, TypedSocket } from "../src/interfaces/server";
 
-/**
- * Configura todos los manejadores de eventos de Socket.IO
- * @param {Server} io - Instancia del servidor Socket.IO
- * @param {BoggleGame} game - Instancia del juego Boggle
- */
-export function setupSocketHandlers(io, game) {
-  io.on("connection", (socket) => {
+export function setupSocketHandlers(io: TypedServer, game: BoggleGame): void {
+  io.on("connection", (socket: TypedSocket) => {
     debugLog("EVENT: connection", null, socket.id);
 
-    // Jugador se une al juego
-    socket.on("join-game", (playerName) => {
+    socket.on("join-game", (playerName: string) => {
       debugLog("EVENT: join-game", { playerName }, socket.id);
 
-      // Si no se proporciona nombre o está vacío, asignar uno aleatorio
       const finalName =
         playerName && playerName.trim()
           ? playerName.trim()
@@ -30,14 +25,12 @@ export function setupSocketHandlers(io, game) {
 
       socket.emit("game-state", game.getGameState());
 
-      // Confirmar unión al cliente con el nombre final asignado
       debugLog("EMIT: join-confirmed", { finalName }, socket.id);
       socket.emit("join-confirmed", {
         playerId: socket.id,
         playerName: finalName,
       });
 
-      // Sincronizar configuración de eliminateCommonWords al cliente
       debugLog(
         "EMIT: eliminate-common-words-changed (initial sync)",
         {
@@ -57,29 +50,24 @@ export function setupSocketHandlers(io, game) {
       });
     });
 
-    // Iniciar nueva partida
     socket.on("start-game", () => {
       debugLog("EVENT: start-game", null, socket.id);
 
       const result = game.startGame();
-      if (result.success) {
+      if (result && result.success) {
         debugLog("EMIT: dice-rolling (game started)", {
           diceCount: result.diceRolls.length,
         });
 
-        // Primero enviar la información de los dados para la animación
         io.emit("dice-rolling", result.diceRolls);
 
-        // Después de un breve delay, enviar el estado del juego iniciado
         setTimeout(() => {
           io.emit("game-started", game.getGameState());
-        }, 3000); // 3 segundos para la animación de dados
+        }, 3000);
       }
     });
 
-    // Enviar una palabra
     socket.on("submit-word", ({ word, path, rotationVersion }) => {
-      // Validar que rotationVersion esté presente
       if (typeof rotationVersion !== "number") {
         debugLog(
           "ERROR: submit-word sin rotationVersion",
@@ -103,10 +91,10 @@ export function setupSocketHandlers(io, game) {
         socket.id
       );
 
-      if (!word || !path || rotationVersion === undefined) {
+      if (!word || !path) {
         debugLog(
           "ERROR: submit-word - parámetros faltantes",
-          { word: !!word, path: !!path, rotationVersion },
+          { word: !!word, path: !!path },
           socket.id
         );
         return;
@@ -114,24 +102,30 @@ export function setupSocketHandlers(io, game) {
 
       const result = game.submitWord(socket.id, word, path, rotationVersion);
 
-      // Si la validación del cliente está habilitada, no enviar word-result
-      // (el cliente ya mostró feedback inmediato)
       if (!game.getClientSideValidation()) {
-        debugLog("EMIT: word-result (server validation mode)", result, socket.id);
+        debugLog(
+          "EMIT: word-result (server validation mode)",
+          result,
+          socket.id
+        );
         socket.emit("word-result", result);
       } else {
-        debugLog("SKIP: word-result (client validation mode)", result, socket.id);
+        debugLog(
+          "SKIP: word-result (client validation mode)",
+          result,
+          socket.id
+        );
       }
 
       if (result.valid) {
-        debugLog(
-          "BROADCAST: player-scored",
-          { word: result.word, points: result.points },
-        );
-        socket.broadcast.emit("player-scored", {
-          playerId: socket.id,
+        debugLog("BROADCAST: player-scored", {
           word: result.word,
           points: result.points,
+        });
+        socket.broadcast.emit("player-scored", {
+          playerId: socket.id,
+          word: result.word!,
+          points: result.points!,
         });
 
         debugLog("EMIT: game-state (after valid word)");
@@ -139,14 +133,12 @@ export function setupSocketHandlers(io, game) {
       }
     });
 
-    // Reiniciar el juego
     socket.on("reset-game", () => {
       debugLog("EVENT: reset-game", null, socket.id);
       game.resetGame();
       io.emit("game-reset", game.getGameState());
     });
 
-    // Rotar el tablero
     socket.on("rotate-board", () => {
       debugLog("EVENT: rotate-board", null, socket.id);
 
@@ -156,22 +148,23 @@ export function setupSocketHandlers(io, game) {
           cooldownTime: result.cooldownTime,
           newRotationVersion: result.rotationVersion,
         });
-        // Enviar el tablero rotado a todos los jugadores
         io.emit("board-rotated", {
           board: game.board,
-          cooldownTime: result.cooldownTime,
-          rotationVersion: result.rotationVersion,
+          cooldownTime: result.cooldownTime!,
+          rotationVersion: result.rotationVersion!,
         });
       } else {
-        debugLog("EMIT: rotation-error", { reason: result.reason }, socket.id);
-        // Enviar mensaje de error solo al jugador que intentó rotar
+        debugLog(
+          "EMIT: rotation-error",
+          { reason: result.reason },
+          socket.id
+        );
         socket.emit("rotation-error", {
-          message: result.reason,
+          message: result.reason!,
         });
       }
     });
 
-    // Obtener scoreboard
     socket.on("get-scoreboard", () => {
       debugLog("EVENT: get-scoreboard", null, socket.id);
 
@@ -186,11 +179,9 @@ export function setupSocketHandlers(io, game) {
       socket.emit("scoreboard-data", scoreboard);
     });
 
-    // Obtener puntuación máxima posible
     socket.on("get-max-score", () => {
       debugLog("EVENT: get-max-score", null, socket.id);
 
-      // Solo calcular si hay un tablero válido
       if (
         game.board &&
         game.board.length === 4 &&
@@ -216,7 +207,6 @@ export function setupSocketHandlers(io, game) {
           socket.id
         );
 
-        // Si no hay tablero válido, enviar datos vacíos
         socket.emit("max-score-data", {
           words: [],
           maxScore: 0,
@@ -225,9 +215,12 @@ export function setupSocketHandlers(io, game) {
       }
     });
 
-    // Configurar eliminación de palabras comunes
-    socket.on("toggle-eliminate-common-words", (enabled) => {
-      debugLog("EVENT: toggle-eliminate-common-words", { enabled }, socket.id);
+    socket.on("toggle-eliminate-common-words", (enabled: boolean) => {
+      debugLog(
+        "EVENT: toggle-eliminate-common-words",
+        { enabled },
+        socket.id
+      );
 
       game.setEliminateCommonWords(enabled);
 
@@ -242,9 +235,12 @@ export function setupSocketHandlers(io, game) {
       });
     });
 
-    // Configurar validación del cliente (feature flag)
-    socket.on("toggle-client-side-validation", (enabled) => {
-      debugLog("EVENT: toggle-client-side-validation", { enabled }, socket.id);
+    socket.on("toggle-client-side-validation", (enabled: boolean) => {
+      debugLog(
+        "EVENT: toggle-client-side-validation",
+        { enabled },
+        socket.id
+      );
 
       game.setClientSideValidation(enabled);
 
@@ -255,7 +251,6 @@ export function setupSocketHandlers(io, game) {
       });
     });
 
-    // Jugador se desconecta
     socket.on("disconnect", () => {
       debugLog("EVENT: disconnect", null, socket.id);
 

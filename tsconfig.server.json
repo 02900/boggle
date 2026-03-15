@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2017"],
+    "jsx": "preserve",
+    "types": ["node"]
+  },
+  "include": [
+    "server.ts",
+    "game/**/*.ts",
+    "socket/**/*.ts",
+    "config/**/*.ts",
+    "utils/**/*.ts",
+    "src/interfaces/**/*.ts"
+  ],
+  "exclude": ["node_modules", "src/app", "src/components", "src/hooks", "src/stores"]
+}

@@ -1,8 +1,10 @@
+import type { DiceConfiguration } from "../src/interfaces/server";
+
 /**
  * Configuración de los 16 dados de Boggle en español
  * Cada dado tiene 6 caras con diferentes letras o dígrafos
  */
-export function getDiceConfiguration() {
+export function getDiceConfiguration(): DiceConfiguration {
   return [
     ["A", "E", "O", "S", "N", "R"],
     ["A", "E", "I", "O", "U", "L"],
@@ -25,9 +27,8 @@ export function getDiceConfiguration() {
 
 /**
  * Calcula los puntos de una palabra según su longitud
- * Basado en las reglas estándar de Boggle
  */
-export function calculateWordPoints(word) {
+export function calculateWordPoints(word: string): number {
   const length = word.length;
   if (length <= 4) return 1;
   if (length === 5) return 2;

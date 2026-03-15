@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import type { StreakData, SessionStats } from "../src/interfaces/server";
 
 const STREAK_FILE_PATH = path.join(
   process.cwd(),
@@ -8,21 +9,16 @@ const STREAK_FILE_PATH = path.join(
 );
 const SESSION_DURATION = 6 * 60 * 60 * 1000; // 6 horas en milisegundos
 
-/**
- * Servicio para trackear total de victorias de jugadores durante sesiones de 6 horas
- */
 export class StreakTracker {
+  streaks: Map<string, StreakData>;
+
   constructor() {
     this.streaks = new Map();
     this.loadStreaks();
   }
 
-  /**
-   * Carga las rachas desde el archivo JSON
-   */
-  loadStreaks() {
+  loadStreaks(): void {
     try {
-      // Crear directorio data si no existe
       const dataDir = path.dirname(STREAK_FILE_PATH);
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
@@ -30,11 +26,9 @@ export class StreakTracker {
 
       if (fs.existsSync(STREAK_FILE_PATH)) {
         const data = fs.readFileSync(STREAK_FILE_PATH, "utf8");
-        const streakData = JSON.parse(data);
+        const streakData: Record<string, StreakData> = JSON.parse(data);
 
-        // Convertir el objeto a Map y limpiar sesiones expiradas
         Object.entries(streakData).forEach(([playerName, playerData]) => {
-          // Usar sessionStartTime si existe, sino lastWinTime para compatibilidad
           const sessionTime = playerData.sessionStartTime || playerData.lastWinTime;
           if (this.isSessionActive(sessionTime)) {
             this.streaks.set(playerName, playerData);
@@ -49,10 +43,7 @@ export class StreakTracker {
     }
   }
 
-  /**
-   * Guarda las rachas al archivo JSON
-   */
-  saveStreaks() {
+  saveStreaks(): void {
     try {
       const streakData = Object.fromEntries(this.streaks);
       fs.writeFileSync(STREAK_FILE_PATH, JSON.stringify(streakData, null, 2));
@@ -61,27 +52,19 @@ export class StreakTracker {
     }
   }
 
-  /**
-   * Verifica si una sesión sigue activa (dentro de las 6 horas)
-   */
-  isSessionActive(lastWinTime) {
+  isSessionActive(lastWinTime: number | undefined): boolean {
     if (!lastWinTime) return false;
     return Date.now() - lastWinTime < SESSION_DURATION;
   }
 
-  /**
-   * Registra una victoria para un jugador
-   */
-  recordWin(playerName) {
+  recordWin(playerName: string): StreakData {
     const now = Date.now();
     const currentData = this.streaks.get(playerName);
 
     if (currentData && this.isSessionActive(currentData.sessionStartTime)) {
-      // Sesión activa - incrementar contador de victorias
       currentData.wins += 1;
       currentData.lastWinTime = now;
     } else {
-      // Nueva sesión o sesión expirada - iniciar nueva sesión
       this.streaks.set(playerName, {
         wins: 1,
         lastWinTime: now,
@@ -90,13 +73,10 @@ export class StreakTracker {
     }
 
     this.saveStreaks();
-    return this.streaks.get(playerName);
+    return this.streaks.get(playerName)!;
   }
 
-  /**
-   * Obtiene el total de victorias de un jugador en la sesión actual
-   */
-  getPlayerStreak(playerName) {
+  getPlayerStreak(playerName: string): number {
     const data = this.streaks.get(playerName);
     if (data && this.isSessionActive(data.sessionStartTime)) {
       return data.wins;
@@ -104,21 +84,15 @@ export class StreakTracker {
     return 0;
   }
 
-  /**
-   * Obtiene el total de victorias de múltiples jugadores
-   */
-  getPlayersStreaks(playerNames) {
-    const result = {};
+  getPlayersStreaks(playerNames: string[]): Record<string, number> {
+    const result: Record<string, number> = {};
     playerNames.forEach((name) => {
       result[name] = this.getPlayerStreak(name);
     });
     return result;
   }
 
-  /**
-   * Limpia sesiones expiradas
-   */
-  cleanExpiredSessions() {
+  cleanExpiredSessions(): number {
     let cleaned = 0;
 
     for (const [playerName, data] of this.streaks.entries()) {
@@ -136,10 +110,7 @@ export class StreakTracker {
     return cleaned;
   }
 
-  /**
-   * Obtiene estadísticas de la sesión actual
-   */
-  getSessionStats() {
+  getSessionStats(): SessionStats {
     this.cleanExpiredSessions();
 
     const activePlayers = Array.from(this.streaks.entries()).map(
@@ -157,5 +128,4 @@ export class StreakTracker {
   }
 }
 
-// Instancia singleton
 export const streakTracker = new StreakTracker();
