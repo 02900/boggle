@@ -635,6 +635,10 @@ export class ScrabbleGame extends WordGame {
     this.turnTimer = setInterval(() => {
       this.turnTimeLeft--;
 
+      if (this.io) {
+        this.io.emit("turn-timer-update" as any, this.turnTimeLeft);
+      }
+
       if (this.turnTimeLeft <= 0) {
         const currentPlayerId = this.getCurrentTurnPlayerId();
         if (currentPlayerId) {

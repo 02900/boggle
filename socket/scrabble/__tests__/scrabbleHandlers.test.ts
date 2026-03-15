@@ -109,7 +109,8 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("place-tiles", { placements });
 
       expect(game.placeTiles).toHaveBeenCalledWith("socket-1", placements);
-      expect(io.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("emits error when placeTiles fails", () => {
@@ -136,7 +137,8 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("recall-tiles");
 
       expect(game.recallTiles).toHaveBeenCalledWith("socket-1");
-      expect(io.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
   });
 
