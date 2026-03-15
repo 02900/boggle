@@ -5,7 +5,7 @@ import { setupScrabbleHandlers } from "./scrabble/scrabbleHandlers";
 import type { GameRegistry } from "../game/GameRegistry";
 import type { BoggleGame } from "../game/boggle/BoggleGame";
 import type { ScrabbleGame } from "../game/scrabble/ScrabbleGame";
-import type { TypedServer, TypedSocket } from "../src/interfaces/server";
+import type { TypedServer, TypedSocket, BoggleTypedServer, BoggleTypedSocket, ScrabbleTypedServer, ScrabbleTypedSocket } from "../src/interfaces/server";
 
 export function setupSocketHandlers(
   io: TypedServer,
@@ -43,9 +43,9 @@ export function setupSocketHandlers(
     });
 
     if (gameType === "boggle") {
-      setupBoggleHandlers(io, socket, game as BoggleGame);
+      setupBoggleHandlers(io as unknown as BoggleTypedServer, socket as unknown as BoggleTypedSocket, game as BoggleGame);
     } else if (gameType === "scrabble") {
-      setupScrabbleHandlers(io, socket, game as ScrabbleGame);
+      setupScrabbleHandlers(io as unknown as ScrabbleTypedServer, socket as unknown as ScrabbleTypedSocket, game as ScrabbleGame);
     }
   });
 }

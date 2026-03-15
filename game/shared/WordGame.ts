@@ -3,7 +3,12 @@ import path from "path";
 import { RANDOM_NAMES } from "../../utils/names";
 import { debugLog } from "../../utils/debug";
 import type { GameStatus } from "../../src/interfaces/game";
-import type { TypedServer, PlayerData } from "../../src/interfaces/server";
+import type { PlayerData } from "../../src/interfaces/server";
+
+// Minimal IO interface — subclasses use game-specific typed servers
+export interface GameIO {
+  emit(event: string, ...args: unknown[]): void;
+}
 
 export interface WordGameConfig {
   timeLimit: number;
@@ -15,7 +20,7 @@ export abstract class WordGame {
   timeLeft: number;
   timer: ReturnType<typeof setInterval> | null;
   updateTimer: ReturnType<typeof setInterval> | null;
-  io: TypedServer | null;
+  io: GameIO | null;
   words: Set<string>;
   availableNames: string[];
   gameHistory: Map<string, PlayerData>;
@@ -42,7 +47,7 @@ export abstract class WordGame {
   abstract endGame(): void;
   abstract getGameState(): unknown;
 
-  setIO(io: TypedServer): void {
+  setIO(io: GameIO): void {
     this.io = io;
   }
 

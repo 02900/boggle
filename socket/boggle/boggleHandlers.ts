@@ -1,10 +1,10 @@
 import { debugLog } from "../../utils/debug";
 import type { BoggleGame } from "../../game/boggle/BoggleGame";
-import type { TypedServer, TypedSocket } from "../../src/interfaces/server";
+import type { BoggleTypedServer, BoggleTypedSocket } from "../../src/interfaces/server";
 
 export function setupBoggleHandlers(
-  io: TypedServer,
-  socket: TypedSocket,
+  io: BoggleTypedServer,
+  socket: BoggleTypedSocket,
   game: BoggleGame
 ): void {
   socket.on("start-game", () => {

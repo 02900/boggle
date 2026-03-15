@@ -89,3 +89,37 @@ export interface SerializedScrabbleGame {
   moveHistory: MoveRecord[];
   isFirstTurn: boolean;
 }
+
+// ---- Scrabble socket events ----
+
+import type { WordResult, ScoreboardEntry } from "./game";
+
+export interface ScrabbleGameEvents {
+  "game-state": (state: ScrabbleGameState & { rack?: ScrabbleTile[] }) => void;
+  "game-started": (state: ScrabbleGameState) => void;
+  "game-ended": (state: ScrabbleGameState) => void;
+  "game-reset": (state: ScrabbleGameState) => void;
+  "word-result": (result: WordResult) => void;
+  "join-confirmed": (data: { playerName: string; playerId: string }) => void;
+  "player-joined": (data: { playerName: string; playerId: string }) => void;
+  "player-left": (playerId: string) => void;
+  "scoreboard-data": (data: ScoreboardEntry[]) => void;
+  "client-side-validation-changed": (data: { enabled: boolean }) => void;
+  "turn-timer-update": (timeLeft: number) => void;
+  "rejoin-success": (state: ScrabbleGameState & { rack: ScrabbleTile[]; gameId?: string }) => void;
+  "rejoin-failed": (data: { reason: string }) => void;
+}
+
+export interface ScrabbleClientEvents {
+  "join-game": (playerName: string) => void;
+  "start-game": () => void;
+  "reset-game": () => void;
+  "toggle-client-side-validation": (enabled: boolean) => void;
+  "get-scoreboard": () => void;
+  "place-tiles": (data: { placements: TilePlacement[] }) => void;
+  "recall-tiles": () => void;
+  "submit-turn": () => void;
+  "pass-turn": () => void;
+  "exchange-tiles": (data: { tileIds: string[] }) => void;
+  "rejoin-game": (data: { playerName: string; gameId: string }) => void;
+}

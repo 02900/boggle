@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { io } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
-import type { ScrabbleGameState, ScrabbleTile } from "@/interfaces/scrabble";
-import type { WordResult } from "@/interfaces/game";
+import type { ScrabbleGameEvents, ScrabbleClientEvents } from "@/interfaces/scrabble";
+
+type ScrabbleSocket = Socket<ScrabbleGameEvents, ScrabbleClientEvents>;
 
 export const useScrabbleSocketListeners = () => {
   const initializedRef = useRef(false);
@@ -14,7 +15,7 @@ export const useScrabbleSocketListeners = () => {
     initializedRef.current = true;
 
     const store = useScrabbleGameStore.getState();
-    const newSocket = io({ query: { game: "scrabble" } });
+    const newSocket: ScrabbleSocket = io({ query: { game: "scrabble" } });
     store.setSocket(newSocket);
 
     newSocket.on("connect", () => {
@@ -28,7 +29,7 @@ export const useScrabbleSocketListeners = () => {
       useScrabbleGameStore.getState().setIsConnected(false);
     });
 
-    newSocket.on("join-confirmed", (data: { playerId: string; playerName: string }) => {
+    newSocket.on("join-confirmed", (data) => {
       const s = useScrabbleGameStore.getState();
       s.setCurrentPlayerId(data.playerId);
       s.setIsJoined(true);
@@ -38,25 +39,24 @@ export const useScrabbleSocketListeners = () => {
       }
     });
 
-    newSocket.on("game-state", (state: ScrabbleGameState & { rack?: ScrabbleTile[] }) => {
+    newSocket.on("game-state", (state) => {
       useScrabbleGameStore.getState().setGameState(state);
       if (state.rack) {
         useScrabbleGameStore.getState().setRack(state.rack);
       }
     });
 
-    newSocket.on("game-started", (state: ScrabbleGameState) => {
+    newSocket.on("game-started", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
       s.clearTentativePlacements();
       s.setMessage("Juego iniciado");
-      // Persist session for auto-rejoin
       if (typeof window !== "undefined" && s.gameId && s.playerName) {
         localStorage.setItem("scrabble-session", JSON.stringify({ gameId: s.gameId, playerName: s.playerName }));
       }
     });
 
-    newSocket.on("word-result", (result: WordResult) => {
+    newSocket.on("word-result", (result) => {
       const s = useScrabbleGameStore.getState();
       if (result.valid) {
         s.setMessage(result.points ? `+${result.points} puntos` : "Turno válido");
@@ -66,14 +66,14 @@ export const useScrabbleSocketListeners = () => {
       }
     });
 
-    newSocket.on("game-reset", (state: ScrabbleGameState) => {
+    newSocket.on("game-reset", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
       s.clearTentativePlacements();
       s.setMessage("Juego reiniciado");
     });
 
-    newSocket.on("game-ended", (state: ScrabbleGameState) => {
+    newSocket.on("game-ended", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
       s.setMessage("Juego terminado");
@@ -82,14 +82,13 @@ export const useScrabbleSocketListeners = () => {
       }
     });
 
-    newSocket.on("turn-timer-update" as any, (timeLeft: number) => {
+    newSocket.on("turn-timer-update", (timeLeft) => {
       useScrabbleGameStore.getState().setGameState((prev) =>
         prev ? { ...prev, turnTimeLeft: timeLeft } : prev
       );
     });
 
-    // Scrabble-specific events
-    newSocket.on("rejoin-success" as any, (state: ScrabbleGameState & { rack?: ScrabbleTile[]; gameId?: string }) => {
+    newSocket.on("rejoin-success", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
       if (state.rack) {
@@ -100,7 +99,6 @@ export const useScrabbleSocketListeners = () => {
       }
       s.setIsJoined(true);
       s.setMessage("Reconectado al juego");
-      // Persist session for future auto-rejoin
       const gameId = state.gameId ?? s.gameId;
       const playerName = s.playerName;
       if (typeof window !== "undefined" && gameId && playerName) {
@@ -108,7 +106,7 @@ export const useScrabbleSocketListeners = () => {
       }
     });
 
-    newSocket.on("rejoin-failed" as any, (data: { reason: string }) => {
+    newSocket.on("rejoin-failed", (data) => {
       const s = useScrabbleGameStore.getState();
       s.setMessage(data.reason);
       s.setGameId(null);

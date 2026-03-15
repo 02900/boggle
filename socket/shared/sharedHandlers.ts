@@ -29,7 +29,9 @@ export function setupSharedHandlers(
       socket.id
     );
 
-    // TODO(step9): remove `as any` when TypedSocket is game-generic
+    // getGameState() returns unknown from abstract WordGame; cast needed since TypedSocket
+    // is the union type and can't infer which game state is returned
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     socket.emit("game-state", game.getGameState() as any);
 
     debugLog("EMIT: join-confirmed", { finalName }, socket.id);
