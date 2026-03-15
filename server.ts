@@ -3,6 +3,7 @@ import next from "next";
 import { Server } from "socket.io";
 
 import { BoggleGame } from "./game/boggle/BoggleGame";
+import { ScrabbleGame } from "./game/scrabble/ScrabbleGame";
 import { GameRegistry } from "./game/GameRegistry";
 import { setupSocketHandlers } from "./socket/socketHandlers";
 import type { TypedServer } from "./src/interfaces/server";
@@ -26,7 +27,9 @@ app.prepare().then(() => {
   boggleGame.setIO(io);
   registry.registerGame("boggle", boggleGame);
 
-  // Future: registry.registerGame("scrabble", new ScrabbleGame());
+  const scrabbleGame = new ScrabbleGame();
+  scrabbleGame.setIO(io);
+  registry.registerGame("scrabble", scrabbleGame);
 
   setupSocketHandlers(io, registry);
 
