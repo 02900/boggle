@@ -3,10 +3,10 @@ import fs from "fs";
 
 // Mock modules before BoggleGame import
 vi.mock("fs");
-vi.mock("../../utils/scoreboard", () => ({
+vi.mock("../../../utils/scoreboard", () => ({
   updateScoreboard: vi.fn(),
 }));
-vi.mock("../../utils/streakTracker", () => ({
+vi.mock("../../../utils/streakTracker", () => ({
   streakTracker: {
     recordWin: vi.fn(() => ({
       wins: 1,
@@ -16,7 +16,7 @@ vi.mock("../../utils/streakTracker", () => ({
     getPlayersStreaks: vi.fn(() => ({})),
   },
 }));
-vi.mock("../../utils/debug", () => ({
+vi.mock("../../../utils/debug", () => ({
   debugLog: vi.fn(),
 }));
 
@@ -26,10 +26,10 @@ vi.mocked(fs.readFileSync).mockReturnValue(
 );
 
 import { BoggleGame } from "../BoggleGame";
-import { updateScoreboard } from "../../utils/scoreboard";
-import { streakTracker } from "../../utils/streakTracker";
-import { TIME_LIMIT } from "../../config/constants";
-import { RANDOM_NAMES } from "../../utils/names";
+import { updateScoreboard } from "../../../utils/scoreboard";
+import { streakTracker } from "../../../utils/streakTracker";
+import { TIME_LIMIT } from "../../../config/constants";
+import { RANDOM_NAMES } from "../../../utils/names";
 
 // ---- Helpers ----
 

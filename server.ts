@@ -2,7 +2,7 @@ import { createServer } from "http";
 import next from "next";
 import { Server } from "socket.io";
 
-import { BoggleGame } from "./game/BoggleGame";
+import { BoggleGame } from "./game/boggle/BoggleGame";
 import { setupSocketHandlers } from "./socket/socketHandlers";
 import type { TypedServer } from "./src/interfaces/server";
 import type { GameEvents, ClientEvents } from "./src/interfaces/game";
