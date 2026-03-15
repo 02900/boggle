@@ -11,8 +11,8 @@ export const useSocket = () => {
 
   const connectSocket = useCallback(() => {
     if (!socket) {
-      const newSocket = io("https://boogle-game-server.herokuapp.com/", {
-        withCredentials: true,
+      const newSocket = io({
+        query: { game: "boggle" },
       });
       setSocket(newSocket);
     }
