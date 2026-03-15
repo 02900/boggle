@@ -78,7 +78,7 @@ describe("setupBoggleHandlers", () => {
     io = createMockIO();
     socket = createMockSocket("socket-1");
     game = createMockGame();
-    setupBoggleHandlers(io, socket, game);
+    setupBoggleHandlers(io as any, socket as any, game as any);
   });
 
   afterEach(() => {
@@ -99,14 +99,14 @@ describe("setupBoggleHandlers", () => {
 
       // Should not have emitted game-started yet
       const gameStartedCalls = io.emit.mock.calls.filter(
-        ([event]: [string]) => event === "game-started"
+        (call: any[]) => call[0] === "game-started"
       );
       expect(gameStartedCalls).toHaveLength(0);
 
       vi.advanceTimersByTime(3000);
 
       const gameStartedCallsAfter = io.emit.mock.calls.filter(
-        ([event]: [string]) => event === "game-started"
+        (call: any[]) => call[0] === "game-started"
       );
       expect(gameStartedCallsAfter).toHaveLength(1);
     });
@@ -153,7 +153,7 @@ describe("setupBoggleHandlers", () => {
       });
 
       const wordResultCalls = socket.emit.mock.calls.filter(
-        ([event]: [string]) => event === "word-result"
+        (call: any[]) => call[0] === "word-result"
       );
       expect(wordResultCalls).toHaveLength(0);
     });
@@ -198,7 +198,7 @@ describe("setupBoggleHandlers", () => {
       });
 
       const playerScoredCalls = io.emit.mock.calls.filter(
-        ([event]: [string]) => event === "player-scored"
+        (call: any[]) => call[0] === "player-scored"
       );
       expect(playerScoredCalls).toHaveLength(0);
     });
