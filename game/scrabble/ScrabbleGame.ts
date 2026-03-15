@@ -211,7 +211,7 @@ export class ScrabbleGame extends WordGame {
     });
 
     if (this.io) {
-      this.io.emit("game-ended" as any, this.getGameState());
+      this.io.emit("game-ended", this.getGameState());
     }
   }
 
@@ -636,7 +636,7 @@ export class ScrabbleGame extends WordGame {
       this.turnTimeLeft--;
 
       if (this.io) {
-        this.io.emit("turn-timer-update" as any, this.turnTimeLeft);
+        this.io.emit("turn-timer-update", this.turnTimeLeft);
       }
 
       if (this.turnTimeLeft <= 0) {
@@ -644,6 +644,10 @@ export class ScrabbleGame extends WordGame {
         if (currentPlayerId) {
           debugLog("SCRABBLE_TURN_TIMEOUT", { playerId: currentPlayerId });
           this.passTurn(currentPlayerId);
+          // Notify clients since this auto-pass bypasses the socket handler
+          if (this.io) {
+            this.io.emit("game-state", this.getGameState());
+          }
         }
       }
     }, 1000);

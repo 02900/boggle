@@ -8,6 +8,7 @@ import { GameRegistry } from "./game/GameRegistry";
 import { setupSocketHandlers } from "./socket/socketHandlers";
 import type { TypedServer } from "./src/interfaces/server";
 import type { GameEvents, ClientEvents } from "./src/interfaces/game";
+import type { ScrabbleGameEvents, ScrabbleClientEvents } from "./src/interfaces/scrabble";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -18,7 +19,7 @@ const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
-  const io: TypedServer = new Server<ClientEvents, GameEvents>(httpServer);
+  const io: TypedServer = new Server<ClientEvents & ScrabbleClientEvents, GameEvents & ScrabbleGameEvents>(httpServer);
 
   // Register game instances
   const registry = new GameRegistry();

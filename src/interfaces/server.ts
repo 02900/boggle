@@ -1,5 +1,6 @@
 import type { Server as SocketIOServer, Socket as SocketIOSocket } from "socket.io";
 import type { Player, GameEvents, ClientEvents, ScoreboardEntry, MaxScoreData } from "./game";
+import type { ScrabbleGameEvents, ScrabbleClientEvents } from "./scrabble";
 
 // Re-export shared types from game.ts
 export type { ScoreboardEntry, MaxScoreData };
@@ -14,8 +15,18 @@ export type {
 } from "./boggle";
 
 // ---- Socket.IO Typed Server & Socket ----
-export type TypedServer = SocketIOServer<ClientEvents, GameEvents>;
-export type TypedSocket = SocketIOSocket<ClientEvents, GameEvents>;
+
+// Boggle-specific
+export type BoggleTypedServer = SocketIOServer<ClientEvents, GameEvents>;
+export type BoggleTypedSocket = SocketIOSocket<ClientEvents, GameEvents>;
+
+// Scrabble-specific
+export type ScrabbleTypedServer = SocketIOServer<ScrabbleClientEvents, ScrabbleGameEvents>;
+export type ScrabbleTypedSocket = SocketIOSocket<ScrabbleClientEvents, ScrabbleGameEvents>;
+
+// Union (orchestrator + shared handlers — accepts all events)
+export type TypedServer = SocketIOServer<ClientEvents & ScrabbleClientEvents, GameEvents & ScrabbleGameEvents>;
+export type TypedSocket = SocketIOSocket<ClientEvents & ScrabbleClientEvents, GameEvents & ScrabbleGameEvents>;
 
 // ---- Shared types ----
 export type Board = string[][];
