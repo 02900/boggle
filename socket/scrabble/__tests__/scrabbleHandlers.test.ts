@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { setupScrabbleHandlers } from "../scrabbleHandlers";
 
 vi.mock("../../../utils/debug", () => ({ debugLog: vi.fn() }));
+vi.mock("../../../game/scrabble/gameSessionStore", () => ({
+  saveSession: vi.fn(),
+  loadSession: vi.fn(() => null),
+  deleteSession: vi.fn(),
+}));
 
 function createMockSocket(id: string) {
   const handlers = new Map<string, Function>();
@@ -59,7 +64,10 @@ function createMockGame() {
       consecutivePasses: 0,
       rack: [],
     })),
+    reconnectPlayer: vi.fn(() => true),
+    serialize: vi.fn(() => ({})),
     players: new Map([["socket-1", { id: "socket-1", name: "Alice" }]]),
+    gameState: "playing",
   };
 }
 
@@ -235,6 +243,101 @@ describe("setupScrabbleHandlers", () => {
       expect(registeredEvents).toContain("reset-game");
       // submit-word should NOT be registered for Scrabble
       expect(registeredEvents).not.toContain("submit-word");
+      // rejoin-game should be registered
+      expect(registeredEvents).toContain("rejoin-game");
+    });
+  });
+
+  describe("rejoin-game", () => {
+    it("emits rejoin-failed when session not found", async () => {
+      const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
+      vi.mocked(loadSession).mockReturnValue(null);
+
+      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "no-exist" });
+
+      expect(socket.emit).toHaveBeenCalledWith("rejoin-failed", {
+        reason: "Sesión no encontrada",
+      });
+    });
+
+    it("emits rejoin-failed when player not in game", async () => {
+      const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
+      vi.mocked(loadSession).mockReturnValue({
+        gameId: "g1",
+        createdAt: "",
+        lastUpdatedAt: "",
+        board: [],
+        tileBag: [],
+        players: [{ name: "Bob", score: 0, rack: [], wordsFound: [] }],
+        currentTurnPlayerName: "Bob",
+        turnTimeLeft: 120,
+        consecutivePasses: 0,
+        gameState: "playing",
+        moveHistory: [],
+        isFirstTurn: false,
+      });
+
+      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+
+      expect(socket.emit).toHaveBeenCalledWith("rejoin-failed", {
+        reason: "No estás en este juego",
+      });
+    });
+
+    it("calls reconnectPlayer and emits rejoin-success on valid rejoin", async () => {
+      const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
+      vi.mocked(loadSession).mockReturnValue({
+        gameId: "g1",
+        createdAt: "",
+        lastUpdatedAt: "",
+        board: [],
+        tileBag: [],
+        players: [{ name: "Alice", score: 5, rack: [], wordsFound: [] }],
+        currentTurnPlayerName: "Alice",
+        turnTimeLeft: 120,
+        consecutivePasses: 0,
+        gameState: "playing",
+        moveHistory: [],
+        isFirstTurn: false,
+      });
+
+      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+
+      expect(game.reconnectPlayer).toHaveBeenCalledWith("Alice", "socket-1");
+      expect(socket.emit).toHaveBeenCalledWith("rejoin-success", expect.anything());
+    });
+
+    it("broadcasts player-joined on successful rejoin", async () => {
+      const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
+      vi.mocked(loadSession).mockReturnValue({
+        gameId: "g1",
+        createdAt: "",
+        lastUpdatedAt: "",
+        board: [],
+        tileBag: [],
+        players: [{ name: "Alice", score: 0, rack: [], wordsFound: [] }],
+        currentTurnPlayerName: null,
+        turnTimeLeft: 120,
+        consecutivePasses: 0,
+        gameState: "playing",
+        moveHistory: [],
+        isFirstTurn: false,
+      });
+
+      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-joined", {
+        playerId: "socket-1",
+        playerName: "Alice",
+      });
+    });
+
+    it("emits rejoin-failed when data is missing", () => {
+      socket._trigger("rejoin-game", {});
+
+      expect(socket.emit).toHaveBeenCalledWith("rejoin-failed", {
+        reason: "Datos inválidos para reconexión",
+      });
     });
   });
 });

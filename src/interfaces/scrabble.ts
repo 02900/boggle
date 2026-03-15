@@ -87,4 +87,5 @@ export interface SerializedScrabbleGame {
   consecutivePasses: number;
   gameState: GameStatus;
   moveHistory: MoveRecord[];
+  isFirstTurn: boolean;
 }

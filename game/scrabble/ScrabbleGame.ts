@@ -21,6 +21,7 @@ import type {
   ScoredWord,
   ScrabbleTurnResult,
   MoveRecord,
+  SerializedScrabbleGame,
 } from "../../src/interfaces/scrabble";
 
 export class ScrabbleGame extends WordGame {
@@ -885,5 +886,155 @@ export class ScrabbleGame extends WordGame {
       ...this.getGameState(),
       rack: this.getPlayerRack(playerId),
     };
+  }
+
+  // ---- Serialization ----
+
+  serialize(gameId: string, existingCreatedAt?: string): SerializedScrabbleGame {
+    // Recall all tentative placements before serializing to avoid tile loss
+    for (const playerId of this.playerOrder) {
+      this.recallTiles(playerId);
+    }
+
+    const players = this.playerOrder.map((playerId) => {
+      const player = this.players.get(playerId) ?? this.gameHistory.get(playerId);
+      const rack = this.playerRacks.get(playerId) ?? [];
+      return {
+        name: player?.name ?? "Unknown",
+        score: player?.score ?? 0,
+        rack: [...rack],
+        wordsFound: [...(player?.wordsFound ?? [])],
+      };
+    });
+
+    const currentPlayer = this.getCurrentTurnPlayerId();
+    const currentPlayerData = currentPlayer
+      ? this.players.get(currentPlayer) ?? this.gameHistory.get(currentPlayer)
+      : null;
+
+    return {
+      gameId,
+      createdAt: existingCreatedAt ?? new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
+      board: this.board.map((row) => row.map((cell) => ({ ...cell, tile: cell.tile ? { ...cell.tile } : null }))),
+      tileBag: [...this.tileBag],
+      players,
+      currentTurnPlayerName: currentPlayerData?.name ?? null,
+      turnTimeLeft: this.turnTimeLeft,
+      consecutivePasses: this.consecutivePasses,
+      gameState: this.gameState,
+      moveHistory: [...this.moveHistory],
+      isFirstTurn: this.isFirstTurn,
+    };
+  }
+
+  static deserialize(data: SerializedScrabbleGame): ScrabbleGame {
+    const game = new ScrabbleGame();
+    game.board = data.board;
+    game.tileBag = data.tileBag;
+    game.gameState = data.gameState;
+    game.turnTimeLeft = data.turnTimeLeft;
+    game.consecutivePasses = data.consecutivePasses;
+    game.moveHistory = data.moveHistory ?? [];
+    game.isFirstTurn = data.isFirstTurn ?? false;
+
+    // Restore players with placeholder socket IDs (will be remapped on rejoin)
+    for (const playerData of data.players) {
+      const placeholderId = `offline-${playerData.name}`;
+      game.players.set(placeholderId, {
+        id: placeholderId,
+        name: playerData.name,
+        score: playerData.score,
+        wordsFound: [...playerData.wordsFound],
+        eliminatedWords: [],
+        isConnected: false,
+        joinedAt: Date.now(),
+      });
+      game.gameHistory.set(placeholderId, {
+        id: placeholderId,
+        name: playerData.name,
+        score: playerData.score,
+        wordsFound: [...playerData.wordsFound],
+        eliminatedWords: [],
+        isConnected: false,
+        joinedAt: Date.now(),
+      });
+      game.playerOrder.push(placeholderId);
+      game.playerRacks.set(placeholderId, [...playerData.rack]);
+    }
+
+    // Restore current turn by player name
+    if (data.currentTurnPlayerName) {
+      const turnIndex = game.playerOrder.findIndex((id) => {
+        const player = game.players.get(id);
+        return player?.name === data.currentTurnPlayerName;
+      });
+      if (turnIndex !== -1) {
+        game.currentTurnIndex = turnIndex;
+      }
+    }
+
+    debugLog("SCRABBLE_DESERIALIZED", {
+      gameId: data.gameId,
+      players: data.players.map((p) => p.name),
+      gameState: data.gameState,
+    });
+
+    return game;
+  }
+
+  reconnectPlayer(playerName: string, newSocketId: string): boolean {
+    // Find the player by name
+    let oldId: string | null = null;
+    for (const [id, player] of this.players) {
+      if (player.name === playerName) {
+        oldId = id;
+        break;
+      }
+    }
+    if (!oldId) return false;
+
+    const player = this.players.get(oldId)!;
+
+    // Guard: if the player is already connected, don't remap
+    if (player.isConnected && oldId !== newSocketId) {
+      debugLog("SCRABBLE_RECONNECT_SKIPPED", {
+        playerName,
+        reason: "Player already connected",
+        existingId: oldId,
+      });
+      return false;
+    }
+    const rack = this.playerRacks.get(oldId) ?? [];
+    const tentative = this.tentativePlacements.get(oldId) ?? [];
+
+    // Remap to new socket ID
+    this.players.delete(oldId);
+    player.id = newSocketId;
+    player.isConnected = true;
+    this.players.set(newSocketId, player);
+
+    this.gameHistory.delete(oldId);
+    this.gameHistory.set(newSocketId, { ...player });
+
+    this.playerRacks.delete(oldId);
+    this.playerRacks.set(newSocketId, rack);
+
+    this.tentativePlacements.delete(oldId);
+    this.tentativePlacements.set(newSocketId, tentative);
+
+    const orderIndex = this.playerOrder.indexOf(oldId);
+    if (orderIndex !== -1) {
+      this.playerOrder[orderIndex] = newSocketId;
+    }
+
+    debugLog("SCRABBLE_PLAYER_RECONNECTED", {
+      playerName,
+      oldId,
+      newSocketId,
+      isCurrentTurn: this.getCurrentTurnPlayerId() === newSocketId,
+    });
+
+    return true;
   }
 }
