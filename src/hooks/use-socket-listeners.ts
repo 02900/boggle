@@ -25,7 +25,7 @@ export const useSocketListeners = () => {
   const { resetSelection, addFoundWord, resetFoundWords } = useGameLogic();
   const { showHighlight } = useHighlightManager();
 
-  const { setIsConnected, setDiceRolling, setEliminateCommonWords, setSocket } =
+  const { setIsConnected, setDiceRolling, setSocket } =
     useSocketsStore();
 
   const {

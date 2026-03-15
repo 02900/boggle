@@ -7,7 +7,7 @@ let lastSubmittedRefGlobal = {
 };
 
 export const setLastSubmittedRefGlobal = (data: { path: [number, number][], word: string }) => {
-  lastSubmittedRefGlobal = { ...data };
+  lastSubmittedRefGlobal = { path: [...data.path], word: data.word };
 };
 
 export const getLastSubmittedRefGlobal = () => {

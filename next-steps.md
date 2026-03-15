@@ -1,5 +1,3 @@
-1. Unificar UI
-2. ??
-3. **Agregar tests unitarios** para cada módulo
-4. **Considerar TypeScript** para mejor type safety
-5. **Documentar APIs** de cada módulo
+1. **Unificar UI**
+3. **Considerar TypeScript** para mejor type safety
+4. **Documentar APIs** de cada módulo
