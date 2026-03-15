@@ -1,4 +1,4 @@
-import type { DiceConfiguration } from "../src/interfaces/server";
+import type { DiceConfiguration } from "../../src/interfaces/server";
 
 /**
  * Configuración de los 16 dados de Boggle en español

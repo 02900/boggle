@@ -1,6 +1,6 @@
 import { debugLog } from "../utils/debug";
 import { loadScoreboard } from "../utils/scoreboard";
-import type { BoggleGame } from "../game/BoggleGame";
+import type { BoggleGame } from "../game/boggle/BoggleGame";
 import type { TypedServer, TypedSocket } from "../src/interfaces/server";
 
 export function setupSocketHandlers(io: TypedServer, game: BoggleGame): void {

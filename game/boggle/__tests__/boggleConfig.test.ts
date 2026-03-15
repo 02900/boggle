@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getDiceConfiguration, calculateWordPoints } from "../gameConfig";
+import { getDiceConfiguration, calculateWordPoints } from "../boggleConfig";
 
 describe("getDiceConfiguration", () => {
   const dice = getDiceConfiguration();

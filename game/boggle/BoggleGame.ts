@@ -1,16 +1,16 @@
-import { TIME_LIMIT, ROTATION_COOLDOWN } from "../config/constants";
-import { getDiceConfiguration, calculateWordPoints } from "./gameConfig";
-import { updateScoreboard } from "../utils/scoreboard";
-import { debugLog } from "../utils/debug";
-import { streakTracker } from "../utils/streakTracker";
-import { WordGame } from "./shared/WordGame";
-import type { DiceRoll, GameState, WordResult } from "../src/interfaces/game";
+import { TIME_LIMIT, ROTATION_COOLDOWN } from "../../config/constants";
+import { getDiceConfiguration, calculateWordPoints } from "./boggleConfig";
+import { updateScoreboard } from "../../utils/scoreboard";
+import { debugLog } from "../../utils/debug";
+import { streakTracker } from "../../utils/streakTracker";
+import { WordGame } from "../shared/WordGame";
+import type { DiceRoll, GameState, WordResult } from "../../src/interfaces/game";
 import type {
   Board,
   StartGameResult,
   RotateBoardResult,
   MaxScoreData,
-} from "../src/interfaces/server";
+} from "../../src/interfaces/server";
 
 export class BoggleGame extends WordGame {
   board: Board;
