@@ -142,10 +142,6 @@ export class ScrabbleGame extends WordGame {
       firstPlayer: this.getCurrentTurnPlayerId(),
     });
 
-    if (this.io) {
-      this.io.emit("game-started" as any, this.getGameState());
-    }
-
     return { success: true };
   }
 
@@ -612,9 +608,6 @@ export class ScrabbleGame extends WordGame {
       turnTimeLeft: this.turnTimeLeft,
     });
 
-    if (this.io) {
-      this.io.emit("game-state" as any, this.getGameState());
-    }
   }
 
   getCurrentTurnPlayerId(): string | null {

@@ -1,8 +1,10 @@
 import { debugLog } from "../utils/debug";
 import { setupSharedHandlers } from "./shared/sharedHandlers";
 import { setupBoggleHandlers } from "./boggle/boggleHandlers";
+import { setupScrabbleHandlers } from "./scrabble/scrabbleHandlers";
 import type { GameRegistry } from "../game/GameRegistry";
 import type { BoggleGame } from "../game/boggle/BoggleGame";
+import type { ScrabbleGame } from "../game/scrabble/ScrabbleGame";
 import type { TypedServer, TypedSocket } from "../src/interfaces/server";
 
 export function setupSocketHandlers(
@@ -42,7 +44,8 @@ export function setupSocketHandlers(
 
     if (gameType === "boggle") {
       setupBoggleHandlers(io, socket, game as BoggleGame);
+    } else if (gameType === "scrabble") {
+      setupScrabbleHandlers(io, socket, game as ScrabbleGame);
     }
-    // Future: else if (gameType === "scrabble") { setupScrabbleHandlers(...) }
   });
 }
