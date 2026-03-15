@@ -1,155 +1,134 @@
-# Boggle Game - Multiplayer Real-time Word Game
+# Boggle - Multiplayer Word Game
 
-A real-time multiplayer Boggle word game built with Next.js and Socket.IO. Players compete to find words on a 4x4 letter grid with Spanish dictionary validation and persistent scoring.
+Real-time multiplayer Boggle game with Spanish dictionary validation, authentic dice board, and persistent scoreboard.
 
-## 🎮 Game Features
+## Features
 
-- **Real-time Multiplayer**: Multiple players can join and play simultaneously
-- **Animated Dice Rolling**: Realistic dice animation when starting games
-- **Spanish Dictionary**: Word validation against a comprehensive Spanish word list
-- **Persistent Scoreboard**: Top 10 scores saved permanently
-- **Board Rotation**: Players can rotate the board 90° with cooldown mechanics
-- **Random Names**: Automatic assignment of creative player names
-- **Live Updates**: Real-time game state synchronization across all players
+- **Real-time multiplayer** via Socket.IO
+- **Authentic Boggle dice** with Spanish digraphs (QU, CH, LL, Ñ)
+- **Spanish dictionary** with ~60,000 words
+- **Optional client-side validation** for immediate feedback
+- **Dice rolling animation** when starting a game
+- **Board rotation** 90° with 30-second cooldown
+- **Common word elimination** for words found by multiple players
+- **Persistent scoreboard** with top 50 scores
+- **Win streaks** in 6-hour sessions
+- **Responsive design** with desktop and mobile views
+- **Sensory feedback** with sounds and haptic vibration
 
-## 🏗️ System Architecture
+## Tech Stack
 
-### Backend Architecture (`server.js`)
+| Technology | Version | Usage |
+|-----------|---------|-------|
+| Next.js | 15.4.4 | Frontend framework |
+| React | 19.1.1 | UI |
+| TypeScript | 5.8.3 | Static typing |
+| Zustand | 5.0.6 | Global state |
+| Socket.IO | 4.8.1 | Real-time communication |
+| Tailwind CSS | 4.1.11 | Styles |
+| Vitest | 4.1.0 | Testing |
+| Node.js | 22+ | Server runtime |
 
-The backend is built on Node.js with the following key components:
-
-#### **BoggleGame Class**
-- **Game State Management**: Handles `waiting`, `playing`, and `finished` states
-- **Board Generation**: Uses authentic Boggle dice configuration for 4x4 grid
-- **Word Validation**: Validates words against Spanish dictionary and board paths
-- **Player Management**: Tracks connected players with unique random names
-- **Scoring System**: Points based on word length (3+ letters)
-- **Board Rotation**: 90° clockwise rotation with 30-second cooldown
-
-#### **Real-time Communication (Socket.IO)**
-- **Player Events**: `join-game`, `start-game`, `submit-word`, `rotate-board`
-- **Game Events**: `game-started`, `timer-update`, `game-ended`, `board-rotated`
-- **Scoreboard Events**: `get-scoreboard`, `scoreboard-data`
-
-#### **Persistent Storage**
-- **Scoreboard**: JSON file storage (`scoreboard.json`) for top 10 scores
-- **Dictionary**: Large Spanish word list loaded from `file-2017.txt`
-
-### Frontend Architecture (Next.js + React)
-
-#### **Core Components**
-- **`BoggleGameMain.tsx`**: Main game orchestrator and state management
-- **`GameBoard.tsx`**: Interactive 4x4 letter grid with path selection
-- **`DiceRollingAnimation.tsx`**: Animated dice rolling sequence
-- **`Scoreboard.tsx`**: Persistent leaderboard display
-- **`GameControls.tsx`**: Game actions (start, reset, rotate)
-- **`PlayersList.tsx`**: Connected players display
-- **`FoundWords.tsx`**: Player's discovered words list
-
-#### **State Management**
-- **Socket.IO Client**: Real-time communication with backend
-- **React Hooks**: Custom hooks in `src/hooks/` for game state
-- **TypeScript Interfaces**: Type definitions in `src/interfaces/`
-
-#### **Styling & UI**
-- **Tailwind CSS 4**: Modern utility-first styling
-- **Responsive Design**: Mobile and desktop optimized
-- **Animations**: Smooth transitions and dice rolling effects
-
-### Project Structure
+## Project Structure
 
 ```
-boggle-game/
-├── server.js                 # Node.js + Socket.IO backend
-├── src/
-│   ├── app/                  # Next.js app router
-│   │   ├── page.tsx         # Landing page
-│   │   ├── lobby/           # Game lobby
-│   │   └── game/            # Main game page
-│   ├── components/          # React components
-│   │   ├── BoggleGameMain.tsx
-│   │   ├── GameBoard.tsx
-│   │   ├── DiceRollingAnimation.tsx
-│   │   └── ...
-│   ├── hooks/               # Custom React hooks
-│   ├── interfaces/          # TypeScript definitions
-│   └── utils/               # Utility functions
-├── public/                  # Static assets
-├── scoreboard.json          # Persistent scores
-├── file-2017.txt           # Spanish dictionary
-└── package.json            # Dependencies
+boggle/
+├── server.js                 # Node.js + Socket.IO server
+├── game/                     # Game logic (backend)
+│   ├── BoggleGame.js         # Main game engine
+│   └── gameConfig.js         # Dice and scoring
+├── socket/                   # WebSocket events
+│   └── socketHandlers.js     # Event handlers
+├── config/                   # Constants
+│   └── constants.js          # Timers, cooldowns, flags
+├── utils/                    # Backend utilities
+├── data/                     # Persistent data (streaks)
+├── src/                      # Frontend (Next.js + TypeScript)
+│   ├── app/                  # App router
+│   ├── components/           # React components
+│   ├── hooks/                # Custom hooks
+│   ├── stores/               # Zustand stores
+│   ├── services/             # Services (dictionary)
+│   ├── utils/                # Frontend utilities
+│   └── interfaces/           # TypeScript types
+├── docs/                     # Technical documentation
+├── scoreboard.json           # Persistent leaderboard
+└── file-2017.txt             # Spanish dictionary
 ```
 
-## 🚀 Getting Started
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or yarn
+
+- Node.js 22+
+- pnpm
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd boggle-game
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-4. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-### Production Deployment
-
 ```bash
-npm run build
-npm start
+pnpm install
 ```
 
-## 🎯 How to Play
+### Development
 
-1. **Join Game**: Enter your name or get a random one assigned
-2. **Start Game**: Any player can start a new round
-3. **Find Words**: Click letters to form words (minimum 3 letters)
-4. **Submit Words**: Valid words add to your score
-5. **Rotate Board**: Use the rotate button (30s cooldown)
-6. **Win**: Highest score when time runs out wins!
+```bash
+pnpm dev
+```
 
-## 🛠️ Tech Stack
+Open [http://localhost:3000](http://localhost:3000).
 
-- **Frontend**: Next.js 15.4.4, React 19.1.0, TypeScript
-- **Backend**: Node.js, Socket.IO 4.7.5
-- **Styling**: Tailwind CSS 4
-- **Real-time**: WebSocket communication
-- **Storage**: JSON file-based persistence
-- **Dictionary**: Spanish word validation
+### Production
 
-## 📊 Game Mechanics
+```bash
+pnpm build
+pnpm start
+```
 
-- **Timer**: 3 minutes + 8 seconds for dice animation
-- **Scoring**: 3-letter words = 1 point, 4-letter = 1 point, 5-letter = 2 points, etc.
-- **Board**: Authentic Boggle dice configuration
-- **Validation**: Words must exist in Spanish dictionary and follow valid board paths
-- **Multiplayer**: Unlimited concurrent players
+### Tests
 
-## 🔧 Development
+```bash
+pnpm test        # Watch mode
+pnpm test:run    # Single run
+```
 
-### Key Files to Modify
-- `server.js`: Backend game logic and Socket.IO events
-- `src/components/BoggleGameMain.tsx`: Main game component
-- `src/components/GameBoard.tsx`: Board interaction logic
-- `src/app/globals.css`: Global styles
+## How to Play
 
-### Adding Features
-- New Socket.IO events in `server.js`
-- React components in `src/components/`
-- Game logic in `BoggleGame` class
-- UI styling with Tailwind classes
+1. Enter your name or generate a random one
+2. Any player can start the game
+3. Select adjacent cells to form words (mouse, touch, or keyboard)
+4. Words must be at least 3 letters long and exist in the dictionary
+5. Use the rotation button to change the board perspective
+6. The player with the highest score when the 3 minutes are up wins
+
+## Scoring
+
+| Length | Points |
+|--------|--------|
+| 3-4 letters | 1 |
+| 5 letters | 2 |
+| 6 letters | 3 |
+| 7 letters | 5 |
+| 8+ letters | 11 |
+
+## Documentation
+
+Detailed technical documentation in [`docs/`](./docs/README.md):
+
+- [Architecture](./docs/architecture.md)
+- [Game Engine](./docs/backend/game-engine.md)
+- [Socket Events](./docs/backend/socket-handlers.md)
+- [Stores](./docs/frontend/stores.md)
+- [Hooks](./docs/frontend/hooks.md)
+- [Components](./docs/frontend/components.md)
+- [TypeScript Types](./docs/types.md)
+
+## Scripts
+
+| Script | Description |
+|--------|------------|
+| `pnpm dev` | Development server |
+| `pnpm build` | Production build |
+| `pnpm start` | Production server |
+| `pnpm lint` | Linting with ESLint |
+| `pnpm test` | Tests in watch mode |
+| `pnpm test:run` | Single test run |
