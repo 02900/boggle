@@ -3,6 +3,7 @@ import next from "next";
 import { Server } from "socket.io";
 
 import { BoggleGame } from "./game/boggle/BoggleGame";
+import { GameRegistry } from "./game/GameRegistry";
 import { setupSocketHandlers } from "./socket/socketHandlers";
 import type { TypedServer } from "./src/interfaces/server";
 import type { GameEvents, ClientEvents } from "./src/interfaces/game";
@@ -18,11 +19,16 @@ app.prepare().then(() => {
   const httpServer = createServer(handler);
   const io: TypedServer = new Server<ClientEvents, GameEvents>(httpServer);
 
-  const game = new BoggleGame();
+  // Register game instances
+  const registry = new GameRegistry();
 
-  game.setIO(io);
+  const boggleGame = new BoggleGame();
+  boggleGame.setIO(io);
+  registry.registerGame("boggle", boggleGame);
 
-  setupSocketHandlers(io, game);
+  // Future: registry.registerGame("scrabble", new ScrabbleGame());
+
+  setupSocketHandlers(io, registry);
 
   httpServer
     .once("error", (err: Error) => {
