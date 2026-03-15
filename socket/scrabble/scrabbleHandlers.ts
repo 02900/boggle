@@ -49,7 +49,8 @@ export function setupScrabbleHandlers(
     const result = game.placeTiles(socket.id, data.placements);
 
     if (result.success) {
-      io.emit("game-state" as any, game.getGameState());
+      socket.broadcast.emit("game-state" as any, game.getGameState());
+      socket.emit("game-state" as any, game.getGameStateForPlayer(socket.id));
     } else {
       socket.emit("word-result", { valid: false, reason: result.reason });
     }
@@ -59,7 +60,8 @@ export function setupScrabbleHandlers(
     debugLog("EVENT: recall-tiles", null, socket.id);
 
     game.recallTiles(socket.id);
-    io.emit("game-state" as any, game.getGameState());
+    socket.broadcast.emit("game-state" as any, game.getGameState());
+    socket.emit("game-state" as any, game.getGameStateForPlayer(socket.id));
   });
 
   rawSocket.on("submit-turn", () => {

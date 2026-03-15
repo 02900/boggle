@@ -50,6 +50,10 @@ export const useScrabbleSocketListeners = () => {
       s.setGameState(state);
       s.clearTentativePlacements();
       s.setMessage("Juego iniciado");
+      // Persist session for auto-rejoin
+      if (typeof window !== "undefined" && s.gameId && s.playerName) {
+        localStorage.setItem("scrabble-session", JSON.stringify({ gameId: s.gameId, playerName: s.playerName }));
+      }
     });
 
     newSocket.on("word-result", (result: WordResult) => {
@@ -73,6 +77,9 @@ export const useScrabbleSocketListeners = () => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
       s.setMessage("Juego terminado");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("scrabble-session");
+      }
     });
 
     newSocket.on("turn-timer-update" as any, (timeLeft: number) => {
@@ -93,6 +100,12 @@ export const useScrabbleSocketListeners = () => {
       }
       s.setIsJoined(true);
       s.setMessage("Reconectado al juego");
+      // Persist session for future auto-rejoin
+      const gameId = state.gameId ?? s.gameId;
+      const playerName = s.playerName;
+      if (typeof window !== "undefined" && gameId && playerName) {
+        localStorage.setItem("scrabble-session", JSON.stringify({ gameId, playerName }));
+      }
     });
 
     newSocket.on("rejoin-failed" as any, (data: { reason: string }) => {
