@@ -112,6 +112,8 @@ export const useSocket = () => {
     }
   };
 
+  const clearDiceRolling = useCallback(() => setDiceRolling(null), [setDiceRolling]);
+
   const toggleClientSideValidation = (enabled: boolean) => {
     if (socket) {
       socket.emit("toggle-client-side-validation", enabled);
@@ -125,7 +127,7 @@ export const useSocket = () => {
     submitWord,
     resetGame,
     rotateBoard,
-    clearDiceRolling: () => setDiceRolling(null),
+    clearDiceRolling,
     triggerVibration,
     playSuccessSound,
     playErrorSound,
