@@ -46,7 +46,7 @@ export const useSocketListeners = () => {
   } = useMaxScoreStore();
 
   useEffect(() => {
-    const newSocket = io();
+    const newSocket = io({ query: { game: "boggle" } });
     setSocket(newSocket);
 
     // Connection events

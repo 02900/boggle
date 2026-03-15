@@ -1,5 +1,5 @@
-import { BoggleGameMain } from '@/components/BoggleGameMain';
+import { GameSelector } from "@/components/shared/GameSelector";
 
 export default function Home() {
-  return <BoggleGameMain />;
+  return <GameSelector />;
 }

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Boggle - Juego de Palabras",
-  description: "Juego multijugador de Boggle en tiempo real con validación inteligente de palabras",
+  title: "Juegos de Palabras",
+  description: "Juegos multijugador de palabras en tiempo real: Boggle y Scrabble",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
