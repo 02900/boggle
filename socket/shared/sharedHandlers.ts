@@ -29,7 +29,7 @@ export function setupSharedHandlers(
       socket.id
     );
 
-    // TODO(step5): remove `as any` when TypedSocket is game-generic
+    // TODO(step9): remove `as any` when TypedSocket is game-generic
     socket.emit("game-state", game.getGameState() as any);
 
     debugLog("EMIT: join-confirmed", { finalName }, socket.id);

@@ -4,19 +4,30 @@ import { setupSocketHandlers } from "../socketHandlers";
 vi.mock("../../utils/debug", () => ({ debugLog: vi.fn() }));
 vi.mock("../../utils/scoreboard", () => ({ loadScoreboard: vi.fn(() => []) }));
 
-function createMockSocket(id: string) {
+function createMockSocket(id: string, gameType = "boggle") {
   const handlers = new Map<string, Function>();
   return {
     id,
+    handshake: { query: { game: gameType } },
     on: vi.fn((event: string, handler: Function) => {
       handlers.set(event, handler);
     }),
     emit: vi.fn(),
     broadcast: { emit: vi.fn() },
+    disconnect: vi.fn(),
     _trigger: (event: string, ...args: any[]) => {
       const h = handlers.get(event);
       if (h) h(...args);
     },
+  };
+}
+
+function createMockRegistry(game: any) {
+  return {
+    getGame: vi.fn((type: string) => (type === "boggle" ? game : undefined)),
+    hasGame: vi.fn((type: string) => type === "boggle"),
+    getGameTypes: vi.fn(() => ["boggle"]),
+    registerGame: vi.fn(),
   };
 }
 
@@ -77,12 +88,14 @@ describe("setupSocketHandlers", () => {
   let io: ReturnType<typeof createMockIO>;
   let socket: ReturnType<typeof createMockSocket>;
   let game: ReturnType<typeof createMockGame>;
+  let registry: ReturnType<typeof createMockRegistry>;
 
   beforeEach(() => {
     io = createMockIO();
     socket = createMockSocket("socket-1");
     game = createMockGame();
-    setupSocketHandlers(io as any, game as any);
+    registry = createMockRegistry(game);
+    setupSocketHandlers(io as any, registry as any);
     io._simulateConnection(socket);
   });
 
@@ -419,6 +432,43 @@ describe("setupSocketHandlers", () => {
         "player-left",
         "socket-1"
       );
+    });
+  });
+
+  // ── Game routing ─────────────────────────────────────────────────
+
+  describe("game routing", () => {
+    it("defaults to boggle when no game query param", () => {
+      const noQuerySocket = createMockSocket("socket-2");
+      delete (noQuerySocket.handshake.query as any).game;
+      io._simulateConnection(noQuerySocket);
+
+      noQuerySocket._trigger("join-game", "Alice");
+      expect(game.addPlayer).toHaveBeenCalledWith("socket-2", "Alice");
+    });
+
+    it("routes to boggle when game=boggle", () => {
+      const boggleSocket = createMockSocket("socket-3", "boggle");
+      io._simulateConnection(boggleSocket);
+
+      boggleSocket._trigger("join-game", "Bob");
+      expect(game.addPlayer).toHaveBeenCalledWith("socket-3", "Bob");
+    });
+
+    it("disconnects socket for unknown game type", () => {
+      const unknownSocket = createMockSocket("socket-4", "chess");
+      io._simulateConnection(unknownSocket);
+
+      expect(unknownSocket.disconnect).toHaveBeenCalled();
+    });
+
+    it("does not register handlers for unknown game type", () => {
+      const unknownSocket = createMockSocket("socket-5", "chess");
+      io._simulateConnection(unknownSocket);
+
+      // join-game should not be registered since the socket was disconnected
+      unknownSocket._trigger("join-game", "Test");
+      expect(game.addPlayer).not.toHaveBeenCalledWith("socket-5", expect.anything());
     });
   });
 });
