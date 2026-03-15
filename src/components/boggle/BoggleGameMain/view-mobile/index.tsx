@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { PlayersList } from "@/components/PlayersList";
+import { PlayersList } from "../../PlayersList";
 import { DiceRollingAnimation } from "../../DiceRollingAnimation";
 import { GameBoard } from "../../GameBoard";
 import { MobileFooter } from "./mobile-footer";

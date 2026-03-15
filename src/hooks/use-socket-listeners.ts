@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
-import { useBoggleGameMainStore } from "@/components/BoggleGameMain/boogle-game-main.store";
+import { useBoggleGameMainStore } from "@/components/boggle/BoggleGameMain/boogle-game-main.store";
 import { useGameLogic } from "@/hooks/useGameLogic";
 import { useSocket } from "@/hooks/useSocket";
 import { useHighlightManager } from "@/hooks/use-highlight-manager";

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useBoggleGameMainStore } from "@/components/BoggleGameMain/boogle-game-main.store";
+import { useBoggleGameMainStore } from "@/components/boggle/BoggleGameMain/boogle-game-main.store";
 import { useSocket } from "./useSocket";
 import { clientWordValidator, ClientWordValidationResult } from "@/utils/clientWordValidator";
 import { WordResult } from "@/interfaces/game";

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useBoggleGameMainStore } from "@/components/BoggleGameMain/boogle-game-main.store";
+import { useBoggleGameMainStore } from "@/components/boggle/BoggleGameMain/boogle-game-main.store";
 import { useSocket } from "./useSocket";
 
 const CLIENT_VALIDATION_KEY = "boggle-client-validation";
