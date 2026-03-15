@@ -50,6 +50,10 @@ export function setupBoggleHandlers(
         { word: !!word, path: !!path },
         socket.id
       );
+      socket.emit("word-result", {
+        valid: false,
+        reason: "Parámetros faltantes",
+      });
       return;
     }
 
