@@ -26,6 +26,10 @@ interface ScrabbleGameStore {
   tentativePlacements: TilePlacement[];
   message: string;
 
+  // Exchange mode
+  exchangeMode: boolean;
+  selectedForExchange: Set<string>;
+
   // Session
   gameId: string | null;
   playerName: string | null;
@@ -42,6 +46,9 @@ interface ScrabbleGameStore {
   removeTentativePlacement: (tileId: string) => void;
   clearTentativePlacements: () => void;
   setMessage: (message: string) => void;
+  setExchangeMode: (mode: boolean) => void;
+  toggleExchangeSelection: (tileId: string) => void;
+  clearExchangeSelection: () => void;
   setGameId: (gameId: string | null) => void;
   setPlayerName: (name: string | null) => void;
   reset: () => void;
@@ -57,6 +64,8 @@ const initialState = {
   selectedTile: null as ScrabbleTile | null,
   tentativePlacements: [] as TilePlacement[],
   message: "",
+  exchangeMode: false,
+  selectedForExchange: new Set<string>(),
   gameId: null as string | null,
   playerName: null as string | null,
 };
@@ -89,6 +98,19 @@ export const useScrabbleGameStore = create<ScrabbleGameStore>((set) => ({
     })),
   clearTentativePlacements: () => set({ tentativePlacements: [] }),
   setMessage: (message) => set({ message }),
+  setExchangeMode: (exchangeMode) =>
+    set({ exchangeMode, selectedForExchange: new Set<string>() }),
+  toggleExchangeSelection: (tileId) =>
+    set((state) => {
+      const next = new Set(state.selectedForExchange);
+      if (next.has(tileId)) {
+        next.delete(tileId);
+      } else {
+        next.add(tileId);
+      }
+      return { selectedForExchange: next };
+    }),
+  clearExchangeSelection: () => set({ selectedForExchange: new Set<string>() }),
   setGameId: (gameId) => set({ gameId }),
   setPlayerName: (playerName) => set({ playerName }),
   reset: () => set(initialState),

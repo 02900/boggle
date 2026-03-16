@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { setupScrabbleHandlers } from "../scrabbleHandlers";
+import {
+  createMockSocket,
+  createMockIO,
+  createMockScrabbleGame,
+  type MockSocket,
+  type MockIO,
+  type MockScrabbleGame,
+} from "../../__tests__/mock-helpers";
 
 vi.mock("../../../utils/debug", () => ({ debugLog: vi.fn() }));
 vi.mock("../../../game/scrabble/gameSessionStore", () => ({
@@ -8,78 +16,15 @@ vi.mock("../../../game/scrabble/gameSessionStore", () => ({
   deleteSession: vi.fn(),
 }));
 
-function createMockSocket(id: string) {
-  const handlers = new Map<string, Function>();
-  return {
-    id,
-    on: vi.fn((event: string, handler: Function) => {
-      handlers.set(event, handler);
-    }),
-    emit: vi.fn(),
-    broadcast: { emit: vi.fn() },
-    _trigger: (event: string, ...args: any[]) => {
-      const h = handlers.get(event);
-      if (h) h(...args);
-    },
-  };
-}
-
-function createMockIO() {
-  return {
-    on: vi.fn(),
-    emit: vi.fn(),
-    to: vi.fn(() => ({ emit: vi.fn() })),
-  };
-}
-
-function createMockGame() {
-  return {
-    startGame: vi.fn(() => ({ success: true })),
-    placeTiles: vi.fn((): { success: boolean; reason?: string } => ({ success: true })),
-    recallTiles: vi.fn(() => ({ success: true })),
-    submitTurn: vi.fn((): { valid: boolean; score?: number; words?: Array<{ word: string; score: number; tiles: any[] }>; reason?: string } => ({
-      valid: true,
-      score: 8,
-      words: [{ word: "CASA", score: 8, tiles: [] }],
-    })),
-    passTurn: vi.fn((): { success: boolean; reason?: string } => ({ success: true })),
-    exchangeTiles: vi.fn((): { success: boolean; reason?: string } => ({ success: true })),
-    resetGame: vi.fn(),
-    getGameState: vi.fn(() => ({
-      board: [],
-      players: [],
-      gameState: "waiting",
-      currentTurnPlayerId: null,
-      turnTimeLeft: 120,
-      tileBagCount: 100,
-      consecutivePasses: 0,
-    })),
-    getGameStateForPlayer: vi.fn(() => ({
-      board: [],
-      players: [],
-      gameState: "waiting",
-      currentTurnPlayerId: null,
-      turnTimeLeft: 120,
-      tileBagCount: 100,
-      consecutivePasses: 0,
-      rack: [],
-    })),
-    reconnectPlayer: vi.fn(() => true),
-    serialize: vi.fn(() => ({})),
-    players: new Map([["socket-1", { id: "socket-1", name: "Alice" }]]),
-    gameState: "playing",
-  };
-}
-
 describe("setupScrabbleHandlers", () => {
-  let io: ReturnType<typeof createMockIO>;
-  let socket: ReturnType<typeof createMockSocket>;
-  let game: ReturnType<typeof createMockGame>;
+  let io: MockIO;
+  let socket: MockSocket;
+  let game: MockScrabbleGame;
 
   beforeEach(() => {
     io = createMockIO();
     socket = createMockSocket("socket-1");
-    game = createMockGame();
+    game = createMockScrabbleGame();
     setupScrabbleHandlers(io as any, socket as any, game as any);
   });
 
@@ -235,7 +180,7 @@ describe("setupScrabbleHandlers", () => {
 
   describe("handler registration", () => {
     it("registers all expected scrabble events", () => {
-      const registeredEvents = socket.on.mock.calls.map((call: any[]) => call[0]);
+      const registeredEvents = socket.on.mock.calls.map((call: unknown[]) => call[0]);
       expect(registeredEvents).toContain("start-game");
       expect(registeredEvents).toContain("place-tiles");
       expect(registeredEvents).toContain("recall-tiles");

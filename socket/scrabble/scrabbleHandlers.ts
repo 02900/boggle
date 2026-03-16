@@ -1,9 +1,11 @@
 import { debugLog } from "../../utils/debug";
+import { SCRABBLE_GRACE_PERIOD } from "../../config/scrabbleConstants";
 import { saveSession, loadSession, deleteSession } from "../../game/scrabble/gameSessionStore";
 import { ScrabbleGame } from "../../game/scrabble/ScrabbleGame";
 import type { ScrabbleTypedServer, ScrabbleTypedSocket } from "../../src/interfaces/server";
 
 const sessionCreatedAt = new Map<string, string>();
+const graceTimers = new Map<string, ReturnType<typeof setTimeout>>(); // keyed by playerName
 
 function autoSave(game: ScrabbleGame, gameId: string): void {
   if (game.gameState === "playing") {
@@ -161,6 +163,14 @@ export function setupScrabbleHandlers(
       return;
     }
 
+    // Cancel grace period if active
+    const existingTimer = graceTimers.get(data.playerName);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      graceTimers.delete(data.playerName);
+      debugLog("SCRABBLE_GRACE_TIMER_CANCELLED", { playerName: data.playerName });
+    }
+
     socket.emit("rejoin-success", game.getGameStateForPlayer(socket.id));
     socket.broadcast.emit("player-joined", {
       playerId: socket.id,
@@ -173,8 +183,59 @@ export function setupScrabbleHandlers(
     });
   });
 
+  // Grace period disconnect handler (overrides shared handler which is skipped for Scrabble)
+  socket.on("disconnect", () => {
+    debugLog("EVENT: disconnect (scrabble)", null, socket.id);
+
+    const player = game.players.get(socket.id);
+    if (!player || game.gameState !== "playing") {
+      game.removePlayer(socket.id);
+      socket.broadcast.emit("player-left", socket.id);
+      return;
+    }
+
+    // Mark as disconnected but DON'T remove yet
+    player.isConnected = false;
+    socket.broadcast.emit("player-left", socket.id);
+
+    const playerName = player.name;
+
+    // Start grace period — auto-pass and remove after SCRABBLE_GRACE_PERIOD
+    const timer = setTimeout(() => {
+      graceTimers.delete(playerName);
+      const isCurrentTurn = game.getCurrentTurnPlayerId() === socket.id;
+      if (isCurrentTurn) {
+        game.passTurn(socket.id);
+      }
+
+      // passTurn may have triggered endGame (e.g. all players passed consecutively),
+      // which already emitted game-ended and cleaned up. Don't removePlayer on a finished game.
+      if (game.gameState === "finished") {
+        autoSave(game, gameId);
+        debugLog("SCRABBLE_GRACE_PERIOD_EXPIRED", { playerName, gameEnded: true });
+        return;
+      }
+
+      game.removePlayer(socket.id);
+      io.emit("game-state", game.getGameState());
+      autoSave(game, gameId);
+      debugLog("SCRABBLE_GRACE_PERIOD_EXPIRED", { playerName });
+    }, SCRABBLE_GRACE_PERIOD);
+
+    graceTimers.set(playerName, timer);
+    debugLog("SCRABBLE_GRACE_TIMER_STARTED", { playerName, gracePeriod: SCRABBLE_GRACE_PERIOD });
+  });
+
   socket.on("reset-game", () => {
     debugLog("EVENT: reset-game (scrabble)", null, socket.id);
+
+    // Clear all active grace timers to prevent stale callbacks
+    for (const [name, timer] of graceTimers) {
+      clearTimeout(timer);
+      debugLog("SCRABBLE_GRACE_TIMER_CLEARED_ON_RESET", { playerName: name });
+    }
+    graceTimers.clear();
+
     game.resetGame();
     deleteSession(gameId);
     sessionCreatedAt.delete(gameId);

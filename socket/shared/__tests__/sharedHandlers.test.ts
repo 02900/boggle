@@ -1,54 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { setupSharedHandlers } from "../sharedHandlers";
+import {
+  createMockSocket,
+  createMockIO,
+  createMockBoggleGame,
+  type MockSocket,
+  type MockIO,
+  type MockBoggleGame,
+} from "../../__tests__/mock-helpers";
 
 vi.mock("../../../utils/debug", () => ({ debugLog: vi.fn() }));
 vi.mock("../../../utils/scoreboard", () => ({ loadScoreboard: vi.fn(() => []) }));
 
-function createMockSocket(id: string) {
-  const handlers = new Map<string, Function>();
-  return {
-    id,
-    on: vi.fn((event: string, handler: Function) => {
-      handlers.set(event, handler);
-    }),
-    emit: vi.fn(),
-    broadcast: { emit: vi.fn() },
-    _trigger: (event: string, ...args: any[]) => {
-      const h = handlers.get(event);
-      if (h) h(...args);
-    },
-  };
-}
-
-function createMockIO() {
-  return { on: vi.fn(), emit: vi.fn() };
-}
-
-function createMockGame() {
-  return {
-    addPlayer: vi.fn(),
-    removePlayer: vi.fn(),
-    getGameState: vi.fn(() => ({
-      players: [],
-      gameState: "waiting",
-      timeLeft: 100,
-    })),
-    getRandomName: vi.fn(() => "RandomName"),
-    setClientSideValidation: vi.fn(),
-    getClientSideValidation: vi.fn(() => false),
-    players: new Map(),
-  };
-}
-
 describe("setupSharedHandlers", () => {
-  let io: ReturnType<typeof createMockIO>;
-  let socket: ReturnType<typeof createMockSocket>;
-  let game: ReturnType<typeof createMockGame>;
+  let io: MockIO;
+  let socket: MockSocket;
+  let game: MockBoggleGame;
 
   beforeEach(() => {
     io = createMockIO();
     socket = createMockSocket("socket-1");
-    game = createMockGame();
+    game = createMockBoggleGame();
   });
 
   afterEach(() => {
@@ -70,7 +42,7 @@ describe("setupSharedHandlers", () => {
       socket._trigger("join-game", "   ");
 
       expect(game.getRandomName).toHaveBeenCalled();
-      expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "RandomName");
+      expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "TestPlayer");
     });
 
     it("emits game-state and join-confirmed to the socket", () => {

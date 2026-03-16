@@ -1,99 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { setupSocketHandlers } from "../socketHandlers";
+import {
+  createMockSocket,
+  createMockIO,
+  createMockBoggleGame,
+  createMockRegistry,
+  type MockSocket,
+  type MockIO,
+  type MockBoggleGame,
+  type MockRegistry,
+} from "./mock-helpers";
 
 vi.mock("../../utils/debug", () => ({ debugLog: vi.fn() }));
 vi.mock("../../utils/scoreboard", () => ({ loadScoreboard: vi.fn(() => []) }));
 
-function createMockSocket(id: string, gameType = "boggle") {
-  const handlers = new Map<string, Function>();
-  return {
-    id,
-    handshake: { query: { game: gameType } },
-    on: vi.fn((event: string, handler: Function) => {
-      handlers.set(event, handler);
-    }),
-    emit: vi.fn(),
-    broadcast: { emit: vi.fn() },
-    disconnect: vi.fn(),
-    _trigger: (event: string, ...args: any[]) => {
-      const h = handlers.get(event);
-      if (h) h(...args);
-    },
-  };
-}
-
-function createMockRegistry(game: any) {
-  return {
-    getGame: vi.fn((type: string) => (type === "boggle" ? game : undefined)),
-    hasGame: vi.fn((type: string) => type === "boggle"),
-    getGameTypes: vi.fn(() => ["boggle"]),
-    registerGame: vi.fn(),
-  };
-}
-
-function createMockIO() {
-  let connectionHandler: Function | null = null;
-  return {
-    on: vi.fn((event: string, handler: Function) => {
-      if (event === "connection") connectionHandler = handler;
-    }),
-    emit: vi.fn(),
-    _simulateConnection: (socket: any) => {
-      if (connectionHandler) connectionHandler(socket);
-    },
-  };
-}
-
-function createMockGame() {
-  return {
-    addPlayer: vi.fn(),
-    removePlayer: vi.fn(),
-    getGameState: vi.fn(() => ({
-      board: [],
-      players: [],
-      gameState: "waiting",
-      timeLeft: 188,
-      diceRolls: [],
-      rotationVersion: 0,
-    })),
-    getRandomName: vi.fn(() => "TestPlayer"),
-    startGame: vi.fn(() => ({ success: true, diceRolls: [] })),
-    submitWord: vi.fn((): { valid: boolean; points?: number; word?: string; reason?: string } => ({ valid: true, points: 1, word: "casa" })),
-    resetGame: vi.fn(),
-    rotateBoard: vi.fn((): { success: boolean; cooldownTime?: number; rotationVersion?: number; reason?: string } => ({
-      success: true,
-      cooldownTime: 30,
-      rotationVersion: 1,
-    })),
-    findAllPossibleWords: vi.fn(() => ({
-      words: [],
-      maxScore: 0,
-      totalWords: 0,
-    })),
-    setEliminateCommonWords: vi.fn(),
-    setClientSideValidation: vi.fn(),
-    getClientSideValidation: vi.fn(() => false),
-    eliminateCommonWords: true,
-    board: [
-      ["A", "B", "C", "D"],
-      ["E", "F", "G", "H"],
-      ["I", "J", "K", "L"],
-      ["M", "N", "O", "P"],
-    ],
-    players: new Map(),
-  };
-}
-
 describe("setupSocketHandlers", () => {
-  let io: ReturnType<typeof createMockIO>;
-  let socket: ReturnType<typeof createMockSocket>;
-  let game: ReturnType<typeof createMockGame>;
-  let registry: ReturnType<typeof createMockRegistry>;
+  let io: MockIO;
+  let socket: MockSocket;
+  let game: MockBoggleGame;
+  let registry: MockRegistry;
 
   beforeEach(() => {
     io = createMockIO();
     socket = createMockSocket("socket-1");
-    game = createMockGame();
+    game = createMockBoggleGame();
     registry = createMockRegistry(game);
     setupSocketHandlers(io as any, registry as any);
     io._simulateConnection(socket);
