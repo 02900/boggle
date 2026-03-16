@@ -35,6 +35,7 @@ export interface ScrabbleGameState {
   turnTimeLeft: number;
   tileBagCount: number;
   consecutivePasses: number;
+  moveHistory?: MoveRecord[];
 }
 
 // ---- Scrabble turn types ----

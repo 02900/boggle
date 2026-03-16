@@ -8,6 +8,7 @@ import { TileRack } from "../TileRack";
 import { TurnIndicator } from "../TurnIndicator";
 import { ScrabbleControls } from "../ScrabbleControls";
 import { ScrabbleInstructions } from "../ScrabbleInstructions";
+import { MoveHistory } from "../MoveHistory";
 import { useState, useEffect } from "react";
 
 function JoinForm() {
@@ -132,6 +133,9 @@ function GameView() {
           <TileRack />
           <ScrabbleControls />
         </div>
+
+        {/* Move History */}
+        <MoveHistory />
 
         {/* End game summary */}
         {isFinished && (

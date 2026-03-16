@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { ScrabbleTile } from "./ScrabbleTile";
+import { BlankTileModal } from "./BlankTileModal";
 import type { ScrabbleBoardCell, MultiplierType } from "@/interfaces/scrabble";
 
 const MULTIPLIER_COLORS: Record<MultiplierType, string> = {
@@ -19,7 +21,7 @@ const MULTIPLIER_LABELS: Record<MultiplierType, string> = {
   DW: "DW",
   TL: "TL",
   DL: "DL",
-  CENTER: "★",
+  CENTER: "\u2605",
   NONE: "",
 };
 
@@ -34,6 +36,12 @@ export function ScrabbleBoard() {
   } = useScrabbleGameStore();
   const { placeTiles } = useScrabbleSocket();
 
+  const [blankModalOpen, setBlankModalOpen] = useState(false);
+  const [pendingBlankPlacement, setPendingBlankPlacement] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
+
   if (!gameState) return null;
 
   const isMyTurn = gameState.currentTurnPlayerId === currentPlayerId;
@@ -43,9 +51,14 @@ export function ScrabbleBoard() {
   );
 
   function handleCellClick(cell: ScrabbleBoardCell) {
-    // If we have a selected tile and cell is empty (no committed or tentative tile), place it
     const hasTentative = tentativeMap.has(`${cell.row},${cell.col}`);
     if (selectedTile && !cell.tile && !hasTentative && isMyTurn) {
+      if (selectedTile.isBlank) {
+        setPendingBlankPlacement({ row: cell.row, col: cell.col });
+        setBlankModalOpen(true);
+        return;
+      }
+
       const placement = { tile: selectedTile, row: cell.row, col: cell.col };
       addTentativePlacement(placement);
       placeTiles([placement]);
@@ -53,46 +66,78 @@ export function ScrabbleBoard() {
     }
   }
 
-  return (
-    <div
-      className="inline-grid gap-px bg-green-900 p-1 rounded"
-      style={{ gridTemplateColumns: "repeat(15, 1fr)" }}
-    >
-      {gameState.board.map((row, r) =>
-        row.map((cell, c) => {
-          const tentative = tentativeMap.get(`${r},${c}`);
-          const hasTile = cell.tile !== null;
-          const hasTentative = tentative !== undefined;
+  function handleBlankLetterSelect(letter: string) {
+    if (!selectedTile || !pendingBlankPlacement) return;
 
-          return (
-            <button
-              key={`${r}-${c}`}
-              onClick={() => handleCellClick(cell)}
-              className={`
-                w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center
-                text-[10px] font-bold rounded-sm
-                transition-colors duration-100
-                ${hasTile || hasTentative
-                  ? ""
-                  : `${MULTIPLIER_COLORS[cell.multiplier]} ${
-                      isMyTurn && selectedTile ? "cursor-pointer hover:brightness-125" : ""
-                    }`
-                }
-              `}
-            >
-              {hasTile && cell.tile ? (
-                <ScrabbleTile tile={cell.tile} size="sm" />
-              ) : hasTentative && tentative ? (
-                <ScrabbleTile tile={tentative.tile} size="sm" isPlaced />
-              ) : (
-                <span className="text-white/40">
-                  {MULTIPLIER_LABELS[cell.multiplier]}
-                </span>
-              )}
-            </button>
-          );
-        })
-      )}
-    </div>
+    const tileWithLetter = {
+      ...selectedTile,
+      assignedLetter: letter,
+    };
+    const placement = {
+      tile: tileWithLetter,
+      row: pendingBlankPlacement.row,
+      col: pendingBlankPlacement.col,
+    };
+    addTentativePlacement(placement);
+    placeTiles([placement]);
+    setSelectedTile(null);
+    setBlankModalOpen(false);
+    setPendingBlankPlacement(null);
+  }
+
+  function handleBlankCancel() {
+    setBlankModalOpen(false);
+    setPendingBlankPlacement(null);
+  }
+
+  return (
+    <>
+      <div
+        className="inline-grid gap-px bg-green-900 p-1 rounded"
+        style={{ gridTemplateColumns: "repeat(15, 1fr)" }}
+      >
+        {gameState.board.map((row, r) =>
+          row.map((cell, c) => {
+            const tentative = tentativeMap.get(`${r},${c}`);
+            const hasTile = cell.tile !== null;
+            const hasTentative = tentative !== undefined;
+
+            return (
+              <button
+                key={`${r}-${c}`}
+                onClick={() => handleCellClick(cell)}
+                className={`
+                  w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center
+                  text-[10px] font-bold rounded-sm
+                  transition-colors duration-100
+                  ${hasTile || hasTentative
+                    ? ""
+                    : `${MULTIPLIER_COLORS[cell.multiplier]} ${
+                        isMyTurn && selectedTile ? "cursor-pointer hover:brightness-125" : ""
+                      }`
+                  }
+                `}
+              >
+                {hasTile && cell.tile ? (
+                  <ScrabbleTile tile={cell.tile} size="sm" />
+                ) : hasTentative && tentative ? (
+                  <ScrabbleTile tile={tentative.tile} size="sm" isPlaced />
+                ) : (
+                  <span className="text-white/40">
+                    {MULTIPLIER_LABELS[cell.multiplier]}
+                  </span>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      <BlankTileModal
+        open={blankModalOpen}
+        onSelect={handleBlankLetterSelect}
+        onCancel={handleBlankCancel}
+      />
+    </>
   );
 }

@@ -1,83 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { setupBoggleHandlers } from "../boggleHandlers";
+import {
+  createMockSocket,
+  createMockIO,
+  createMockBoggleGame,
+  type MockSocket,
+  type MockIO,
+  type MockBoggleGame,
+} from "../../__tests__/mock-helpers";
 
 vi.mock("../../../utils/debug", () => ({ debugLog: vi.fn() }));
 
-function createMockSocket(id: string) {
-  const handlers = new Map<string, Function>();
-  return {
-    id,
-    on: vi.fn((event: string, handler: Function) => {
-      handlers.set(event, handler);
-    }),
-    emit: vi.fn(),
-    broadcast: { emit: vi.fn() },
-    _trigger: (event: string, ...args: any[]) => {
-      const h = handlers.get(event);
-      if (h) h(...args);
-    },
-  };
-}
-
-function createMockIO() {
-  return { on: vi.fn(), emit: vi.fn() };
-}
-
-function createMockGame() {
-  return {
-    startGame: vi.fn(() => ({ success: true, diceRolls: [] })),
-    submitWord: vi.fn(
-      (): {
-        valid: boolean;
-        points?: number;
-        word?: string;
-        reason?: string;
-      } => ({ valid: true, points: 1, word: "casa" })
-    ),
-    resetGame: vi.fn(),
-    rotateBoard: vi.fn(
-      (): {
-        success: boolean;
-        cooldownTime?: number;
-        rotationVersion?: number;
-        reason?: string;
-      } => ({ success: true, cooldownTime: 30, rotationVersion: 1 })
-    ),
-    findAllPossibleWords: vi.fn(() => ({
-      words: [],
-      maxScore: 0,
-      totalWords: 0,
-    })),
-    setEliminateCommonWords: vi.fn(),
-    getClientSideValidation: vi.fn(() => false),
-    getGameState: vi.fn(() => ({
-      board: [],
-      players: [],
-      gameState: "waiting",
-      timeLeft: 188,
-      diceRolls: [],
-      rotationVersion: 0,
-    })),
-    eliminateCommonWords: true,
-    board: [
-      ["A", "B", "C", "D"],
-      ["E", "F", "G", "H"],
-      ["I", "J", "K", "L"],
-      ["M", "N", "O", "P"],
-    ],
-  };
-}
-
 describe("setupBoggleHandlers", () => {
-  let io: ReturnType<typeof createMockIO>;
-  let socket: ReturnType<typeof createMockSocket>;
-  let game: ReturnType<typeof createMockGame>;
+  let io: MockIO;
+  let socket: MockSocket;
+  let game: MockBoggleGame;
 
   beforeEach(() => {
     vi.useFakeTimers();
     io = createMockIO();
     socket = createMockSocket("socket-1");
-    game = createMockGame();
+    game = createMockBoggleGame();
     setupBoggleHandlers(io as any, socket as any, game as any);
   });
 
@@ -99,14 +42,14 @@ describe("setupBoggleHandlers", () => {
 
       // Should not have emitted game-started yet
       const gameStartedCalls = io.emit.mock.calls.filter(
-        (call: any[]) => call[0] === "game-started"
+        (call: unknown[]) => call[0] === "game-started"
       );
       expect(gameStartedCalls).toHaveLength(0);
 
       vi.advanceTimersByTime(3000);
 
       const gameStartedCallsAfter = io.emit.mock.calls.filter(
-        (call: any[]) => call[0] === "game-started"
+        (call: unknown[]) => call[0] === "game-started"
       );
       expect(gameStartedCallsAfter).toHaveLength(1);
     });
@@ -153,7 +96,7 @@ describe("setupBoggleHandlers", () => {
       });
 
       const wordResultCalls = socket.emit.mock.calls.filter(
-        (call: any[]) => call[0] === "word-result"
+        (call: unknown[]) => call[0] === "word-result"
       );
       expect(wordResultCalls).toHaveLength(0);
     });
@@ -198,7 +141,7 @@ describe("setupBoggleHandlers", () => {
       });
 
       const playerScoredCalls = io.emit.mock.calls.filter(
-        (call: any[]) => call[0] === "player-scored"
+        (call: unknown[]) => call[0] === "player-scored"
       );
       expect(playerScoredCalls).toHaveLength(0);
     });

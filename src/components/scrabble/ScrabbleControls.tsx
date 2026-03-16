@@ -4,8 +4,17 @@ import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 
 export function ScrabbleControls() {
-  const { gameState, currentPlayerId, tentativePlacements, message, rack } =
-    useScrabbleGameStore();
+  const {
+    gameState,
+    currentPlayerId,
+    tentativePlacements,
+    message,
+    rack,
+    exchangeMode,
+    selectedForExchange,
+    setExchangeMode,
+    clearExchangeSelection,
+  } = useScrabbleGameStore();
   const { startGame, submitTurn, passTurn, recallTiles, exchangeTiles, resetGame } =
     useScrabbleSocket();
 
@@ -16,11 +25,30 @@ export function ScrabbleControls() {
   const hasPlacements = tentativePlacements.length > 0;
   const playerCount = gameState?.players.length ?? 0;
 
+  const handleExchangeConfirm = () => {
+    const tileIds = [...selectedForExchange];
+    if (tileIds.length > 0) {
+      exchangeTiles(tileIds);
+    }
+    setExchangeMode(false);
+  };
+
+  const handleExchangeCancel = () => {
+    setExchangeMode(false);
+    clearExchangeSelection();
+  };
+
   return (
     <div className="flex flex-col gap-2">
       {message && (
         <div className="text-center text-sm text-gray-300 bg-gray-800 rounded px-3 py-1">
           {message}
+        </div>
+      )}
+
+      {exchangeMode && (
+        <div className="text-center text-sm text-orange-300 bg-orange-900/40 rounded px-3 py-1">
+          Selecciona las fichas que quieres cambiar
         </div>
       )}
 
@@ -34,7 +62,7 @@ export function ScrabbleControls() {
           </button>
         )}
 
-        {isPlaying && isMyTurn && (
+        {isPlaying && isMyTurn && !exchangeMode && (
           <>
             <button
               onClick={submitTurn}
@@ -57,14 +85,29 @@ export function ScrabbleControls() {
               Pasar
             </button>
             <button
-              onClick={() => {
-                const tileIds = rack.map((t) => t.id);
-                if (tileIds.length > 0) exchangeTiles(tileIds);
-              }}
+              onClick={() => setExchangeMode(true)}
               disabled={hasPlacements || rack.length === 0}
               className="px-3 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
             >
               Cambiar
+            </button>
+          </>
+        )}
+
+        {isPlaying && isMyTurn && exchangeMode && (
+          <>
+            <button
+              onClick={handleExchangeConfirm}
+              disabled={selectedForExchange.size === 0}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
+            >
+              Confirmar cambio ({selectedForExchange.size})
+            </button>
+            <button
+              onClick={handleExchangeCancel}
+              className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded font-medium transition-colors"
+            >
+              Cancelar
             </button>
           </>
         )}

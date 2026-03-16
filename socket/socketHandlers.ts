@@ -40,6 +40,7 @@ export function setupSocketHandlers(
               });
             }
           : undefined,
+      skipDisconnect: gameType === "scrabble",
     });
 
     if (gameType === "boggle") {

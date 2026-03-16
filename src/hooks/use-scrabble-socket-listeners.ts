@@ -40,9 +40,14 @@ export const useScrabbleSocketListeners = () => {
     });
 
     newSocket.on("game-state", (state) => {
-      useScrabbleGameStore.getState().setGameState(state);
+      const s = useScrabbleGameStore.getState();
+      s.setGameState(state);
       if (state.rack) {
-        useScrabbleGameStore.getState().setRack(state.rack);
+        s.setRack(state.rack);
+      }
+      // Clear exchange mode when server state updates (e.g. turn changed via auto-pass)
+      if (s.exchangeMode) {
+        s.setExchangeMode(false);
       }
     });
 
@@ -70,12 +75,14 @@ export const useScrabbleSocketListeners = () => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
       s.clearTentativePlacements();
+      s.setExchangeMode(false);
       s.setMessage("Juego reiniciado");
     });
 
     newSocket.on("game-ended", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
+      s.setExchangeMode(false);
       s.setMessage("Juego terminado");
       if (typeof window !== "undefined") {
         localStorage.removeItem("scrabble-session");

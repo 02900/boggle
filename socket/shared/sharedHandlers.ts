@@ -5,6 +5,7 @@ import type { TypedServer, TypedSocket } from "../../src/interfaces/server";
 
 export interface SharedHandlerHooks {
   onPlayerJoined?: (socket: TypedSocket, playerName: string) => void;
+  skipDisconnect?: boolean;
 }
 
 export function setupSharedHandlers(
@@ -63,9 +64,11 @@ export function setupSharedHandlers(
     io.emit("client-side-validation-changed", { enabled });
   });
 
-  socket.on("disconnect", () => {
-    debugLog("EVENT: disconnect", null, socket.id);
-    game.removePlayer(socket.id);
-    socket.broadcast.emit("player-left", socket.id);
-  });
+  if (!hooks?.skipDisconnect) {
+    socket.on("disconnect", () => {
+      debugLog("EVENT: disconnect", null, socket.id);
+      game.removePlayer(socket.id);
+      socket.broadcast.emit("player-left", socket.id);
+    });
+  }
 }

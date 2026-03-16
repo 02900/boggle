@@ -235,6 +235,7 @@ export class ScrabbleGame extends WordGame {
       turnTimeLeft: this.turnTimeLeft,
       tileBagCount: this.tileBag.length,
       consecutivePasses: this.consecutivePasses,
+      moveHistory: this.moveHistory,
     };
   }
 
