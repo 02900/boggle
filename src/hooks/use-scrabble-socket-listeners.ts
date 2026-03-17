@@ -46,7 +46,10 @@ export const useScrabbleSocketListeners = () => {
         if (prev.players.some((p) => p.id === playerId || p.name === playerName)) return prev;
         return {
           ...prev,
-          players: [...prev.players, { id: playerId, name: playerName, score: 0 }],
+          players: [
+            ...prev.players,
+            { id: playerId, name: playerName, score: 0, rackSize: 0, isCurrentTurn: false, wordsFound: [] },
+          ],
         };
       });
     });
