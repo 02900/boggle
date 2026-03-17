@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx playwright:*)",
-      "Bash(pnpm test:e2e)"
+      "Bash(pnpm test:e2e)",
+      "Bash(npx husky:*)"
     ]
   }
 }

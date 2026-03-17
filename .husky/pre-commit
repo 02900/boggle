@@ -1,0 +1,10 @@
+echo "Running unit tests..."
+pnpm test:run || exit 1
+
+echo "Running e2e tests..."
+pnpm test:e2e || exit 1
+
+echo "Running build..."
+pnpm build || exit 1
+
+echo "All checks passed!"
