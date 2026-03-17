@@ -1,7 +1,7 @@
 {
   "gameId": "default-scrabble",
-  "createdAt": "2026-03-16T00:17:04.422Z",
-  "lastUpdatedAt": "2026-03-16T00:17:43.179Z",
+  "createdAt": "2026-03-17T01:34:03.044Z",
+  "lastUpdatedAt": "2026-03-17T01:34:03.044Z",
   "board": [
     [
       {
@@ -1386,20 +1386,80 @@
   ],
   "tileBag": [
     {
-      "id": "tile-1",
-      "letter": "A",
+      "id": "tile-56",
+      "letter": "U",
       "value": 1,
       "isBlank": false
     },
     {
-      "id": "tile-60",
-      "letter": "L",
+      "id": "tile-98",
+      "letter": "",
+      "value": 0,
+      "isBlank": true
+    },
+    {
+      "id": "tile-65",
+      "letter": "T",
       "value": 1,
       "isBlank": false
     },
     {
-      "id": "tile-5",
-      "letter": "A",
+      "id": "tile-21",
+      "letter": "E",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-33",
+      "letter": "I",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-20",
+      "letter": "E",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-87",
+      "letter": "F",
+      "value": 4,
+      "isBlank": false
+    },
+    {
+      "id": "tile-40",
+      "letter": "S",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-30",
+      "letter": "O",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-49",
+      "letter": "N",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-38",
+      "letter": "I",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-45",
+      "letter": "N",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-17",
+      "letter": "E",
       "value": 1,
       "isBlank": false
     },
@@ -1410,8 +1470,176 @@
       "isBlank": false
     },
     {
-      "id": "tile-11",
+      "id": "tile-34",
+      "letter": "I",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-5",
       "letter": "A",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-3",
+      "letter": "A",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-75",
+      "letter": "C",
+      "value": 3,
+      "isBlank": false
+    },
+    {
+      "id": "tile-80",
+      "letter": "B",
+      "value": 3,
+      "isBlank": false
+    },
+    {
+      "id": "tile-58",
+      "letter": "U",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-27",
+      "letter": "O",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-84",
+      "letter": "P",
+      "value": 3,
+      "isBlank": false
+    },
+    {
+      "id": "tile-92",
+      "letter": "J",
+      "value": 8,
+      "isBlank": false
+    },
+    {
+      "id": "tile-35",
+      "letter": "I",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-90",
+      "letter": "CH",
+      "value": 5,
+      "isBlank": false
+    },
+    {
+      "id": "tile-91",
+      "letter": "Q",
+      "value": 5,
+      "isBlank": false
+    },
+    {
+      "id": "tile-46",
+      "letter": "N",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-61",
+      "letter": "L",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-93",
+      "letter": "LL",
+      "value": 8,
+      "isBlank": false
+    },
+    {
+      "id": "tile-81",
+      "letter": "M",
+      "value": 3,
+      "isBlank": false
+    },
+    {
+      "id": "tile-51",
+      "letter": "R",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-70",
+      "letter": "D",
+      "value": 2,
+      "isBlank": false
+    },
+    {
+      "id": "tile-24",
+      "letter": "O",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-69",
+      "letter": "D",
+      "value": 2,
+      "isBlank": false
+    },
+    {
+      "id": "tile-52",
+      "letter": "R",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-55",
+      "letter": "U",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-60",
+      "letter": "L",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-62",
+      "letter": "L",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-67",
+      "letter": "T",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-13",
+      "letter": "E",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-47",
+      "letter": "N",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-22",
+      "letter": "E",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-37",
+      "letter": "I",
       "value": 1,
       "isBlank": false
     },
@@ -1422,25 +1650,25 @@
       "isBlank": false
     },
     {
-      "id": "tile-2",
-      "letter": "A",
-      "value": 1,
+      "id": "tile-97",
+      "letter": "Z",
+      "value": 10,
       "isBlank": false
     },
     {
-      "id": "tile-63",
-      "letter": "L",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-18",
+      "id": "tile-12",
       "letter": "E",
       "value": 1,
       "isBlank": false
     },
     {
-      "id": "tile-24",
+      "id": "tile-66",
+      "letter": "T",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-32",
       "letter": "O",
       "value": 1,
       "isBlank": false
@@ -1452,27 +1680,9 @@
       "isBlank": false
     },
     {
-      "id": "tile-8",
-      "letter": "A",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-90",
-      "letter": "CH",
-      "value": 5,
-      "isBlank": false
-    },
-    {
-      "id": "tile-58",
-      "letter": "U",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-52",
-      "letter": "R",
-      "value": 1,
+      "id": "tile-82",
+      "letter": "M",
+      "value": 3,
       "isBlank": false
     },
     {
@@ -1482,31 +1692,73 @@
       "isBlank": false
     },
     {
-      "id": "tile-3",
+      "id": "tile-78",
+      "letter": "C",
+      "value": 3,
+      "isBlank": false
+    },
+    {
+      "id": "tile-4",
       "letter": "A",
       "value": 1,
       "isBlank": false
     },
     {
-      "id": "tile-25",
-      "letter": "O",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-92",
-      "letter": "J",
+      "id": "tile-94",
+      "letter": "Ñ",
       "value": 8,
       "isBlank": false
     },
     {
-      "id": "tile-68",
+      "id": "tile-74",
+      "letter": "G",
+      "value": 2,
+      "isBlank": false
+    },
+    {
+      "id": "tile-6",
+      "letter": "A",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-76",
+      "letter": "C",
+      "value": 3,
+      "isBlank": false
+    },
+    {
+      "id": "tile-43",
+      "letter": "S",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-72",
       "letter": "D",
       "value": 2,
       "isBlank": false
     },
     {
-      "id": "tile-7",
+      "id": "tile-88",
+      "letter": "V",
+      "value": 4,
+      "isBlank": false
+    },
+    {
+      "id": "tile-31",
+      "letter": "O",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-77",
+      "letter": "C",
+      "value": 3,
+      "isBlank": false
+    },
+    {
+      "id": "tile-0",
       "letter": "A",
       "value": 1,
       "isBlank": false
@@ -1518,27 +1770,123 @@
       "isBlank": false
     },
     {
-      "id": "tile-6",
-      "letter": "A",
-      "value": 1,
-      "isBlank": false
-    },
-    {
       "id": "tile-19",
       "letter": "E",
       "value": 1,
       "isBlank": false
     },
     {
-      "id": "tile-76",
-      "letter": "C",
-      "value": 3,
+      "id": "tile-8",
+      "letter": "A",
+      "value": 1,
       "isBlank": false
     },
     {
-      "id": "tile-97",
-      "letter": "Z",
-      "value": 10,
+      "id": "tile-7",
+      "letter": "A",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-41",
+      "letter": "S",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-29",
+      "letter": "O",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-14",
+      "letter": "E",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-86",
+      "letter": "H",
+      "value": 4,
+      "isBlank": false
+    },
+    {
+      "id": "tile-64",
+      "letter": "T",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-10",
+      "letter": "A",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-71",
+      "letter": "D",
+      "value": 2,
+      "isBlank": false
+    },
+    {
+      "id": "tile-15",
+      "letter": "E",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-54",
+      "letter": "R",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-63",
+      "letter": "L",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-85",
+      "letter": "H",
+      "value": 4,
+      "isBlank": false
+    },
+    {
+      "id": "tile-28",
+      "letter": "O",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-11",
+      "letter": "A",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-2",
+      "letter": "A",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-96",
+      "letter": "X",
+      "value": 8,
+      "isBlank": false
+    },
+    {
+      "id": "tile-59",
+      "letter": "U",
+      "value": 1,
+      "isBlank": false
+    },
+    {
+      "id": "tile-36",
+      "letter": "I",
+      "value": 1,
       "isBlank": false
     },
     {
@@ -1552,400 +1900,52 @@
       "letter": "R",
       "value": 1,
       "isBlank": false
-    },
-    {
-      "id": "tile-0",
-      "letter": "A",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-43",
-      "letter": "S",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-56",
-      "letter": "U",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-94",
-      "letter": "Ñ",
-      "value": 8,
-      "isBlank": false
-    },
-    {
-      "id": "tile-66",
-      "letter": "T",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-22",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-61",
-      "letter": "L",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-87",
-      "letter": "F",
-      "value": 4,
-      "isBlank": false
-    },
-    {
-      "id": "tile-75",
-      "letter": "C",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-35",
-      "letter": "I",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-84",
-      "letter": "P",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-42",
-      "letter": "S",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-17",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-55",
-      "letter": "U",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-15",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-98",
-      "letter": "",
-      "value": 0,
-      "isBlank": true
-    },
-    {
-      "id": "tile-93",
-      "letter": "LL",
-      "value": 8,
-      "isBlank": false
-    },
-    {
-      "id": "tile-64",
-      "letter": "T",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-14",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-71",
-      "letter": "D",
-      "value": 2,
-      "isBlank": false
-    },
-    {
-      "id": "tile-59",
-      "letter": "U",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-34",
-      "letter": "I",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-83",
-      "letter": "P",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-16",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-79",
-      "letter": "B",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-31",
-      "letter": "O",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-82",
-      "letter": "M",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-21",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-65",
-      "letter": "T",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-78",
-      "letter": "C",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-91",
-      "letter": "Q",
-      "value": 5,
-      "isBlank": false
-    },
-    {
-      "id": "tile-4",
-      "letter": "A",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-32",
-      "letter": "O",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-47",
-      "letter": "N",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-12",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-36",
-      "letter": "I",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-33",
-      "letter": "I",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-72",
-      "letter": "D",
-      "value": 2,
-      "isBlank": false
-    },
-    {
-      "id": "tile-95",
-      "letter": "RR",
-      "value": 8,
-      "isBlank": false
-    },
-    {
-      "id": "tile-29",
-      "letter": "O",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-80",
-      "letter": "B",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-28",
-      "letter": "O",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-49",
-      "letter": "N",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-27",
-      "letter": "O",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-51",
-      "letter": "R",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-81",
-      "letter": "M",
-      "value": 3,
-      "isBlank": false
-    },
-    {
-      "id": "tile-40",
-      "letter": "S",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-96",
-      "letter": "X",
-      "value": 8,
-      "isBlank": false
-    },
-    {
-      "id": "tile-88",
-      "letter": "V",
-      "value": 4,
-      "isBlank": false
-    },
-    {
-      "id": "tile-69",
-      "letter": "D",
-      "value": 2,
-      "isBlank": false
-    },
-    {
-      "id": "tile-26",
-      "letter": "O",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-67",
-      "letter": "T",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-23",
-      "letter": "E",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-57",
-      "letter": "U",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-38",
-      "letter": "I",
-      "value": 1,
-      "isBlank": false
-    },
-    {
-      "id": "tile-70",
-      "letter": "D",
-      "value": 2,
-      "isBlank": false
-    },
-    {
-      "id": "tile-74",
-      "letter": "G",
-      "value": 2,
-      "isBlank": false
-    },
-    {
-      "id": "tile-62",
-      "letter": "L",
-      "value": 1,
-      "isBlank": false
     }
   ],
   "players": [
     {
-      "name": "Juan",
+      "name": "Alice",
       "score": 0,
       "rack": [
         {
-          "id": "tile-54",
-          "letter": "R",
+          "id": "tile-26",
+          "letter": "O",
           "value": 1,
           "isBlank": false
         },
         {
-          "id": "tile-41",
+          "id": "tile-16",
+          "letter": "E",
+          "value": 1,
+          "isBlank": false
+        },
+        {
+          "id": "tile-57",
+          "letter": "U",
+          "value": 1,
+          "isBlank": false
+        },
+        {
+          "id": "tile-18",
+          "letter": "E",
+          "value": 1,
+          "isBlank": false
+        },
+        {
+          "id": "tile-23",
+          "letter": "E",
+          "value": 1,
+          "isBlank": false
+        },
+        {
+          "id": "tile-42",
           "letter": "S",
           "value": 1,
           "isBlank": false
         },
         {
-          "id": "tile-45",
-          "letter": "N",
-          "value": 1,
-          "isBlank": false
-        },
-        {
-          "id": "tile-13",
-          "letter": "E",
-          "value": 1,
-          "isBlank": false
-        },
-        {
-          "id": "tile-20",
-          "letter": "E",
-          "value": 1,
-          "isBlank": false
-        },
-        {
-          "id": "tile-77",
-          "letter": "C",
-          "value": 3,
-          "isBlank": false
-        },
-        {
-          "id": "tile-37",
-          "letter": "I",
+          "id": "tile-1",
+          "letter": "A",
           "value": 1,
           "isBlank": false
         }
@@ -1953,9 +1953,27 @@
       "wordsFound": []
     },
     {
-      "name": "Juan",
+      "name": "Bob",
       "score": 0,
       "rack": [
+        {
+          "id": "tile-68",
+          "letter": "D",
+          "value": 2,
+          "isBlank": false
+        },
+        {
+          "id": "tile-25",
+          "letter": "O",
+          "value": 1,
+          "isBlank": false
+        },
+        {
+          "id": "tile-79",
+          "letter": "B",
+          "value": 3,
+          "isBlank": false
+        },
         {
           "id": "tile-89",
           "letter": "Y",
@@ -1963,33 +1981,15 @@
           "isBlank": false
         },
         {
-          "id": "tile-85",
-          "letter": "H",
-          "value": 4,
+          "id": "tile-83",
+          "letter": "P",
+          "value": 3,
           "isBlank": false
         },
         {
-          "id": "tile-86",
-          "letter": "H",
-          "value": 4,
-          "isBlank": false
-        },
-        {
-          "id": "tile-46",
-          "letter": "N",
-          "value": 1,
-          "isBlank": false
-        },
-        {
-          "id": "tile-10",
-          "letter": "A",
-          "value": 1,
-          "isBlank": false
-        },
-        {
-          "id": "tile-30",
-          "letter": "O",
-          "value": 1,
+          "id": "tile-95",
+          "letter": "RR",
+          "value": 8,
           "isBlank": false
         },
         {
@@ -2002,16 +2002,10 @@
       "wordsFound": []
     }
   ],
-  "currentTurnPlayerName": "Juan",
+  "currentTurnPlayerName": "Alice",
   "turnTimeLeft": 120,
-  "consecutivePasses": 1,
+  "consecutivePasses": 0,
   "gameState": "playing",
-  "moveHistory": [
-    {
-      "playerName": "Juan",
-      "type": "pass",
-      "score": 0
-    }
-  ],
+  "moveHistory": [],
   "isFirstTurn": true
 }

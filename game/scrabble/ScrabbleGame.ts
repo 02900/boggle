@@ -243,14 +243,24 @@ export class ScrabbleGame extends WordGame {
     this.board = createEmptyBoard();
     this.tileBag = [];
     this.playerRacks.clear();
-    this.playerOrder = Array.from(this.players.keys());
-    this.currentTurnIndex = 0;
     this.clearTurnTimer();
     this.turnTimeLeft = SCRABBLE_TURN_TIME_LIMIT;
     this.consecutivePasses = 0;
     this.tentativePlacements.clear();
     this.isFirstTurn = true;
     this.moveHistory = [];
+
+    // Remove disconnected players before resetting
+    for (const [playerId, player] of this.players) {
+      if (!player.isConnected) {
+        this.playerRacks.delete(playerId);
+        this.releaseName(player.name);
+        this.players.delete(playerId);
+      }
+    }
+
+    this.playerOrder = Array.from(this.players.keys());
+    this.currentTurnIndex = 0;
 
     super.resetGame();
 

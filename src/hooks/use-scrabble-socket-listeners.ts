@@ -39,6 +39,29 @@ export const useScrabbleSocketListeners = () => {
       }
     });
 
+    newSocket.on("player-joined", ({ playerId, playerName }) => {
+      const s = useScrabbleGameStore.getState();
+      s.setGameState((prev) => {
+        if (!prev) return prev;
+        if (prev.players.some((p) => p.id === playerId || p.name === playerName)) return prev;
+        return {
+          ...prev,
+          players: [...prev.players, { id: playerId, name: playerName, score: 0 }],
+        };
+      });
+    });
+
+    newSocket.on("player-left", (playerId) => {
+      const s = useScrabbleGameStore.getState();
+      s.setGameState((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          players: prev.players.filter((p) => p.id !== playerId),
+        };
+      });
+    });
+
     newSocket.on("game-state", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
