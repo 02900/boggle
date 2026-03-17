@@ -13,7 +13,8 @@
     "test:server": "vitest --project server",
     "test:client": "vitest --project client",
     "typecheck:server": "tsc --noEmit -p tsconfig.server.json",
-    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "next": "15.4.4",
@@ -33,6 +34,7 @@
     "cross-env": "^10.1.0",
     "eslint": "9.32.0",
     "eslint-config-next": "15.4.4",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.0",
     "tailwindcss": "4.1.11",
     "tsx": "^4.21.0",
