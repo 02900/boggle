@@ -23,8 +23,9 @@ describe("setupScrabbleHandlers", () => {
 
   beforeEach(() => {
     io = createMockIO();
-    socket = createMockSocket("socket-1");
+    socket = createMockSocket("socket-1", "scrabble");
     game = createMockScrabbleGame();
+    io._addSocket(socket);
     setupScrabbleHandlers(io as any, socket as any, game as any);
   });
 
@@ -38,6 +39,8 @@ describe("setupScrabbleHandlers", () => {
 
       expect(game.startGame).toHaveBeenCalled();
       expect(io.emit).toHaveBeenCalledWith("game-started", expect.anything());
+      // Also sends per-player game-state with rack
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("does not emit when startGame returns false", () => {
@@ -128,7 +131,8 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("pass-turn");
 
       expect(game.passTurn).toHaveBeenCalledWith("socket-1");
-      expect(io.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("emits error on failure", () => {

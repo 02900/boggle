@@ -32,6 +32,14 @@ export function setupScrabbleHandlers(
     const result = game.startGame();
     if (result && result.success) {
       io.emit("game-started", game.getGameState());
+      // Send each player their private rack
+      for (const [, s] of io.sockets.sockets) {
+        const raw = s.handshake.query.game;
+        const sGameType = Array.isArray(raw) ? raw[0] : raw;
+        if (sGameType === "scrabble" && game.players.has(s.id)) {
+          s.emit("game-state", game.getGameStateForPlayer(s.id));
+        }
+      }
       autoSave(game, gameId);
     }
   });
@@ -87,7 +95,8 @@ export function setupScrabbleHandlers(
     const result = game.passTurn(socket.id);
 
     if (result.success) {
-      io.emit("game-state", game.getGameState());
+      socket.broadcast.emit("game-state", game.getGameState());
+      socket.emit("game-state", game.getGameStateForPlayer(socket.id));
       autoSave(game, gameId);
     } else {
       socket.emit("word-result", { valid: false, reason: result.reason });

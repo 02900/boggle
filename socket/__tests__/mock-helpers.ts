@@ -23,14 +23,20 @@ export type MockSocket = ReturnType<typeof createMockSocket>;
 export function createMockIO() {
   let connectionHandler: Function | null = null;
   const toEmit = vi.fn();
+  const connectedSockets = new Map<string, MockSocket>();
   return {
     on: vi.fn((event: string, handler: Function) => {
       if (event === "connection") connectionHandler = handler;
     }),
     emit: vi.fn(),
     to: vi.fn(() => ({ emit: toEmit })),
+    sockets: { sockets: connectedSockets },
     _simulateConnection: (socket: MockSocket) => {
+      connectedSockets.set(socket.id, socket);
       if (connectionHandler) connectionHandler(socket);
+    },
+    _addSocket: (socket: MockSocket) => {
+      connectedSockets.set(socket.id, socket);
     },
     _toEmit: toEmit,
   };

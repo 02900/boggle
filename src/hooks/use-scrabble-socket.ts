@@ -33,6 +33,7 @@ export const useScrabbleSocket = () => {
   );
 
   const recallTiles = useCallback(() => {
+    useScrabbleGameStore.getState().clearTentativePlacements();
     socket?.emit("recall-tiles");
   }, [socket]);
 
@@ -41,6 +42,7 @@ export const useScrabbleSocket = () => {
   }, [socket]);
 
   const passTurn = useCallback(() => {
+    useScrabbleGameStore.getState().clearTentativePlacements();
     socket?.emit("pass-turn");
   }, [socket]);
 
