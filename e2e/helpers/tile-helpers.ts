@@ -1,10 +1,10 @@
 /**
  * Common short Spanish words that are likely in the dictionary.
  * Used to find a playable word from random rack tiles.
+ * NOTE: the server dictionary only contains words of 3+ letters
+ * (see game/shared/WordGame.ts), so 2-letter words must not be used.
  */
 const COMMON_WORDS = [
-  // 2-letter words
-  "as", "da", "si", "no", "ya", "ir",
   // 3-letter words
   "sol", "sal", "mar", "pan", "rio", "luz", "eso", "uso",
   "era", "son", "ser", "oro", "uno", "sur", "sin", "dos",
