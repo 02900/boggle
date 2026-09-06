@@ -1,4 +1,5 @@
 import { createServer } from "http";
+import { networkInterfaces } from "os";
 import next from "next";
 import { Server } from "socket.io";
 
@@ -13,6 +14,19 @@ import type { ScrabbleGameEvents, ScrabbleClientEvents } from "./src/interfaces/
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
 const port = Number(process.env.PORT) || 3000;
+
+function getLocalIPs(): string[] {
+  const ips: string[] = [];
+  const interfaces = networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] ?? []) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+  return ips;
+}
 
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
@@ -41,5 +55,8 @@ app.prepare().then(() => {
     })
     .listen(port, () => {
       console.log(`> Ready on http://${hostname}:${port}`);
+      for (const ip of getLocalIPs()) {
+        console.log(`> Network: http://${ip}:${port}`);
+      }
     });
 });
