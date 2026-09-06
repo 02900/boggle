@@ -34,14 +34,14 @@ export const BoggleGameMain = () => {
 
       {/* Modal de Configuración */}
       {modalType === ModalType.Settings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <GameSettings />
         </div>
       )}
 
       {/* Modal de Instrucciones */}
       {modalType === ModalType.Instructions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <GameInstructions />
         </div>
       )}

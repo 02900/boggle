@@ -124,7 +124,7 @@ export const PlayersList = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
-      <h3 className="text-xl font-bold mb-3 flex items-center">
+      <h3 className="text-xl font-bold mb-3 flex items-center text-gray-800">
         <span className="mr-2">👥</span>
         {gameState.gameState === "finished" && gameState.allParticipants ? (
           <>

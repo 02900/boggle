@@ -11,7 +11,7 @@ export const MobileFooter = () => {
   if (gameState.gameState !== "playing") return null;
 
   return (
-    <div className="bg-white shadow-sm p-3 border-t mt-auto">
+    <div className="fixed bottom-0 inset-x-0 z-40 bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.08)] p-3 border-t min-h-14">
       {currentWord && (
         <div className="text-center mb-2">
           <span className="text-lg font-bold text-blue-600">{currentWord}</span>

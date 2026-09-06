@@ -4,7 +4,6 @@ import React from "react";
 import { useSocket } from "@/hooks/useSocket";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useBoggleGameMainStore } from "../boogle-game-main.store";
-import { ClientValidationToggleMobile } from "../../ClientValidationToggleMobile";
 
 export const MobileHeader = () => {
   const { setModalType } = useModalStore();
@@ -94,9 +93,6 @@ export const MobileHeader = () => {
           </div>
         </div>
       )}
-
-      {/* Feature Flag: Validación del Cliente (Móvil) */}
-      <ClientValidationToggleMobile />
     </div>
   );
 };
