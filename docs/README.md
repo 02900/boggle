@@ -22,6 +22,10 @@ Technical documentation for the real-time multiplayer Boggle game.
 - [Utilities](./frontend/utils.md) - Helper functions: scoring, validation, path checking
 - [Components](./frontend/components.md) - React components: structure and responsibilities
 
+### Scrabble
+
+- [Estado actual y plan de mejora](./scrabble/estado-actual-y-plan.md) - Auditoría de lógica, UI/UX, estados intermedios y plan por fases
+
 ### Types
 
 - [TypeScript Interfaces](./types.md) - Player, GameState, DiceRoll, WordResult, and events

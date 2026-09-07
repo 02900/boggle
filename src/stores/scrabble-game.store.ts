@@ -44,6 +44,7 @@ interface ScrabbleGameStore {
   setSelectedTile: (tile: ScrabbleTile | null) => void;
   addTentativePlacement: (placement: TilePlacement) => void;
   removeTentativePlacement: (tileId: string) => void;
+  setTentativePlacements: (placements: TilePlacement[]) => void;
   clearTentativePlacements: () => void;
   setMessage: (message: string) => void;
   setExchangeMode: (mode: boolean) => void;
@@ -96,6 +97,7 @@ export const useScrabbleGameStore = create<ScrabbleGameStore>((set) => ({
         (p) => p.tile.id !== tileId
       ),
     })),
+  setTentativePlacements: (tentativePlacements) => set({ tentativePlacements }),
   clearTentativePlacements: () => set({ tentativePlacements: [] }),
   setMessage: (message) => set({ message }),
   setExchangeMode: (exchangeMode) =>

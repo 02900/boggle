@@ -14,13 +14,6 @@ export const useScrabbleSocket = () => {
     [socket]
   );
 
-  const rejoinGame = useCallback(
-    (playerName: string, gameId: string) => {
-      socket?.emit("rejoin-game", { playerName, gameId });
-    },
-    [socket]
-  );
-
   const startGame = useCallback(() => {
     socket?.emit("start-game");
   }, [socket]);
@@ -59,7 +52,6 @@ export const useScrabbleSocket = () => {
 
   return {
     joinGame,
-    rejoinGame,
     startGame,
     placeTiles,
     recallTiles,

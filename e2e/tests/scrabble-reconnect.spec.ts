@@ -6,9 +6,7 @@ test.describe("Scrabble - Reconnection", () => {
     await resetServerGame();
   });
 
-  // TODO: reconnection is broken — server never sends gameId to client during game-started,
-  // so localStorage session is never saved and rejoin-game cannot work.
-  test.fixme("player can rejoin after page refresh", async ({
+  test("player can rejoin after page refresh", async ({
     player1Page,
     player2Page,
   }) => {
@@ -46,7 +44,7 @@ test.describe("Scrabble - Reconnection", () => {
     expect(names).toContain("Bob");
   });
 
-  test.fixme("reconnected player retains their score", async ({
+  test("reconnected player retains their score", async ({
     player1Page,
     player2Page,
   }) => {

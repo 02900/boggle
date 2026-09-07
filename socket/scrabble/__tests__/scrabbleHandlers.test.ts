@@ -43,6 +43,15 @@ describe("setupScrabbleHandlers", () => {
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
+    it("includes the gameId in game-started so clients can persist the session", () => {
+      socket._trigger("start-game");
+
+      expect(io.emit).toHaveBeenCalledWith(
+        "game-started",
+        expect.objectContaining({ gameId: "default-scrabble" })
+      );
+    });
+
     it("does not emit when startGame returns false", () => {
       game.startGame.mockReturnValue(false as any);
       socket._trigger("start-game");
@@ -70,6 +79,9 @@ describe("setupScrabbleHandlers", () => {
         valid: false,
         reason: "No es tu turno",
       });
+      // The player still gets their authoritative state so the UI can resync
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.broadcast.emit).not.toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("rejects invalid data", () => {
@@ -108,11 +120,12 @@ describe("setupScrabbleHandlers", () => {
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
-    it("does not emit game-state on invalid submission", () => {
+    it("sends the submitter their refreshed private state on invalid submission (tiles were recalled)", () => {
       game.submitTurn.mockReturnValue({ valid: false, reason: "Palabra inválida" });
       socket._trigger("submit-turn");
 
-      expect(io.emit).not.toHaveBeenCalledWith("game-state", expect.anything());
+      expect(game.getGameStateForPlayer).toHaveBeenCalledWith("socket-1");
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("emits error reason on invalid submission", () => {
@@ -281,6 +294,36 @@ describe("setupScrabbleHandlers", () => {
         playerId: "socket-1",
         playerName: "Alice",
       });
+    });
+
+    it("kicks a stale still-connected socket with the same name before reconnecting (newest wins)", async () => {
+      const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
+      vi.mocked(loadSession).mockReturnValue({
+        gameId: "g1",
+        createdAt: "",
+        lastUpdatedAt: "",
+        board: [],
+        tileBag: [],
+        players: [{ name: "Alice", score: 0, rack: [], wordsFound: [] }],
+        currentTurnPlayerName: null,
+        turnTimeLeft: 120,
+        consecutivePasses: 0,
+        gameState: "playing",
+        moveHistory: [],
+        isFirstTurn: false,
+      });
+      // Old socket hasn't been seen disconnecting yet
+      const staleSocket = createMockSocket("old-socket", "scrabble");
+      io._addSocket(staleSocket);
+      const stalePlayer = { id: "old-socket", name: "Alice", isConnected: true };
+      game.players = new Map([["old-socket", stalePlayer]]) as any;
+
+      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+
+      expect(staleSocket.disconnect).toHaveBeenCalledWith(true);
+      expect(stalePlayer.isConnected).toBe(false);
+      expect(game.reconnectPlayer).toHaveBeenCalledWith("Alice", "socket-1");
+      expect(socket.emit).toHaveBeenCalledWith("rejoin-success", expect.anything());
     });
 
     it("emits rejoin-failed when data is missing", () => {

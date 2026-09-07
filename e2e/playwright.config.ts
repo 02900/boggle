@@ -13,7 +13,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "cross-env PORT=3001 pnpm dev",
+    command: "cross-env PORT=3001 NEXT_DIST_DIR=.next-e2e pnpm dev",
     port: 3001,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

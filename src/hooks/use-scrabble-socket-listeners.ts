@@ -7,6 +7,21 @@ import type { ScrabbleGameEvents, ScrabbleClientEvents } from "@/interfaces/scra
 
 type ScrabbleSocket = Socket<ScrabbleGameEvents, ScrabbleClientEvents>;
 
+const SESSION_KEY = "scrabble-session";
+
+function readStoredSession(): { gameId: string; playerName: string } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    const session = raw ? JSON.parse(raw) : null;
+    if (session?.gameId && session?.playerName) return session;
+  } catch {
+    // fallthrough: corrupted value
+  }
+  localStorage.removeItem(SESSION_KEY);
+  return null;
+}
+
 export const useScrabbleSocketListeners = () => {
   const initializedRef = useRef(false);
 
@@ -19,9 +34,19 @@ export const useScrabbleSocketListeners = () => {
     store.setSocket(newSocket);
 
     newSocket.on("connect", () => {
-      useScrabbleGameStore.getState().setIsConnected(true);
+      const s = useScrabbleGameStore.getState();
+      s.setIsConnected(true);
       if (newSocket.id) {
-        useScrabbleGameStore.getState().setCurrentPlayerId(newSocket.id);
+        s.setCurrentPlayerId(newSocket.id);
+      }
+      // Auto-rejoin a persisted session. Done here (not in JoinForm's effect)
+      // because the socket doesn't exist yet when child effects run, and this
+      // also covers network reconnects, which get a fresh socket id.
+      const session = readStoredSession();
+      if (session) {
+        s.setGameId(session.gameId);
+        s.setPlayerName(session.playerName);
+        newSocket.emit("rejoin-game", session);
       }
     });
 
@@ -43,7 +68,14 @@ export const useScrabbleSocketListeners = () => {
       const s = useScrabbleGameStore.getState();
       s.setGameState((prev) => {
         if (!prev) return prev;
-        if (prev.players.some((p) => p.id === playerId || p.name === playerName)) return prev;
+        if (prev.players.some((p) => p.id === playerId)) return prev;
+        // Same name, new id → the player reconnected; keep their data, swap the id
+        if (prev.players.some((p) => p.name === playerName)) {
+          return {
+            ...prev,
+            players: prev.players.map((p) => (p.name === playerName ? { ...p, id: playerId } : p)),
+          };
+        }
         return {
           ...prev,
           players: [
@@ -68,8 +100,10 @@ export const useScrabbleSocketListeners = () => {
     newSocket.on("game-state", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
-      if (state.rack) {
+      // Private view: the server is the source of truth for rack + tentative placements
+      if ("rack" in state) {
         s.setRack(state.rack);
+        s.setTentativePlacements(state.tentativePlacements);
       }
       // Clear exchange mode when server state updates (e.g. turn changed via auto-pass)
       if (s.exchangeMode) {
@@ -82,19 +116,20 @@ export const useScrabbleSocketListeners = () => {
       s.setGameState(state);
       s.clearTentativePlacements();
       s.setMessage("Juego iniciado");
-      if (typeof window !== "undefined" && s.gameId && s.playerName) {
-        localStorage.setItem("scrabble-session", JSON.stringify({ gameId: s.gameId, playerName: s.playerName }));
+      const gameId = state.gameId ?? s.gameId;
+      if (state.gameId) s.setGameId(state.gameId);
+      if (typeof window !== "undefined" && gameId && s.playerName) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerName: s.playerName }));
       }
     });
 
     newSocket.on("word-result", (result) => {
       const s = useScrabbleGameStore.getState();
-      if (result.valid) {
-        s.setMessage(result.points ? `+${result.points} puntos` : "Turno válido");
-        s.clearTentativePlacements();
-      } else {
-        s.setMessage(result.reason ?? "Error");
-      }
+      s.setMessage(
+        result.valid
+          ? result.points ? `+${result.points} puntos` : "Turno válido"
+          : result.reason ?? "Error"
+      );
     });
 
     newSocket.on("game-reset", (state) => {
@@ -103,6 +138,9 @@ export const useScrabbleSocketListeners = () => {
       s.clearTentativePlacements();
       s.setExchangeMode(false);
       s.setMessage("Juego reiniciado");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(SESSION_KEY);
+      }
     });
 
     newSocket.on("game-ended", (state) => {
@@ -111,7 +149,7 @@ export const useScrabbleSocketListeners = () => {
       s.setExchangeMode(false);
       s.setMessage("Juego terminado");
       if (typeof window !== "undefined") {
-        localStorage.removeItem("scrabble-session");
+        localStorage.removeItem(SESSION_KEY);
       }
     });
 
@@ -124,9 +162,8 @@ export const useScrabbleSocketListeners = () => {
     newSocket.on("rejoin-success", (state) => {
       const s = useScrabbleGameStore.getState();
       s.setGameState(state);
-      if (state.rack) {
-        s.setRack(state.rack);
-      }
+      s.setRack(state.rack);
+      s.setTentativePlacements(state.tentativePlacements);
       if (state.gameId) {
         s.setGameId(state.gameId);
       }
@@ -135,7 +172,7 @@ export const useScrabbleSocketListeners = () => {
       const gameId = state.gameId ?? s.gameId;
       const playerName = s.playerName;
       if (typeof window !== "undefined" && gameId && playerName) {
-        localStorage.setItem("scrabble-session", JSON.stringify({ gameId, playerName }));
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerName }));
       }
     });
 
@@ -143,6 +180,10 @@ export const useScrabbleSocketListeners = () => {
       const s = useScrabbleGameStore.getState();
       s.setMessage(data.reason);
       s.setGameId(null);
+      // Stale session: drop it so we don't retry on every connect
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(SESSION_KEY);
+      }
     });
 
     return () => {

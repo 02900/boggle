@@ -95,9 +95,15 @@ export interface SerializedScrabbleGame {
 
 import type { WordResult, ScoreboardEntry } from "./game";
 
+/** Private per-player view: includes the rack and the player's own tentative placements. */
+export interface ScrabblePlayerGameState extends ScrabbleGameState {
+  rack: ScrabbleTile[];
+  tentativePlacements: TilePlacement[];
+}
+
 export interface ScrabbleGameEvents {
-  "game-state": (state: ScrabbleGameState & { rack?: ScrabbleTile[] }) => void;
-  "game-started": (state: ScrabbleGameState) => void;
+  "game-state": (state: ScrabbleGameState | ScrabblePlayerGameState) => void;
+  "game-started": (state: ScrabbleGameState & { gameId?: string }) => void;
   "game-ended": (state: ScrabbleGameState) => void;
   "game-reset": (state: ScrabbleGameState) => void;
   "word-result": (result: WordResult) => void;
@@ -107,7 +113,7 @@ export interface ScrabbleGameEvents {
   "scoreboard-data": (data: ScoreboardEntry[]) => void;
   "client-side-validation-changed": (data: { enabled: boolean }) => void;
   "turn-timer-update": (timeLeft: number) => void;
-  "rejoin-success": (state: ScrabbleGameState & { rack: ScrabbleTile[]; gameId?: string }) => void;
+  "rejoin-success": (state: ScrabblePlayerGameState & { gameId?: string }) => void;
   "rejoin-failed": (data: { reason: string }) => void;
 }
 

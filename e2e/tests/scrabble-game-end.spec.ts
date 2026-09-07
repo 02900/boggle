@@ -1,6 +1,9 @@
 import { test, expect, resetServerGame } from "../fixtures/scrabble-fixture";
 import { ScrabblePage } from "../helpers/scrabble-page";
 
+// Must match SCRABBLE_MAX_CONSECUTIVE_PASSES in config/scrabbleConstants.ts
+const MAX_CONSECUTIVE_PASSES = 6;
+
 test.describe("Scrabble - Game end", () => {
   let p1: ScrabblePage;
   let p2: ScrabblePage;
@@ -21,18 +24,35 @@ test.describe("Scrabble - Game end", () => {
     await expect(p2.turnIndicator).toBeVisible();
   });
 
-  test("game ends when all players pass consecutively", async () => {
-    // Determine who goes first
+  /** Alternates passes between both players until the pass limit is reached. */
+  async function passUntilGameEnds(first: ScrabblePage, second: ScrabblePage) {
+    for (let i = 0; i < MAX_CONSECUTIVE_PASSES; i++) {
+      const active = i % 2 === 0 ? first : second;
+      const waiting = i % 2 === 0 ? second : first;
+      await active.passTurn();
+      if (i < MAX_CONSECUTIVE_PASSES - 1) await waiting.waitForMyTurn();
+    }
+  }
+
+  test("game ends after the consecutive-pass limit, not before", async () => {
     const p1IsFirst = await p1.isMyTurn();
     const first = p1IsFirst ? p1 : p2;
     const second = p1IsFirst ? p2 : p1;
 
-    // First player passes
+    // One full round of passes must NOT end the game
     await first.passTurn();
     await second.waitForMyTurn();
-
-    // Second player passes
     await second.passTurn();
+    await first.waitForMyTurn();
+    await expect(first.gameEndHeading).not.toBeVisible();
+
+    // Complete the remaining passes
+    for (let i = 2; i < MAX_CONSECUTIVE_PASSES; i++) {
+      const active = i % 2 === 0 ? first : second;
+      const waiting = i % 2 === 0 ? second : first;
+      await active.passTurn();
+      if (i < MAX_CONSECUTIVE_PASSES - 1) await waiting.waitForMyTurn();
+    }
 
     // Game should end — "Juego Terminado" should appear for both
     await expect(first.gameEndHeading).toBeVisible({ timeout: 10_000 });
@@ -48,10 +68,7 @@ test.describe("Scrabble - Game end", () => {
     const first = p1IsFirst ? p1 : p2;
     const second = p1IsFirst ? p2 : p1;
 
-    // End the game by consecutive passes
-    await first.passTurn();
-    await second.waitForMyTurn();
-    await second.passTurn();
+    await passUntilGameEnds(first, second);
 
     // Wait for game to end
     await expect(first.gameEndHeading).toBeVisible({ timeout: 10_000 });

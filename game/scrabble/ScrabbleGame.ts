@@ -2,6 +2,8 @@ import {
   SCRABBLE_TURN_TIME_LIMIT,
   SCRABBLE_RACK_SIZE,
   SCRABBLE_BOARD_SIZE,
+  SCRABBLE_MIN_WORD_LENGTH,
+  SCRABBLE_MAX_CONSECUTIVE_PASSES,
 } from "../../config/scrabbleConstants";
 import {
   createEmptyBoard,
@@ -16,6 +18,7 @@ import type {
   ScrabbleBoardCell,
   ScrabbleTile,
   ScrabbleGameState,
+  ScrabblePlayerGameState,
   ScrabblePlayer,
   TilePlacement,
   ScoredWord,
@@ -38,7 +41,7 @@ export class ScrabbleGame extends WordGame {
   moveHistory: MoveRecord[];
 
   constructor() {
-    super({ timeLimit: SCRABBLE_TURN_TIME_LIMIT });
+    super({ timeLimit: SCRABBLE_TURN_TIME_LIMIT, minWordLength: SCRABBLE_MIN_WORD_LENGTH });
     this.board = createEmptyBoard();
     this.tileBag = [];
     this.playerRacks = new Map();
@@ -517,7 +520,7 @@ export class ScrabbleGame extends WordGame {
     debugLog("SCRABBLE_TURN_PASSED", {
       playerId,
       consecutivePasses: this.consecutivePasses,
-      threshold: this.playerOrder.length,
+      threshold: SCRABBLE_MAX_CONSECUTIVE_PASSES,
     });
 
     // Check if all players have passed consecutively
@@ -859,7 +862,7 @@ export class ScrabbleGame extends WordGame {
 
   isGameOver(): boolean {
     // All active players passed/exchanged consecutively
-    if (this.consecutivePasses >= this.playerOrder.length) {
+    if (this.consecutivePasses >= SCRABBLE_MAX_CONSECUTIVE_PASSES) {
       debugLog("SCRABBLE_GAME_OVER", { reason: "All players passed consecutively" });
       return true;
     }
@@ -898,12 +901,13 @@ export class ScrabbleGame extends WordGame {
   }
 
   /**
-   * Get the full game state including a specific player's rack.
+   * Get the full game state including a specific player's rack and tentative placements.
    */
-  getGameStateForPlayer(playerId: string): ScrabbleGameState & { rack: ScrabbleTile[] } {
+  getGameStateForPlayer(playerId: string): ScrabblePlayerGameState {
     return {
       ...this.getGameState(),
       rack: this.getPlayerRack(playerId),
+      tentativePlacements: [...(this.tentativePlacements.get(playerId) ?? [])],
     };
   }
 

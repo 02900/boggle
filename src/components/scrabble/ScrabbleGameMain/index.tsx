@@ -12,30 +12,16 @@ import { MoveHistory } from "../MoveHistory";
 import { useState, useEffect } from "react";
 
 function JoinForm() {
-  const { joinGame, rejoinGame } = useScrabbleSocket();
-  const { isConnected, setGameId } = useScrabbleGameStore();
+  const { joinGame } = useScrabbleSocket();
+  const { isConnected } = useScrabbleGameStore();
   const [name, setName] = useState("");
   const [showInstructions, setShowInstructions] = useState(false);
 
+  // Session auto-rejoin lives in useScrabbleSocketListeners (on socket connect)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const savedName = localStorage.getItem("scrabble-player-name");
     if (savedName) setName(savedName);
-
-    // Try to rejoin if session exists
-    const sessionStr = localStorage.getItem("scrabble-session");
-    if (sessionStr) {
-      try {
-        const session = JSON.parse(sessionStr);
-        if (session.gameId && session.playerName) {
-          setGameId(session.gameId);
-          rejoinGame(session.playerName, session.gameId);
-        }
-      } catch {
-        localStorage.removeItem("scrabble-session");
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleJoin = () => {

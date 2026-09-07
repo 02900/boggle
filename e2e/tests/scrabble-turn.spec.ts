@@ -99,6 +99,28 @@ test.describe("Scrabble - Turns", () => {
     await expect(activePlayer.tileRack.locator("button")).toHaveCount(tilesBefore);
   });
 
+  test("an invalid submission returns the tiles to the rack (no ghost tile on board)", async () => {
+    const activePlayer = (await p1.isMyTurn()) ? p1 : p2;
+    const tilesBefore = await activePlayer.getRackTileCount();
+
+    // A single tile alone is never a valid play (either no word is formed, or a
+    // digraph tile like "RR"/"LL"/"CH" isn't in the dictionary) → server rejects and recalls it
+    await activePlayer.selectRackTile(0);
+    await activePlayer.clickBoardCell(7, 7);
+    await expect(activePlayer.tileRack.locator("button")).toHaveCount(tilesBefore - 1);
+    await activePlayer.submitTurn();
+
+    await expect(activePlayer.messageBox).toContainText(
+      /No se formó ninguna palabra|no está en el diccionario/
+    );
+    // Client must resync with the server: rack restored, board cell empty, still my turn
+    await expect(activePlayer.tileRack.locator("button")).toHaveCount(tilesBefore);
+    const centerCell = activePlayer.boardGrid.locator("> button").nth(7 * 15 + 7);
+    await expect(centerCell.locator("button")).toHaveCount(0);
+    expect(await activePlayer.isMyTurn()).toBe(true);
+    await expect(activePlayer.exchangeButton).toBeEnabled();
+  });
+
   test("submitting a valid word scores points and advances turn", async () => {
     const p1IsActive = await p1.isMyTurn();
     const activePlayer = p1IsActive ? p1 : p2;

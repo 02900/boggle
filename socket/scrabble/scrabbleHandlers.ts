@@ -31,7 +31,8 @@ export function setupScrabbleHandlers(
 
     const result = game.startGame();
     if (result && result.success) {
-      io.emit("game-started", game.getGameState());
+      // gameId lets clients persist a session for reconnection
+      io.emit("game-started", { ...game.getGameState(), gameId });
       // Send each player their private rack
       for (const [, s] of io.sockets.sockets) {
         const raw = s.handshake.query.game;
@@ -56,10 +57,11 @@ export function setupScrabbleHandlers(
 
     if (result.success) {
       socket.broadcast.emit("game-state", game.getGameState());
-      socket.emit("game-state", game.getGameStateForPlayer(socket.id));
     } else {
       socket.emit("word-result", { valid: false, reason: result.reason });
     }
+    // Always send the player their authoritative rack + tentative placements
+    socket.emit("game-state", game.getGameStateForPlayer(socket.id));
   });
 
   socket.on("recall-tiles", () => {
@@ -82,11 +84,11 @@ export function setupScrabbleHandlers(
       word: result.words?.map((w) => w.word).join(", "),
     });
 
-    if (result.valid) {
-      socket.broadcast.emit("game-state", game.getGameState());
-      socket.emit("game-state", game.getGameStateForPlayer(socket.id));
-      autoSave(game, gameId);
-    }
+    // On invalid turns the game recalls the tentative tiles server-side, so the
+    // player must receive the refreshed state too or their view desyncs.
+    socket.broadcast.emit("game-state", game.getGameState());
+    socket.emit("game-state", game.getGameStateForPlayer(socket.id));
+    if (result.valid) autoSave(game, gameId);
   });
 
   socket.on("pass-turn", () => {
@@ -166,6 +168,14 @@ export function setupScrabbleHandlers(
       sessionCreatedAt.set(data.gameId, sessionData.createdAt);
     }
 
+    // Newest connection wins: on a page reload the new socket's rejoin can arrive
+    // before the old socket's disconnect is processed. Drop the stale one first.
+    const existing = [...game.players.values()].find((p) => p.name === data.playerName);
+    if (existing && existing.isConnected && existing.id !== socket.id) {
+      io.sockets.sockets.get(existing.id)?.disconnect(true);
+      existing.isConnected = false;
+    }
+
     const reconnected = game.reconnectPlayer(data.playerName, socket.id);
     if (!reconnected) {
       socket.emit("rejoin-failed", { reason: "Error al reconectar" });
@@ -197,7 +207,10 @@ export function setupScrabbleHandlers(
     debugLog("EVENT: disconnect (scrabble)", null, socket.id);
 
     const player = game.players.get(socket.id);
-    if (!player || game.gameState !== "playing") {
+    // Already remapped to a new socket (reconnect) or never joined: nothing to announce
+    if (!player) return;
+
+    if (game.gameState !== "playing") {
       game.removePlayer(socket.id);
       socket.broadcast.emit("player-left", socket.id);
       return;

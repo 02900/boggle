@@ -7,7 +7,7 @@ vi.mock("../../../utils/debug", () => ({ debugLog: vi.fn() }));
 
 // Mock dictionary
 vi.mocked(fs.readFileSync).mockReturnValue(
-  "casa\nmesa\nsilla\nagua\nfuego\ngato\nperro\ntierra\naire\namor\ntiempo\nlugar\ncosa\npersona\nanimal\nplanta\ncomida\nsol\nsal\nmar\npan\nrio\nluz\n"
+  "casa\nmesa\nsilla\nagua\nfuego\ngato\nperro\ntierra\naire\namor\ntiempo\nlugar\ncosa\npersona\nanimal\nplanta\ncomida\nsol\nsal\nmar\npan\nrio\nluz\nde\nla\nel\na\n"
 );
 
 import { ScrabbleGame } from "../ScrabbleGame";
@@ -17,6 +17,7 @@ import {
   SCRABBLE_RACK_SIZE,
   SCRABBLE_BOARD_SIZE,
   SCRABBLE_TURN_TIME_LIMIT,
+  SCRABBLE_MAX_CONSECUTIVE_PASSES,
 } from "../../../config/scrabbleConstants";
 
 // ---- Helpers ----
@@ -118,6 +119,45 @@ describe("ScrabbleGame", () => {
     it("starts with empty playerRacks and playerOrder", () => {
       expect(game.playerRacks.size).toBe(0);
       expect(game.playerOrder).toHaveLength(0);
+    });
+
+    it("loads 2-letter words into the dictionary (Scrabble allows them) but not 1-letter", () => {
+      expect(game.words.has("de")).toBe(true);
+      expect(game.words.has("la")).toBe(true);
+      expect(game.words.has("casa")).toBe(true);
+      expect(game.words.has("a")).toBe(false);
+    });
+  });
+
+  // ===========================================================================
+  // getGameStateForPlayer
+  // ===========================================================================
+  describe("getGameStateForPlayer", () => {
+    it("includes the player's rack and tentative placements", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const tile = makeTile("A", 1, "priv-a");
+      game.playerRacks.set(playerId, [tile, makeTile("B", 3, "priv-b")]);
+      game.placeTiles(playerId, [{ tile, row: 7, col: 7 }]);
+
+      const state = game.getGameStateForPlayer(playerId);
+      expect(state.rack.map((t) => t.id)).toEqual(["priv-b"]);
+      expect(state.tentativePlacements).toEqual([{ tile, row: 7, col: 7 }]);
+    });
+
+    it("returns empty tentative placements after an invalid submit recalled the tiles", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const tile = makeTile("Z", 10, "priv-z");
+      game.playerRacks.set(playerId, [tile]);
+      game.placeTiles(playerId, [{ tile, row: 7, col: 7 }]);
+
+      const result = game.submitTurn(playerId);
+      expect(result.valid).toBe(false);
+
+      const state = game.getGameStateForPlayer(playerId);
+      expect(state.tentativePlacements).toEqual([]);
+      expect(state.rack.map((t) => t.id)).toEqual(["priv-z"]);
     });
   });
 
@@ -556,16 +596,16 @@ describe("ScrabbleGame", () => {
       expect(game.consecutivePasses).toBe(passesBefore + 1);
     });
 
-    it("ends the game when all players pass consecutively", () => {
+    it("ends the game after SCRABBLE_MAX_CONSECUTIVE_PASSES passes, not before", () => {
       setupGameForPlay(game);
 
-      // Both players pass (2 players, 2 consecutive passes should end the game)
-      const first = game.getCurrentTurnPlayerId()!;
-      game.passTurn(first);
-      game.clearTimers();
+      for (let i = 0; i < SCRABBLE_MAX_CONSECUTIVE_PASSES - 1; i++) {
+        game.passTurn(game.getCurrentTurnPlayerId()!);
+        game.clearTimers();
+        expect(game.gameState).toBe("playing");
+      }
 
-      const second = game.getCurrentTurnPlayerId()!;
-      game.passTurn(second);
+      game.passTurn(game.getCurrentTurnPlayerId()!);
       game.clearTimers();
 
       expect(game.gameState).toBe("finished");
@@ -889,10 +929,11 @@ describe("ScrabbleGame", () => {
   // isGameOver
   // ===========================================================================
   describe("isGameOver", () => {
-    it("returns true when all players have passed consecutively", () => {
+    it("returns true once the consecutive-pass limit is reached", () => {
       setupGameForPlay(game);
-      // Set consecutivePasses to equal player count
-      game.consecutivePasses = game.playerOrder.length;
+      game.consecutivePasses = SCRABBLE_MAX_CONSECUTIVE_PASSES - 1;
+      expect(game.isGameOver()).toBe(false);
+      game.consecutivePasses = SCRABBLE_MAX_CONSECUTIVE_PASSES;
       expect(game.isGameOver()).toBe(true);
     });
 

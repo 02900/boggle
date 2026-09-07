@@ -12,6 +12,7 @@ export interface GameIO {
 
 export interface WordGameConfig {
   timeLimit: number;
+  minWordLength?: number;
 }
 
 export abstract class WordGame {
@@ -75,12 +76,13 @@ export abstract class WordGame {
       const dictionaryPath = path.join(process.cwd(), "file-2017.txt");
       const fileContent = fs.readFileSync(dictionaryPath, "utf8");
 
+      const minWordLength = this.config.minWordLength ?? 3;
       const allWords = fileContent
         .split("\n")
         .map((word) => word.trim().toLowerCase())
         .filter((word) => {
           return (
-            word.length >= 3 &&
+            word.length >= minWordLength &&
             word.length <= 16 &&
             /^[a-záéíóúñü]+$/.test(word)
           );
