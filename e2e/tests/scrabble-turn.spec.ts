@@ -110,7 +110,7 @@ test.describe("Scrabble - Turns", () => {
     await expect(activePlayer.tileRack.locator("button")).toHaveCount(tilesBefore - 1);
     await activePlayer.submitTurn();
 
-    await expect(activePlayer.messageBox).toContainText(
+    await expect(activePlayer.errorToast()).toContainText(
       /No se formó ninguna palabra|no está en el diccionario/
     );
     // Client must resync with the server: rack restored, board cell empty, still my turn

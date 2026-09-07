@@ -8,7 +8,6 @@ export function ScrabbleControls() {
     gameState,
     currentPlayerId,
     tentativePlacements,
-    message,
     rack,
     exchangeMode,
     selectedForExchange,
@@ -40,12 +39,6 @@ export function ScrabbleControls() {
 
   return (
     <div className="flex flex-col gap-2">
-      {message && (
-        <div className="text-center text-sm text-gray-300 bg-gray-800 rounded px-3 py-1">
-          {message}
-        </div>
-      )}
-
       {exchangeMode && (
         <div className="text-center text-sm text-orange-300 bg-orange-900/40 rounded px-3 py-1">
           Selecciona las fichas que quieres cambiar

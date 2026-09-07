@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
+import { describeGameEnd, describeTurnChanged, describeTurnPlayed } from "@/utils/scrabble-messages";
 import type { ScrabbleGameEvents, ScrabbleClientEvents } from "@/interfaces/scrabble";
 
 type ScrabbleSocket = Socket<ScrabbleGameEvents, ScrabbleClientEvents>;
@@ -22,6 +23,15 @@ function readStoredSession(): { gameId: string; playerName: string } | null {
   return null;
 }
 
+function saveSession(gameId: string | null, playerName: string | null) {
+  if (typeof window === "undefined" || !gameId || !playerName) return;
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerName }));
+}
+
+function clearSession() {
+  if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY);
+}
+
 export const useScrabbleSocketListeners = () => {
   const initializedRef = useRef(false);
 
@@ -32,10 +42,15 @@ export const useScrabbleSocketListeners = () => {
     const store = useScrabbleGameStore.getState();
     const newSocket: ScrabbleSocket = io({ query: { game: "scrabble" } });
     store.setSocket(newSocket);
+    const get = useScrabbleGameStore.getState;
+    if (process.env.NODE_ENV !== "production") {
+      // Dev/test hook: lets e2e tests simulate a network drop (Playwright can't cut open WebSockets)
+      (window as unknown as { __SCRABBLE_SOCKET__?: ScrabbleSocket }).__SCRABBLE_SOCKET__ = newSocket;
+    }
 
     newSocket.on("connect", () => {
-      const s = useScrabbleGameStore.getState();
-      s.setIsConnected(true);
+      const s = get();
+      s.setConnectionStatus("connected");
       if (newSocket.id) {
         s.setCurrentPlayerId(newSocket.id);
       }
@@ -51,11 +66,13 @@ export const useScrabbleSocketListeners = () => {
     });
 
     newSocket.on("disconnect", () => {
-      useScrabbleGameStore.getState().setIsConnected(false);
+      const s = get();
+      // Only "reconnecting" if we were in a game; before that it's just "connecting"
+      s.setConnectionStatus(s.isJoined ? "reconnecting" : "connecting");
     });
 
     newSocket.on("join-confirmed", (data) => {
-      const s = useScrabbleGameStore.getState();
+      const s = get();
       s.setCurrentPlayerId(data.playerId);
       s.setIsJoined(true);
       s.setPlayerName(data.playerName);
@@ -65,40 +82,52 @@ export const useScrabbleSocketListeners = () => {
     });
 
     newSocket.on("player-joined", ({ playerId, playerName }) => {
-      const s = useScrabbleGameStore.getState();
+      const s = get();
       s.setGameState((prev) => {
-        if (!prev) return prev;
-        if (prev.players.some((p) => p.id === playerId)) return prev;
-        // Same name, new id → the player reconnected; keep their data, swap the id
-        if (prev.players.some((p) => p.name === playerName)) {
-          return {
-            ...prev,
-            players: prev.players.map((p) => (p.name === playerName ? { ...p, id: playerId } : p)),
-          };
-        }
+        if (!prev || prev.players.some((p) => p.id === playerId)) return prev;
         return {
           ...prev,
           players: [
             ...prev.players,
-            { id: playerId, name: playerName, score: 0, rackSize: 0, isCurrentTurn: false, wordsFound: [] },
+            { id: playerId, name: playerName, score: 0, rackSize: 0, isCurrentTurn: false, isConnected: true, wordsFound: [] },
           ],
         };
       });
+      s.notify("info", `${playerName} se unió`);
     });
 
     newSocket.on("player-left", (playerId) => {
-      const s = useScrabbleGameStore.getState();
-      s.setGameState((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          players: prev.players.filter((p) => p.id !== playerId),
-        };
-      });
+      const s = get();
+      const left = s.gameState?.players.find((p) => p.id === playerId);
+      s.setGameState((prev) =>
+        prev ? { ...prev, players: prev.players.filter((p) => p.id !== playerId) } : prev
+      );
+      if (left) {
+        s.markPlayerReconnected(left.name); // drop any grace entry
+        s.notify("info", `${left.name} abandonó la partida`);
+      }
+    });
+
+    newSocket.on("player-disconnected", ({ playerId, playerName, graceSeconds }) => {
+      const s = get();
+      s.markPlayerDisconnected(playerId, playerName, graceSeconds);
+      s.notify("info", `${playerName} se desconectó · ${graceSeconds}s para volver`);
+    });
+
+    newSocket.on("player-reconnected", ({ playerId, playerName }) => {
+      const s = get();
+      s.markPlayerReconnected(playerName);
+      // Same name, new id → swap the id, keep their data
+      s.setGameState((prev) =>
+        prev
+          ? { ...prev, players: prev.players.map((p) => (p.name === playerName ? { ...p, id: playerId, isConnected: true } : p)) }
+          : prev
+      );
+      s.notify("info", `${playerName} volvió`);
     });
 
     newSocket.on("game-state", (state) => {
-      const s = useScrabbleGameStore.getState();
+      const s = get();
       s.setGameState(state);
       // Private view: the server is the source of truth for rack + tentative placements
       if ("rack" in state) {
@@ -112,78 +141,82 @@ export const useScrabbleSocketListeners = () => {
     });
 
     newSocket.on("game-started", (state) => {
-      const s = useScrabbleGameStore.getState();
+      const s = get();
       s.setGameState(state);
       s.clearTentativePlacements();
-      s.setMessage("Juego iniciado");
-      const gameId = state.gameId ?? s.gameId;
+      s.setGameEndSummary(null);
+      s.clearDisconnectedPlayers();
+      const starter = state.players.find((p) => p.id === state.currentTurnPlayerId);
+      const isMe = state.currentTurnPlayerId === s.currentPlayerId;
+      s.notify("turn", isMe ? "¡Empieza la partida, tu turno!" : `Empieza la partida · turno de ${starter?.name ?? "..."}`);
       if (state.gameId) s.setGameId(state.gameId);
-      if (typeof window !== "undefined" && gameId && s.playerName) {
-        localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerName: s.playerName }));
-      }
+      saveSession(state.gameId ?? s.gameId, s.playerName);
+    });
+
+    newSocket.on("start-failed", ({ reason }) => {
+      get().notify("error", reason);
     });
 
     newSocket.on("word-result", (result) => {
-      const s = useScrabbleGameStore.getState();
-      s.setMessage(
-        result.valid
-          ? result.points ? `+${result.points} puntos` : "Turno válido"
-          : result.reason ?? "Error"
-      );
+      // Successes are announced via turn-played; here we only surface rejections
+      if (!result.valid) get().notify("error", result.reason ?? "Jugada inválida");
+    });
+
+    newSocket.on("turn-played", (event) => {
+      const s = get();
+      const isMe = event.playerId === s.currentPlayerId;
+      const kind = event.type === "place" ? "success" : event.type === "timeout" ? "error" : "info";
+      s.notify(kind, describeTurnPlayed(event, isMe));
+    });
+
+    newSocket.on("turn-changed", (event) => {
+      const s = get();
+      const isMe = event.currentPlayerId === s.currentPlayerId;
+      s.notify("turn", describeTurnChanged(event, isMe));
     });
 
     newSocket.on("game-reset", (state) => {
-      const s = useScrabbleGameStore.getState();
+      const s = get();
       s.setGameState(state);
       s.clearTentativePlacements();
       s.setExchangeMode(false);
-      s.setMessage("Juego reiniciado");
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(SESSION_KEY);
-      }
+      s.setGameEndSummary(null);
+      s.clearDisconnectedPlayers();
+      s.notify("info", "Partida reiniciada");
+      clearSession();
     });
 
     newSocket.on("game-ended", (state) => {
-      const s = useScrabbleGameStore.getState();
-      s.setGameState(state);
+      const s = get();
+      const { reason, finalAdjustments, ...gameState } = state;
+      s.setGameState(gameState);
       s.setExchangeMode(false);
-      s.setMessage("Juego terminado");
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(SESSION_KEY);
-      }
+      s.setGameEndSummary({ reason, finalAdjustments });
+      s.notify("info", describeGameEnd(reason));
+      clearSession();
     });
 
     newSocket.on("turn-timer-update", (timeLeft) => {
-      useScrabbleGameStore.getState().setGameState((prev) =>
-        prev ? { ...prev, turnTimeLeft: timeLeft } : prev
-      );
+      get().setGameState((prev) => (prev ? { ...prev, turnTimeLeft: timeLeft } : prev));
     });
 
     newSocket.on("rejoin-success", (state) => {
-      const s = useScrabbleGameStore.getState();
+      const s = get();
       s.setGameState(state);
       s.setRack(state.rack);
       s.setTentativePlacements(state.tentativePlacements);
-      if (state.gameId) {
-        s.setGameId(state.gameId);
-      }
+      if (state.gameId) s.setGameId(state.gameId);
       s.setIsJoined(true);
-      s.setMessage("Reconectado al juego");
-      const gameId = state.gameId ?? s.gameId;
-      const playerName = s.playerName;
-      if (typeof window !== "undefined" && gameId && playerName) {
-        localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerName }));
-      }
+      s.notify("success", "Reconectado a la partida");
+      saveSession(state.gameId ?? s.gameId, s.playerName);
     });
 
     newSocket.on("rejoin-failed", (data) => {
-      const s = useScrabbleGameStore.getState();
-      s.setMessage(data.reason);
+      const s = get();
+      s.notify("error", data.reason);
       s.setGameId(null);
       // Stale session: drop it so we don't retry on every connect
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(SESSION_KEY);
-      }
+      clearSession();
     });
 
     return () => {

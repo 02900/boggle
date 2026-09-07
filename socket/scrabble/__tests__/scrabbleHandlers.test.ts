@@ -52,11 +52,12 @@ describe("setupScrabbleHandlers", () => {
       );
     });
 
-    it("does not emit when startGame returns false", () => {
+    it("emits start-failed to the requester when startGame returns false", () => {
       game.startGame.mockReturnValue(false as any);
       socket._trigger("start-game");
 
       expect(io.emit).not.toHaveBeenCalledWith("game-started", expect.anything());
+      expect(socket.emit).toHaveBeenCalledWith("start-failed", { reason: "Se necesitan al menos 2 jugadores" });
     });
   });
 
@@ -195,6 +196,62 @@ describe("setupScrabbleHandlers", () => {
     });
   });
 
+  describe("disconnect", () => {
+    it("removes the player and broadcasts player-left while waiting", () => {
+      game.players = new Map([["socket-1", { id: "socket-1", name: "Alice", isConnected: true }]]) as any;
+      game.gameState = "waiting" as any;
+
+      socket._trigger("disconnect");
+
+      expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-left", "socket-1");
+    });
+
+    it("during a game marks the player disconnected and broadcasts player-disconnected with the grace period", () => {
+      const player = { id: "socket-1", name: "Alice", isConnected: true };
+      game.players = new Map([["socket-1", player]]) as any;
+      game.gameState = "playing" as any;
+
+      socket._trigger("disconnect");
+
+      expect(game.removePlayer).not.toHaveBeenCalled();
+      expect(player.isConnected).toBe(false);
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-disconnected", {
+        playerId: "socket-1",
+        playerName: "Alice",
+        graceSeconds: 30,
+      });
+      expect(socket.broadcast.emit).not.toHaveBeenCalledWith("player-left", expect.anything());
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+    });
+
+    it("after the grace period force-passes the turn and announces player-left", () => {
+      vi.useFakeTimers();
+      const player = { id: "socket-1", name: "Alice", isConnected: true };
+      game.players = new Map([["socket-1", player]]) as any;
+      game.gameState = "playing" as any;
+      game.getCurrentTurnPlayerId = vi.fn(() => "socket-1") as any;
+
+      socket._trigger("disconnect");
+      vi.advanceTimersByTime(30_000);
+
+      expect(game.passTurn).toHaveBeenCalledWith("socket-1", "disconnect");
+      expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
+      expect(io.emit).toHaveBeenCalledWith("player-left", "socket-1");
+      vi.useRealTimers();
+    });
+
+    it("ignores disconnects of sockets already remapped by a reconnect", () => {
+      game.players = new Map() as any;
+      game.gameState = "playing" as any;
+
+      socket._trigger("disconnect");
+
+      expect(game.removePlayer).not.toHaveBeenCalled();
+      expect(socket.broadcast.emit).not.toHaveBeenCalled();
+    });
+  });
+
   describe("handler registration", () => {
     it("registers all expected scrabble events", () => {
       const registeredEvents = socket.on.mock.calls.map((call: unknown[]) => call[0]);
@@ -271,7 +328,7 @@ describe("setupScrabbleHandlers", () => {
       expect(socket.emit).toHaveBeenCalledWith("rejoin-success", expect.anything());
     });
 
-    it("broadcasts player-joined on successful rejoin", async () => {
+    it("broadcasts player-reconnected (not player-joined) on successful rejoin", async () => {
       const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
       vi.mocked(loadSession).mockReturnValue({
         gameId: "g1",
@@ -290,10 +347,12 @@ describe("setupScrabbleHandlers", () => {
 
       socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
 
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-joined", {
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-reconnected", {
         playerId: "socket-1",
         playerName: "Alice",
       });
+      expect(socket.broadcast.emit).not.toHaveBeenCalledWith("player-joined", expect.anything());
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("kicks a stale still-connected socket with the same name before reconnecting (newest wins)", async () => {

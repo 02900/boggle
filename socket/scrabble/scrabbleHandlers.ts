@@ -30,19 +30,24 @@ export function setupScrabbleHandlers(
     debugLog("EVENT: start-game (scrabble)", null, socket.id);
 
     const result = game.startGame();
-    if (result && result.success) {
-      // gameId lets clients persist a session for reconnection
-      io.emit("game-started", { ...game.getGameState(), gameId });
-      // Send each player their private rack
-      for (const [, s] of io.sockets.sockets) {
-        const raw = s.handshake.query.game;
-        const sGameType = Array.isArray(raw) ? raw[0] : raw;
-        if (sGameType === "scrabble" && game.players.has(s.id)) {
-          s.emit("game-state", game.getGameStateForPlayer(s.id));
-        }
-      }
-      autoSave(game, gameId);
+    if (!result || !result.success) {
+      socket.emit("start-failed", {
+        reason: game.players.size < 2 ? "Se necesitan al menos 2 jugadores" : "No se pudo iniciar la partida",
+      });
+      return;
     }
+
+    // gameId lets clients persist a session for reconnection
+    io.emit("game-started", { ...game.getGameState(), gameId });
+    // Send each player their private rack
+    for (const [, s] of io.sockets.sockets) {
+      const raw = s.handshake.query.game;
+      const sGameType = Array.isArray(raw) ? raw[0] : raw;
+      if (sGameType === "scrabble" && game.players.has(s.id)) {
+        s.emit("game-state", game.getGameStateForPlayer(s.id));
+      }
+    }
+    autoSave(game, gameId);
   });
 
   socket.on("place-tiles", (data) => {
@@ -191,10 +196,11 @@ export function setupScrabbleHandlers(
     }
 
     socket.emit("rejoin-success", game.getGameStateForPlayer(socket.id));
-    socket.broadcast.emit("player-joined", {
+    socket.broadcast.emit("player-reconnected", {
       playerId: socket.id,
       playerName: data.playerName,
     });
+    socket.broadcast.emit("game-state", game.getGameState());
 
     debugLog("SCRABBLE_REJOIN_SUCCESS", {
       playerName: data.playerName,
@@ -216,18 +222,22 @@ export function setupScrabbleHandlers(
       return;
     }
 
-    // Mark as disconnected but DON'T remove yet
+    // Mark as disconnected but DON'T remove yet — others see them greyed out with a countdown
     player.isConnected = false;
-    socket.broadcast.emit("player-left", socket.id);
-
     const playerName = player.name;
+    socket.broadcast.emit("player-disconnected", {
+      playerId: socket.id,
+      playerName,
+      graceSeconds: SCRABBLE_GRACE_PERIOD / 1000,
+    });
+    socket.broadcast.emit("game-state", game.getGameState());
 
     // Start grace period — auto-pass and remove after SCRABBLE_GRACE_PERIOD
     const timer = setTimeout(() => {
       graceTimers.delete(playerName);
       const isCurrentTurn = game.getCurrentTurnPlayerId() === socket.id;
       if (isCurrentTurn) {
-        game.passTurn(socket.id);
+        game.passTurn(socket.id, "disconnect");
       }
 
       // passTurn may have triggered endGame (e.g. all players passed consecutively),
@@ -239,6 +249,7 @@ export function setupScrabbleHandlers(
       }
 
       game.removePlayer(socket.id);
+      io.emit("player-left", socket.id);
       io.emit("game-state", game.getGameState());
       autoSave(game, gameId);
       debugLog("SCRABBLE_GRACE_PERIOD_EXPIRED", { playerName });

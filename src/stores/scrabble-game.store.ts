@@ -4,27 +4,65 @@ import type {
   ScrabbleGameState,
   ScrabbleTile,
   TilePlacement,
+  GameEndReason,
+  FinalAdjustment,
 } from "@/interfaces/scrabble";
 
 type GameStateUpdater =
   | ScrabbleGameState
   | ((prev: ScrabbleGameState | null) => ScrabbleGameState | null);
 
+export type ConnectionStatus = "connecting" | "connected" | "reconnecting";
+
+export type NotificationKind = "success" | "error" | "info" | "turn";
+
+export interface Notification {
+  id: number;
+  kind: NotificationKind;
+  text: string;
+  /** ms until auto-dismiss; 0 = sticky */
+  ttl: number;
+}
+
+export interface DisconnectedPlayer {
+  playerName: string;
+  /** Epoch ms when the server will drop the player if they don't come back */
+  graceEndsAt: number;
+}
+
+export interface GameEndSummary {
+  reason: GameEndReason;
+  finalAdjustments: FinalAdjustment[];
+}
+
+/** Oldest notifications are dropped beyond this many visible at once. */
+const MAX_NOTIFICATIONS = 4;
+
+const DEFAULT_TTL: Record<NotificationKind, number> = {
+  success: 4000,
+  error: 5000,
+  info: 4000,
+  turn: 3000,
+};
+
 interface ScrabbleGameStore {
   // Connection
   socket: Socket | null;
   isConnected: boolean;
+  connectionStatus: ConnectionStatus;
   currentPlayerId: string | null;
   isJoined: boolean;
 
   // Game state from server
   gameState: ScrabbleGameState | null;
   rack: ScrabbleTile[];
+  disconnectedPlayers: Record<string, DisconnectedPlayer>;
+  gameEndSummary: GameEndSummary | null;
 
   // Client-side interaction state
   selectedTile: ScrabbleTile | null;
   tentativePlacements: TilePlacement[];
-  message: string;
+  notifications: Notification[];
 
   // Exchange mode
   exchangeMode: boolean;
@@ -36,7 +74,7 @@ interface ScrabbleGameStore {
 
   // Setters
   setSocket: (socket: Socket) => void;
-  setIsConnected: (isConnected: boolean) => void;
+  setConnectionStatus: (status: ConnectionStatus) => void;
   setCurrentPlayerId: (id: string | null) => void;
   setIsJoined: (isJoined: boolean) => void;
   setGameState: (stateOrUpdater: GameStateUpdater) => void;
@@ -46,7 +84,12 @@ interface ScrabbleGameStore {
   removeTentativePlacement: (tileId: string) => void;
   setTentativePlacements: (placements: TilePlacement[]) => void;
   clearTentativePlacements: () => void;
-  setMessage: (message: string) => void;
+  notify: (kind: NotificationKind, text: string, ttl?: number) => number;
+  dismissNotification: (id: number) => void;
+  markPlayerDisconnected: (playerId: string, playerName: string, graceSeconds: number) => void;
+  markPlayerReconnected: (playerName: string) => void;
+  clearDisconnectedPlayers: () => void;
+  setGameEndSummary: (summary: GameEndSummary | null) => void;
   setExchangeMode: (mode: boolean) => void;
   toggleExchangeSelection: (tileId: string) => void;
   clearExchangeSelection: () => void;
@@ -58,24 +101,30 @@ interface ScrabbleGameStore {
 const initialState = {
   socket: null as Socket | null,
   isConnected: false,
+  connectionStatus: "connecting" as ConnectionStatus,
   currentPlayerId: null as string | null,
   isJoined: false,
   gameState: null as ScrabbleGameState | null,
   rack: [] as ScrabbleTile[],
+  disconnectedPlayers: {} as Record<string, DisconnectedPlayer>,
+  gameEndSummary: null as GameEndSummary | null,
   selectedTile: null as ScrabbleTile | null,
   tentativePlacements: [] as TilePlacement[],
-  message: "",
+  notifications: [] as Notification[],
   exchangeMode: false,
   selectedForExchange: new Set<string>(),
   gameId: null as string | null,
   playerName: null as string | null,
 };
 
+let nextNotificationId = 1;
+
 export const useScrabbleGameStore = create<ScrabbleGameStore>((set) => ({
   ...initialState,
 
   setSocket: (socket) => set({ socket }),
-  setIsConnected: (isConnected) => set({ isConnected }),
+  setConnectionStatus: (connectionStatus) =>
+    set({ connectionStatus, isConnected: connectionStatus === "connected" }),
   setCurrentPlayerId: (currentPlayerId) => set({ currentPlayerId }),
   setIsJoined: (isJoined) => set({ isJoined }),
   setGameState: (stateOrUpdater) =>
@@ -99,7 +148,30 @@ export const useScrabbleGameStore = create<ScrabbleGameStore>((set) => ({
     })),
   setTentativePlacements: (tentativePlacements) => set({ tentativePlacements }),
   clearTentativePlacements: () => set({ tentativePlacements: [] }),
-  setMessage: (message) => set({ message }),
+  notify: (kind, text, ttl = DEFAULT_TTL[kind]) => {
+    const id = nextNotificationId++;
+    set((state) => ({
+      notifications: [...state.notifications, { id, kind, text, ttl }].slice(-MAX_NOTIFICATIONS),
+    }));
+    return id;
+  },
+  dismissNotification: (id) =>
+    set((state) => ({ notifications: state.notifications.filter((n) => n.id !== id) })),
+  markPlayerDisconnected: (playerId, playerName, graceSeconds) =>
+    set((state) => ({
+      disconnectedPlayers: {
+        ...state.disconnectedPlayers,
+        [playerId]: { playerName, graceEndsAt: Date.now() + graceSeconds * 1000 },
+      },
+    })),
+  markPlayerReconnected: (playerName) =>
+    set((state) => ({
+      disconnectedPlayers: Object.fromEntries(
+        Object.entries(state.disconnectedPlayers).filter(([, p]) => p.playerName !== playerName)
+      ),
+    })),
+  clearDisconnectedPlayers: () => set({ disconnectedPlayers: {} }),
+  setGameEndSummary: (gameEndSummary) => set({ gameEndSummary }),
   setExchangeMode: (exchangeMode) =>
     set({ exchangeMode, selectedForExchange: new Set<string>() }),
   toggleExchangeSelection: (tileId) =>

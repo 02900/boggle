@@ -25,6 +25,54 @@ export interface ScrabblePlayer extends Player {
   rackSize: number;
   rack?: ScrabbleTile[];
   isCurrentTurn: boolean;
+  /** False while the player is in the reconnection grace period. */
+  isConnected: boolean;
+}
+
+// ---- Scrabble turn/game lifecycle events ----
+
+/** Why a turn ended. "timeout" and "disconnect" are forced passes. */
+export type TurnEndReason = "place" | "pass" | "exchange" | "timeout" | "disconnect";
+
+export type GameEndReason = "passes" | "bag-empty" | "abandon";
+
+export interface TurnPlayedEvent {
+  playerId: string;
+  playerName: string;
+  type: TurnEndReason;
+  /** Only for type "place" */
+  words?: ScoredWord[];
+  score?: number;
+  /** Only for type "exchange" */
+  exchangedCount?: number;
+}
+
+export interface TurnChangedEvent {
+  previousPlayerId: string | null;
+  currentPlayerId: string | null;
+  currentPlayerName: string | null;
+  reason: TurnEndReason;
+}
+
+export interface FinalAdjustment {
+  playerId: string;
+  playerName: string;
+  remainingTiles: number;
+  remainingValue: number;
+  /** Points added (positive) or deducted (negative) at game end */
+  delta: number;
+  finalScore: number;
+}
+
+export interface GameEndedEvent extends ScrabbleGameState {
+  reason: GameEndReason;
+  finalAdjustments: FinalAdjustment[];
+}
+
+export interface PlayerDisconnectedEvent {
+  playerId: string;
+  playerName: string;
+  graceSeconds: number;
 }
 
 export interface ScrabbleGameState {
@@ -104,12 +152,17 @@ export interface ScrabblePlayerGameState extends ScrabbleGameState {
 export interface ScrabbleGameEvents {
   "game-state": (state: ScrabbleGameState | ScrabblePlayerGameState) => void;
   "game-started": (state: ScrabbleGameState & { gameId?: string }) => void;
-  "game-ended": (state: ScrabbleGameState) => void;
+  "start-failed": (data: { reason: string }) => void;
+  "game-ended": (state: GameEndedEvent) => void;
   "game-reset": (state: ScrabbleGameState) => void;
   "word-result": (result: WordResult) => void;
+  "turn-played": (data: TurnPlayedEvent) => void;
+  "turn-changed": (data: TurnChangedEvent) => void;
   "join-confirmed": (data: { playerName: string; playerId: string }) => void;
   "player-joined": (data: { playerName: string; playerId: string }) => void;
   "player-left": (playerId: string) => void;
+  "player-disconnected": (data: PlayerDisconnectedEvent) => void;
+  "player-reconnected": (data: { playerId: string; playerName: string }) => void;
   "scoreboard-data": (data: ScoreboardEntry[]) => void;
   "client-side-validation-changed": (data: { enabled: boolean }) => void;
   "turn-timer-update": (timeLeft: number) => void;

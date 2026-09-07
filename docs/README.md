@@ -25,6 +25,7 @@ Technical documentation for the real-time multiplayer Boggle game.
 ### Scrabble
 
 - [Estado actual y plan de mejora](./scrabble/estado-actual-y-plan.md) - Auditoría de lógica, UI/UX, estados intermedios y plan por fases
+- [Protocolo de eventos socket](./scrabble/socket-events.md) - Eventos cliente↔server, ciclo de turno, presencia y reconexión
 
 ### Types
 

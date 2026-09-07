@@ -34,14 +34,78 @@ describe("useScrabbleGameStore", () => {
     expect(state.rack).toEqual([]);
     expect(state.selectedTile).toBeNull();
     expect(state.tentativePlacements).toEqual([]);
-    expect(state.message).toBe("");
+    expect(state.notifications).toEqual([]);
+    expect(state.connectionStatus).toBe("connecting");
+    expect(state.disconnectedPlayers).toEqual({});
+    expect(state.gameEndSummary).toBeNull();
     expect(state.gameId).toBeNull();
     expect(state.playerName).toBeNull();
   });
 
-  it("sets isConnected", () => {
-    useScrabbleGameStore.getState().setIsConnected(true);
+  it("setConnectionStatus keeps isConnected in sync", () => {
+    useScrabbleGameStore.getState().setConnectionStatus("connected");
     expect(useScrabbleGameStore.getState().isConnected).toBe(true);
+    useScrabbleGameStore.getState().setConnectionStatus("reconnecting");
+    expect(useScrabbleGameStore.getState().isConnected).toBe(false);
+    expect(useScrabbleGameStore.getState().connectionStatus).toBe("reconnecting");
+  });
+
+  describe("notifications", () => {
+    it("notify appends with a default ttl per kind and returns an id", () => {
+      const id = useScrabbleGameStore.getState().notify("error", "boom");
+      const [n] = useScrabbleGameStore.getState().notifications;
+      expect(n).toEqual({ id, kind: "error", text: "boom", ttl: 5000 });
+    });
+
+    it("notify accepts a custom ttl (0 = sticky)", () => {
+      useScrabbleGameStore.getState().notify("info", "stay", 0);
+      expect(useScrabbleGameStore.getState().notifications[0].ttl).toBe(0);
+    });
+
+    it("keeps only the 4 most recent notifications", () => {
+      for (let i = 0; i < 6; i++) useScrabbleGameStore.getState().notify("info", `n${i}`);
+      expect(useScrabbleGameStore.getState().notifications.map((n) => n.text)).toEqual(["n2", "n3", "n4", "n5"]);
+    });
+
+    it("dismissNotification removes only the given id", () => {
+      const a = useScrabbleGameStore.getState().notify("info", "a");
+      const b = useScrabbleGameStore.getState().notify("info", "b");
+      useScrabbleGameStore.getState().dismissNotification(a);
+      expect(useScrabbleGameStore.getState().notifications.map((n) => n.id)).toEqual([b]);
+    });
+  });
+
+  describe("disconnected players", () => {
+    it("markPlayerDisconnected stores a grace deadline", () => {
+      const before = Date.now();
+      useScrabbleGameStore.getState().markPlayerDisconnected("p2", "Bob", 30);
+      const entry = useScrabbleGameStore.getState().disconnectedPlayers["p2"];
+      expect(entry.playerName).toBe("Bob");
+      expect(entry.graceEndsAt).toBeGreaterThanOrEqual(before + 30_000);
+    });
+
+    it("markPlayerReconnected removes by name (id changes on reconnect)", () => {
+      useScrabbleGameStore.getState().markPlayerDisconnected("old-id", "Bob", 30);
+      useScrabbleGameStore.getState().markPlayerDisconnected("p3", "Carol", 30);
+      useScrabbleGameStore.getState().markPlayerReconnected("Bob");
+      expect(Object.keys(useScrabbleGameStore.getState().disconnectedPlayers)).toEqual(["p3"]);
+    });
+  });
+
+  describe("exchange mode", () => {
+    it("toggleExchangeSelection adds and removes tile ids", () => {
+      const s = useScrabbleGameStore.getState();
+      s.toggleExchangeSelection("t1");
+      s.toggleExchangeSelection("t2");
+      s.toggleExchangeSelection("t1");
+      expect([...useScrabbleGameStore.getState().selectedForExchange]).toEqual(["t2"]);
+    });
+
+    it("setExchangeMode clears the selection", () => {
+      useScrabbleGameStore.getState().toggleExchangeSelection("t1");
+      useScrabbleGameStore.getState().setExchangeMode(false);
+      expect(useScrabbleGameStore.getState().selectedForExchange.size).toBe(0);
+    });
   });
 
   it("sets currentPlayerId", () => {
@@ -117,13 +181,14 @@ describe("useScrabbleGameStore", () => {
   });
 
   it("resets all state", () => {
-    useScrabbleGameStore.getState().setIsConnected(true);
+    useScrabbleGameStore.getState().setConnectionStatus("connected");
     useScrabbleGameStore.getState().setIsJoined(true);
     useScrabbleGameStore.getState().setGameState(mockGameState);
     useScrabbleGameStore.getState().setRack([mockTile]);
     useScrabbleGameStore.getState().setSelectedTile(mockTile);
     useScrabbleGameStore.getState().setGameId("game-123");
-    useScrabbleGameStore.getState().setMessage("test message");
+    useScrabbleGameStore.getState().notify("info", "test message");
+    useScrabbleGameStore.getState().markPlayerDisconnected("p2", "Bob", 30);
     useScrabbleGameStore.getState().setPlayerName("Alice");
 
     useScrabbleGameStore.getState().reset();
@@ -135,7 +200,8 @@ describe("useScrabbleGameStore", () => {
     expect(state.rack).toEqual([]);
     expect(state.selectedTile).toBeNull();
     expect(state.gameId).toBeNull();
-    expect(state.message).toBe("");
+    expect(state.notifications).toEqual([]);
+    expect(state.disconnectedPlayers).toEqual({});
     expect(state.playerName).toBeNull();
   });
 });

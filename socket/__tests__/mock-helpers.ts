@@ -137,6 +137,7 @@ export function createMockScrabbleGame() {
     getClientSideValidation: vi.fn(() => false),
     players: new Map([["socket-1", { id: "socket-1", name: "Alice" }]]),
     gameState: "playing" as string,
+    getCurrentTurnPlayerId: vi.fn((): string | null => null),
   };
 }
 

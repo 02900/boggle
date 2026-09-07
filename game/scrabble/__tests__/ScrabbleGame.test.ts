@@ -899,6 +899,101 @@ describe("ScrabbleGame", () => {
       game.endGame();
       expect(updateScoreboard).toHaveBeenCalledTimes(1);
     });
+
+    it("emits game-ended with the reason and per-player final adjustments", () => {
+      const { p1, p2 } = setupGameForPlay(game);
+      const io = { emit: vi.fn() };
+      game.setIO(io);
+      game.players.get(p1)!.score = 20;
+      game.playerRacks.set(p1, [makeTile("Z", 10, "adj-Z")]);
+      game.playerRacks.set(p2, []); // p2 went out
+      game.tileBag.splice(0);
+
+      game.endGame("bag-empty");
+
+      const call = io.emit.mock.calls.find((c) => c[0] === "game-ended");
+      expect(call).toBeDefined();
+      const payload = call![1];
+      expect(payload.reason).toBe("bag-empty");
+      expect(payload.finalAdjustments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ playerId: p1, remainingTiles: 1, remainingValue: 10, delta: -10, finalScore: 10 }),
+          expect.objectContaining({ playerId: p2, remainingTiles: 0, delta: 10 }),
+        ])
+      );
+    });
+  });
+
+  // ===========================================================================
+  // Turn lifecycle events (turn-played / turn-changed)
+  // ===========================================================================
+  describe("turn lifecycle events", () => {
+    function withIO() {
+      const io = { emit: vi.fn() };
+      game.setIO(io);
+      const events = (name: string) => io.emit.mock.calls.filter((c) => c[0] === name).map((c) => c[1]);
+      return { io, events };
+    }
+
+    it("a valid submit emits turn-played (place) with words and score, then turn-changed", () => {
+      const { p1, p2 } = setupGameForPlay(game);
+      const { events } = withIO();
+      const { tiles, positions } = makeCasaTiles();
+      setRackAndPlace(game, p1, tiles, positions);
+
+      game.submitTurn(p1);
+      game.clearTimers();
+
+      expect(events("turn-played")).toEqual([
+        expect.objectContaining({
+          playerId: p1,
+          playerName: "Alice",
+          type: "place",
+          score: expect.any(Number),
+          words: [expect.objectContaining({ word: "CASA" })],
+        }),
+      ]);
+      expect(events("turn-changed")).toEqual([
+        { previousPlayerId: p1, currentPlayerId: p2, currentPlayerName: "Bob", reason: "place" },
+      ]);
+    });
+
+    it("passTurn emits the given reason (pass / timeout / disconnect)", () => {
+      const { p1, p2 } = setupGameForPlay(game);
+      const { events } = withIO();
+
+      game.passTurn(p1, "timeout");
+      game.clearTimers();
+      game.passTurn(p2);
+      game.clearTimers();
+
+      expect(events("turn-played").map((e) => e.type)).toEqual(["timeout", "pass"]);
+      expect(events("turn-changed").map((e) => e.reason)).toEqual(["timeout", "pass"]);
+    });
+
+    it("exchangeTiles emits turn-played (exchange) with the exchanged count", () => {
+      const { p1 } = setupGameForPlay(game);
+      const { events } = withIO();
+      const rack = game.playerRacks.get(p1)!;
+
+      game.exchangeTiles(p1, [rack[0].id, rack[1].id]);
+      game.clearTimers();
+
+      expect(events("turn-played")).toEqual([
+        expect.objectContaining({ playerId: p1, type: "exchange", exchangedCount: 2 }),
+      ]);
+    });
+
+    it("does not emit turn-changed when the turn ends the game", () => {
+      const { p1 } = setupGameForPlay(game);
+      const { events } = withIO();
+      game.consecutivePasses = SCRABBLE_MAX_CONSECUTIVE_PASSES - 1;
+
+      game.passTurn(p1);
+
+      expect(events("turn-changed")).toEqual([]);
+      expect(events("game-ended")).toEqual([expect.objectContaining({ reason: "passes" })]);
+    });
   });
 
   // ===========================================================================

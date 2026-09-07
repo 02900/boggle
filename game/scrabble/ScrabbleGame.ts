@@ -25,6 +25,10 @@ import type {
   ScrabbleTurnResult,
   MoveRecord,
   SerializedScrabbleGame,
+  TurnEndReason,
+  GameEndReason,
+  TurnPlayedEvent,
+  FinalAdjustment,
 } from "../../src/interfaces/scrabble";
 
 export class ScrabbleGame extends WordGame {
@@ -100,7 +104,7 @@ export class ScrabbleGame extends WordGame {
     this.tentativePlacements.delete(playerId);
 
     if (wasCurrentTurn && this.gameState === "playing" && this.playerOrder.length > 0) {
-      this.advanceTurn();
+      this.advanceTurn("disconnect");
     }
 
     super.removePlayer(playerId);
@@ -149,7 +153,7 @@ export class ScrabbleGame extends WordGame {
     return { success: true };
   }
 
-  endGame(): void {
+  endGame(reason: GameEndReason = "passes"): void {
     this.gameState = "finished";
     this.clearTimers();
     this.clearTurnTimer();
@@ -157,6 +161,7 @@ export class ScrabbleGame extends WordGame {
     // Final score adjustments: each player loses points for remaining rack tiles
     let goOutPlayerId: string | null = null;
     let otherPlayersRemainingValue = 0;
+    const finalAdjustments: FinalAdjustment[] = [];
 
     // Find if any player went out (empty rack and empty bag)
     for (const [playerId, rack] of this.playerRacks) {
@@ -175,9 +180,18 @@ export class ScrabbleGame extends WordGame {
 
         const player = this.players.get(playerId);
         if (player) {
+          const before = player.score;
           player.score -= remainingValue;
           // Don't let score go below 0
           if (player.score < 0) player.score = 0;
+          finalAdjustments.push({
+            playerId,
+            playerName: player.name,
+            remainingTiles: rack.length,
+            remainingValue,
+            delta: player.score - before,
+            finalScore: player.score,
+          });
         }
 
         const historyPlayer = this.gameHistory.get(playerId);
@@ -192,6 +206,14 @@ export class ScrabbleGame extends WordGame {
       const goOutPlayer = this.players.get(goOutPlayerId);
       if (goOutPlayer) {
         goOutPlayer.score += otherPlayersRemainingValue;
+        finalAdjustments.push({
+          playerId: goOutPlayerId,
+          playerName: goOutPlayer.name,
+          remainingTiles: 0,
+          remainingValue: 0,
+          delta: otherPlayersRemainingValue,
+          finalScore: goOutPlayer.score,
+        });
       }
       const goOutHistory = this.gameHistory.get(goOutPlayerId);
       if (goOutHistory) {
@@ -207,6 +229,7 @@ export class ScrabbleGame extends WordGame {
     updateScoreboard(playerScores, this.players.size);
 
     debugLog("SCRABBLE_GAME_ENDED", {
+      reason,
       playerScores,
       goOutPlayer: goOutPlayerId,
       otherPlayersRemainingValue,
@@ -214,7 +237,7 @@ export class ScrabbleGame extends WordGame {
     });
 
     if (this.io) {
-      this.io.emit("game-ended", this.getGameState());
+      this.io.emit("game-ended", { ...this.getGameState(), reason, finalAdjustments });
     }
   }
 
@@ -228,6 +251,7 @@ export class ScrabbleGame extends WordGame {
       wordsFound: player.wordsFound,
       rackSize: this.playerRacks.get(player.id)?.length ?? 0,
       isCurrentTurn: player.id === currentTurnPlayerId,
+      isConnected: player.isConnected,
     }));
 
     return {
@@ -490,17 +514,26 @@ export class ScrabbleGame extends WordGame {
       tilesPlaced: placements.length,
     });
 
-    // Check if game is over
-    if (this.isGameOver()) {
-      this.endGame();
-    } else {
-      this.advanceTurn();
-    }
+    this.emitTurnPlayed({
+      playerId,
+      playerName: player?.name ?? "Unknown",
+      type: "place",
+      words: scoredWords,
+      score: totalScore,
+    });
+    this.finishTurn("place");
 
     return { valid: true, score: totalScore, words: scoredWords };
   }
 
-  passTurn(playerId: string): { success: boolean; reason?: string } {
+  /**
+   * Ends the current player's turn without playing. `reason` distinguishes a
+   * voluntary pass from forced ones (timer expiry, disconnection).
+   */
+  passTurn(
+    playerId: string,
+    reason: Extract<TurnEndReason, "pass" | "timeout" | "disconnect"> = "pass"
+  ): { success: boolean; reason?: string } {
     if (this.getCurrentTurnPlayerId() !== playerId) {
       return { success: false, reason: "No es tu turno" };
     }
@@ -516,6 +549,7 @@ export class ScrabbleGame extends WordGame {
       type: "pass",
       score: 0,
     });
+    this.emitTurnPlayed({ playerId, playerName: player?.name ?? "Unknown", type: reason });
 
     debugLog("SCRABBLE_TURN_PASSED", {
       playerId,
@@ -523,12 +557,7 @@ export class ScrabbleGame extends WordGame {
       threshold: SCRABBLE_MAX_CONSECUTIVE_PASSES,
     });
 
-    // Check if all players have passed consecutively
-    if (this.isGameOver()) {
-      this.endGame();
-    } else {
-      this.advanceTurn();
-    }
+    this.finishTurn(reason);
 
     return { success: true };
   }
@@ -590,17 +619,39 @@ export class ScrabbleGame extends WordGame {
       exchangedCount: removedTiles.length,
     });
 
-    this.advanceTurn();
+    this.emitTurnPlayed({
+      playerId,
+      playerName: player?.name ?? "Unknown",
+      type: "exchange",
+      exchangedCount: removedTiles.length,
+    });
+    this.advanceTurn("exchange");
 
     return { success: true };
   }
 
   // ---- Turn management ----
 
-  advanceTurn(): void {
+  private emitTurnPlayed(event: TurnPlayedEvent): void {
+    this.io?.emit("turn-played", event);
+  }
+
+  /** After a completed turn: end the game if a game-over condition holds, else pass the turn. */
+  private finishTurn(reason: TurnEndReason): void {
+    const gameOverReason = this.getGameOverReason();
+    if (gameOverReason) {
+      this.endGame(gameOverReason);
+    } else {
+      this.advanceTurn(reason);
+    }
+  }
+
+  advanceTurn(reason: TurnEndReason = "pass"): void {
     this.clearTurnTimer();
 
     if (this.playerOrder.length === 0) return;
+
+    const previousPlayerId = this.getCurrentTurnPlayerId();
 
     // Move to next player, skipping disconnected ones
     let attempts = 0;
@@ -621,8 +672,15 @@ export class ScrabbleGame extends WordGame {
       currentPlayerId,
       turnIndex: this.currentTurnIndex,
       turnTimeLeft: this.turnTimeLeft,
+      reason,
     });
 
+    this.io?.emit("turn-changed", {
+      previousPlayerId,
+      currentPlayerId,
+      currentPlayerName: currentPlayerId ? this.players.get(currentPlayerId)?.name ?? null : null,
+      reason,
+    });
   }
 
   getCurrentTurnPlayerId(): string | null {
@@ -657,7 +715,7 @@ export class ScrabbleGame extends WordGame {
         const currentPlayerId = this.getCurrentTurnPlayerId();
         if (currentPlayerId) {
           debugLog("SCRABBLE_TURN_TIMEOUT", { playerId: currentPlayerId });
-          this.passTurn(currentPlayerId);
+          this.passTurn(currentPlayerId, "timeout");
           // Notify clients since this auto-pass bypasses the socket handler
           if (this.io) {
             this.io.emit("game-state", this.getGameState());
@@ -861,10 +919,15 @@ export class ScrabbleGame extends WordGame {
   // ---- Game-over detection ----
 
   isGameOver(): boolean {
+    return this.getGameOverReason() !== null;
+  }
+
+  /** Returns why the game should end now, or null if it should continue. */
+  getGameOverReason(): GameEndReason | null {
     // All active players passed/exchanged consecutively
     if (this.consecutivePasses >= SCRABBLE_MAX_CONSECUTIVE_PASSES) {
       debugLog("SCRABBLE_GAME_OVER", { reason: "All players passed consecutively" });
-      return true;
+      return "passes";
     }
 
     // Tile bag is empty and any player has an empty rack
@@ -876,12 +939,12 @@ export class ScrabbleGame extends WordGame {
             reason: "Bag empty and player has no tiles",
             playerId,
           });
-          return true;
+          return "bag-empty";
         }
       }
     }
 
-    return false;
+    return null;
   }
 
   // ---- Helpers ----

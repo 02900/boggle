@@ -18,6 +18,8 @@ export function TurnIndicator() {
 
   return (
     <div
+      data-testid="turn-indicator"
+      data-my-turn={isMyTurn}
       className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium ${
         isMyTurn
           ? "bg-green-600 text-white"

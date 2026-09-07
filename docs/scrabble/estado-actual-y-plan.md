@@ -210,23 +210,32 @@ si son **server (S)**, **cliente (C)** o ambos.
    `disconnect` de un socket ya remapeado no emite `player-left`. El cliente, ante
    `player-joined` con nombre existente, actualiza el id en vez de duplicar.
 
-### Fase 1 — Protocolo de estados intermedios (S + C)
+### Fase 1 — Protocolo de estados intermedios (S + C) — ✅ HECHA
 
-Nuevos eventos server→cliente, con tipos en `src/interfaces/scrabble.ts`:
+Eventos server→cliente nuevos, tipados en `src/interfaces/scrabble.ts`:
 
 ```ts
-"turn-played":        { playerId, playerName, type: "place"|"pass"|"exchange"|"timeout", words?, score? }
-"turn-changed":       { previousPlayerId, currentPlayerId, reason }
-"player-disconnected":{ playerId, playerName, graceSeconds }
-"player-reconnected": { playerId, playerName }
-"game-ended":         ScrabbleGameState & { reason: "passes"|"bag-empty"|"abandon", finalAdjustments: {...} }
+"turn-played":        TurnPlayedEvent   { playerId, playerName, type: "place"|"pass"|"exchange"|"timeout"|"disconnect", words?, score?, exchangedCount? }
+"turn-changed":       TurnChangedEvent  { previousPlayerId, currentPlayerId, currentPlayerName, reason }
+"player-disconnected":{ playerId, playerName, graceSeconds }   // en vez de player-left durante la partida
+"player-reconnected": { playerId, playerName }                 // en vez de player-joined al reconectar
+"game-ended":         GameEndedEvent    ScrabbleGameState & { reason: "passes"|"bag-empty"|"abandon", finalAdjustments[] }
 "start-failed":       { reason }
 ```
 
-En el cliente reemplazar `message: string` por una cola de **notificaciones tipadas**
-`{ id, kind: "success"|"error"|"info"|"turn", text, ttl }` consumida por un `<Toaster/>`.
-Añadir al store `connectionStatus: "connected"|"reconnecting"|"offline"` y
-`disconnectedPlayers: Map<id, {name, until}>`.
+- `ScrabblePlayer.isConnected` viaja en cada `game-state` (badge atenuado/tachado en gracia).
+- `turn-played`/`turn-changed` los emite `ScrabbleGame` (única fuente: cubre timeout,
+  desconexión y jugadas). `passTurn(playerId, reason)` distingue pase voluntario de forzado.
+- `game-ended` trae `finalAdjustments` por jugador (fichas restantes, valor, delta, score final).
+- Cliente: `message: string` reemplazado por `notifications: Notification[]` (`notify(kind, text, ttl?)`,
+  máx. 4 visibles, auto-dismiss) renderizadas por `<Toaster/>`; `connectionStatus`
+  (`connecting|connected|reconnecting`); `disconnectedPlayers` con deadline de gracia;
+  `gameEndSummary`. Copy centralizado en `src/utils/scrabble-messages.ts`.
+- `<ConnectionBanner/>`: "Conexión perdida · reconectando…" para el propio socket, y
+  "Bob se desconectó · 27s para volver" con cuenta regresiva para los demás.
+- Page object e2e usa `data-testid` (`turn-indicator`, `player-badge`, `toast`, `connection-banner`)
+  en vez de clases Tailwind. Nuevo spec `scrabble-presence.spec.ts` (toasts de turno,
+  desconexión con gracia + vuelta, socket propio reconectando).
 
 ### Fase 2 — Sistema de diseño mínimo (C)
 

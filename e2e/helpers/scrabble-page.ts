@@ -22,6 +22,8 @@ export class ScrabblePage {
   readonly moveHistoryToggle: Locator;
   readonly gameEndHeading: Locator;
   readonly tileBagCount: Locator;
+  readonly playerBadges: Locator;
+  readonly connectionBanner: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -36,9 +38,12 @@ export class ScrabblePage {
     this.cancelExchangeButton = page.getByRole("button", { name: "Cancelar" });
     this.resetButton = page.getByRole("button", { name: "Nueva Partida" });
     this.tileRack = page.locator(".bg-amber-800");
+    this.playerBadges = page.locator('[data-testid="player-badge"]');
+    this.connectionBanner = page.locator('[data-testid="connection-banner"]');
     this.boardGrid = page.locator('[style*="grid-template-columns: repeat(15"]');
-    this.turnIndicator = page.locator("text=/Tu turno|Turno de/");
-    this.messageBox = page.locator(".bg-gray-800.rounded.px-3.py-1");
+    this.turnIndicator = page.locator('[data-testid="turn-indicator"]');
+    // Transient notifications (turn events, errors). Most recent is last.
+    this.messageBox = page.locator('[data-testid="toast"]');
     this.exchangeMessage = page.locator("text=Selecciona las fichas que quieres cambiar");
     this.moveHistoryToggle = page.locator("text=/Historial \\(/");
     this.gameEndHeading = page.getByRole("heading", { name: "Juego Terminado" });
@@ -63,7 +68,7 @@ export class ScrabblePage {
 
   async waitForPlayerVisible(name: string, timeout = 10_000) {
     await this.page
-      .locator(`.flex.gap-2.overflow-x-auto > div`, { hasText: name })
+      .locator('[data-testid="player-badge"]', { hasText: name })
       .first()
       .waitFor({ state: "visible", timeout });
   }
@@ -76,16 +81,22 @@ export class ScrabblePage {
     await this.turnIndicator.waitFor({ state: "visible", timeout: 15_000 });
   }
 
+  private myTurnIndicator(): Locator {
+    return this.page.locator('[data-testid="turn-indicator"][data-my-turn="true"]');
+  }
+
   async isMyTurn(): Promise<boolean> {
-    return this.page.locator("text=Tu turno").isVisible();
+    return this.myTurnIndicator().isVisible();
   }
 
   async waitForMyTurn(timeout = 15_000) {
-    await this.page.locator("text=Tu turno").waitFor({ state: "visible", timeout });
+    await this.myTurnIndicator().waitFor({ state: "visible", timeout });
   }
 
   async waitForOtherTurn(timeout = 15_000) {
-    await this.page.locator("text=/Turno de/").waitFor({ state: "visible", timeout });
+    await this.page
+      .locator('[data-testid="turn-indicator"][data-my-turn="false"]')
+      .waitFor({ state: "visible", timeout });
   }
 
   async getRackTileLetters(): Promise<string[]> {
@@ -151,7 +162,7 @@ export class ScrabblePage {
   }
 
   async getPlayerNames(): Promise<string[]> {
-    const badges = this.page.locator(".flex.gap-2.overflow-x-auto > div");
+    const badges = this.playerBadges;
     const count = await badges.count();
     const names: string[] = [];
     for (let i = 0; i < count; i++) {
@@ -162,16 +173,18 @@ export class ScrabblePage {
   }
 
   async getPlayerScore(name: string): Promise<number> {
-    const badge = this.page.locator(`.flex.gap-2.overflow-x-auto > div`).filter({ hasText: name });
+    const badge = this.playerBadges.filter({ hasText: name });
     const scoreText = await badge.locator("span.text-xs").textContent();
     return parseInt(scoreText?.replace("pts", "").trim() ?? "0", 10);
   }
 
-  async getMessage(): Promise<string> {
-    if (await this.messageBox.isVisible()) {
-      return (await this.messageBox.textContent()) ?? "";
-    }
-    return "";
+  /** Text of all currently visible toasts, oldest first. */
+  async getMessages(): Promise<string[]> {
+    return this.messageBox.allTextContents();
+  }
+
+  errorToast(): Locator {
+    return this.page.locator('[data-testid="toast"][data-kind="error"]');
   }
 
   async getTileBagCount(): Promise<number> {

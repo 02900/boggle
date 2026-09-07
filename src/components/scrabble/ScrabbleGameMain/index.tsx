@@ -9,6 +9,9 @@ import { TurnIndicator } from "../TurnIndicator";
 import { ScrabbleControls } from "../ScrabbleControls";
 import { ScrabbleInstructions } from "../ScrabbleInstructions";
 import { MoveHistory } from "../MoveHistory";
+import { Toaster } from "../Toaster";
+import { ConnectionBanner } from "../ConnectionBanner";
+import { describeGameEnd } from "@/utils/scrabble-messages";
 import { useState, useEffect } from "react";
 
 function JoinForm() {
@@ -76,7 +79,7 @@ function JoinForm() {
 }
 
 function GameView() {
-  const { gameState, currentPlayerId } = useScrabbleGameStore();
+  const { gameState, currentPlayerId, gameEndSummary } = useScrabbleGameStore();
 
   const players = gameState?.players ?? [];
   const isFinished = gameState?.gameState === "finished";
@@ -90,18 +93,22 @@ function GameView() {
           <TurnIndicator />
         </div>
 
+        <ConnectionBanner />
+
         {/* Players */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {players.map((p) => (
             <div
               key={p.id}
+              data-testid="player-badge"
+              data-connected={p.isConnected !== false}
               className={`flex-shrink-0 px-3 py-1.5 rounded text-sm ${
                 p.id === gameState?.currentTurnPlayerId
                   ? "bg-green-600 text-white"
                   : p.id === currentPlayerId
                     ? "bg-gray-600 text-white"
                     : "bg-gray-700 text-gray-300"
-              }`}
+              } ${p.isConnected === false ? "opacity-50 line-through" : ""}`}
             >
               <span className="font-medium">{p.name}</span>
               <span className="ml-2 text-xs opacity-75">{p.score}pts</span>
@@ -126,16 +133,27 @@ function GameView() {
         {/* End game summary */}
         {isFinished && (
           <div className="bg-gray-800 rounded-lg p-4 text-center text-white">
-            <h2 className="text-xl font-bold mb-2">Juego Terminado</h2>
+            <h2 className="text-xl font-bold mb-1">Juego Terminado</h2>
+            {gameEndSummary && (
+              <p className="text-xs text-gray-400 mb-3">{describeGameEnd(gameEndSummary.reason)}</p>
+            )}
             {players
               .slice()
               .sort((a, b) => b.score - a.score)
-              .map((p, i) => (
-                <div key={p.id} className="text-sm">
-                  {i === 0 ? "🏆 " : ""}
-                  {p.name}: {p.score} puntos
-                </div>
-              ))}
+              .map((p, i) => {
+                const adj = gameEndSummary?.finalAdjustments.find((a) => a.playerId === p.id);
+                return (
+                  <div key={p.id} className="text-sm">
+                    {i === 0 ? "🏆 " : ""}
+                    {p.name}: {p.score} puntos
+                    {adj && adj.delta !== 0 && (
+                      <span className="ml-1 text-xs text-gray-400">
+                        ({adj.delta > 0 ? "+" : ""}{adj.delta} por fichas restantes)
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         )}
       </div>
@@ -148,5 +166,10 @@ export function ScrabbleGameMain() {
 
   const { isJoined } = useScrabbleGameStore();
 
-  return isJoined ? <GameView /> : <JoinForm />;
+  return (
+    <>
+      <Toaster />
+      {isJoined ? <GameView /> : <JoinForm />}
+    </>
+  );
 }
