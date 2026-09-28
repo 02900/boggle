@@ -16,6 +16,59 @@ input {
   --font-mono: var(--font-geist-mono);
 }
 
+/*
+ * Game design tokens (dark, sober). Use these — not raw Tailwind palette
+ * colors — inside game screens so the look stays consistent and tweakable.
+ * Tailwind 4 turns each --color-* into utilities: bg-surface, text-ink, border-edge, …
+ */
+@theme {
+  /* Surfaces */
+  --color-canvas: #0f1318;          /* page background */
+  --color-surface: #181e25;         /* cards, panels */
+  --color-surface-raised: #222a33;  /* hover, secondary buttons, inputs */
+  --color-edge: #2c3641;            /* borders, dividers */
+
+  /* Text */
+  --color-ink: #eef2f6;
+  --color-ink-muted: #9aa6b3;
+  --color-ink-faint: #667281;
+
+  /* Single accent: "your turn", primary CTA */
+  --color-accent: #f2b544;
+  --color-accent-hover: #f7c565;
+  --color-accent-ink: #1b1305;
+
+  /* Semantic */
+  --color-success: #3fcf8e;
+  --color-success-ink: #062b1b;
+  --color-danger: #ef6b62;
+  --color-danger-ink: #2b0806;
+  --color-warning: #f2b544;
+  --color-info: #6fb3ee;
+
+  /* Board — premium squares are desaturated so they read as a grid, not confetti */
+  --color-board-frame: #0a0d11;
+  --color-board-cell: #1d2731;
+  --color-board-cell-hover: #2a3744;
+  --color-board-tw: #8e3d3d;
+  --color-board-dw: #9c5d78;
+  --color-board-tl: #355f7d;
+  --color-board-dl: #3d7a82;
+  --color-board-center: #a8863a;
+
+  /* Tiles and rack */
+  --color-tile: #f4ecd8;
+  --color-tile-edge: #d8c8a4;
+  --color-tile-ink: #2a2118;
+  --color-tile-tentative: #fbe6a6;
+  --color-tile-selected: #ffd76a;
+  --color-rack: #2b2118;
+  --color-rack-edge: #3d3022;
+
+  --shadow-tile: 0 1px 0 var(--color-tile-edge), 0 2px 4px rgb(0 0 0 / 0.35);
+  --shadow-tile-lift: 0 1px 0 var(--color-tile-edge), 0 6px 14px rgb(0 0 0 / 0.45);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -30,7 +83,7 @@ input {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 /* Prevenir scroll en móviles y optimizar para juego */

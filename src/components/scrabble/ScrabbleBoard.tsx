@@ -1,129 +1,120 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
+import { composeClasses } from "@/utils/compose-classes";
 import { ScrabbleTile } from "./ScrabbleTile";
 import { BlankTileModal } from "./BlankTileModal";
 import type { ScrabbleBoardCell, MultiplierType } from "@/interfaces/scrabble";
 
-const MULTIPLIER_COLORS: Record<MultiplierType, string> = {
-  TW: "bg-red-700",
-  DW: "bg-pink-600",
-  TL: "bg-blue-600",
-  DL: "bg-cyan-600",
-  CENTER: "bg-pink-600",
-  NONE: "bg-green-800",
+const MULTIPLIER_CLASSES: Record<MultiplierType, string> = {
+  TW: "bg-board-tw",
+  DW: "bg-board-dw",
+  TL: "bg-board-tl",
+  DL: "bg-board-dl",
+  CENTER: "bg-board-center",
+  NONE: "bg-board-cell",
 };
 
 const MULTIPLIER_LABELS: Record<MultiplierType, string> = {
-  TW: "TW",
-  DW: "DW",
-  TL: "TL",
-  DL: "DL",
-  CENTER: "\u2605",
+  TW: "3P",
+  DW: "2P",
+  TL: "3L",
+  DL: "2L",
+  CENTER: "★",
+  NONE: "",
+};
+
+const MULTIPLIER_NAMES: Record<MultiplierType, string> = {
+  TW: "palabra triple",
+  DW: "palabra doble",
+  TL: "letra triple",
+  DL: "letra doble",
+  CENTER: "centro",
   NONE: "",
 };
 
 export function ScrabbleBoard() {
-  const {
-    gameState,
-    selectedTile,
-    tentativePlacements,
-    currentPlayerId,
-    setSelectedTile,
-    addTentativePlacement,
-  } = useScrabbleGameStore();
+  const gameState = useScrabbleGameStore((s) => s.gameState);
+  const selectedTile = useScrabbleGameStore((s) => s.selectedTile);
+  const tentativePlacements = useScrabbleGameStore((s) => s.tentativePlacements);
+  const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
+  const setSelectedTile = useScrabbleGameStore((s) => s.setSelectedTile);
+  const addTentativePlacement = useScrabbleGameStore((s) => s.addTentativePlacement);
   const { placeTiles } = useScrabbleSocket();
 
-  const [blankModalOpen, setBlankModalOpen] = useState(false);
-  const [pendingBlankPlacement, setPendingBlankPlacement] = useState<{
-    row: number;
-    col: number;
-  } | null>(null);
+  const [pendingBlankPlacement, setPendingBlankPlacement] = useState<{ row: number; col: number } | null>(null);
+
+  const tentativeMap = useMemo(
+    () => new Map(tentativePlacements.map((p) => [`${p.row},${p.col}`, p])),
+    [tentativePlacements]
+  );
 
   if (!gameState) return null;
 
   const isMyTurn = gameState.currentTurnPlayerId === currentPlayerId;
-
-  const tentativeMap = new Map(
-    tentativePlacements.map((p) => [`${p.row},${p.col}`, p])
-  );
+  const canPlace = isMyTurn && selectedTile !== null;
 
   function handleCellClick(cell: ScrabbleBoardCell) {
-    const hasTentative = tentativeMap.has(`${cell.row},${cell.col}`);
-    if (selectedTile && !cell.tile && !hasTentative && isMyTurn) {
-      if (selectedTile.isBlank) {
-        setPendingBlankPlacement({ row: cell.row, col: cell.col });
-        setBlankModalOpen(true);
-        return;
-      }
-
-      const placement = { tile: selectedTile, row: cell.row, col: cell.col };
-      addTentativePlacement(placement);
-      placeTiles([placement]);
-      setSelectedTile(null);
+    if (!selectedTile || cell.tile || tentativeMap.has(`${cell.row},${cell.col}`) || !isMyTurn) return;
+    if (selectedTile.isBlank) {
+      setPendingBlankPlacement({ row: cell.row, col: cell.col });
+      return;
     }
+    const placement = { tile: selectedTile, row: cell.row, col: cell.col };
+    addTentativePlacement(placement);
+    placeTiles([placement]);
+    setSelectedTile(null);
   }
 
   function handleBlankLetterSelect(letter: string) {
     if (!selectedTile || !pendingBlankPlacement) return;
-
-    const tileWithLetter = {
-      ...selectedTile,
-      assignedLetter: letter,
-    };
-    const placement = {
-      tile: tileWithLetter,
-      row: pendingBlankPlacement.row,
-      col: pendingBlankPlacement.col,
-    };
+    const placement = { tile: { ...selectedTile, assignedLetter: letter }, ...pendingBlankPlacement };
     addTentativePlacement(placement);
     placeTiles([placement]);
     setSelectedTile(null);
-    setBlankModalOpen(false);
-    setPendingBlankPlacement(null);
-  }
-
-  function handleBlankCancel() {
-    setBlankModalOpen(false);
     setPendingBlankPlacement(null);
   }
 
   return (
     <>
       <div
-        className="inline-grid gap-px bg-green-900 p-1 rounded"
-        style={{ gridTemplateColumns: "repeat(15, 1fr)" }}
+        data-testid="board"
+        role="grid"
+        aria-label="Tablero"
+        className="inline-grid w-full max-w-[min(100%,34rem)] gap-px rounded-lg border-4 border-board-frame bg-board-frame p-0.5 shadow-2xl"
+        style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}
       >
         {gameState.board.map((row, r) =>
           row.map((cell, c) => {
             const tentative = tentativeMap.get(`${r},${c}`);
-            const hasTile = cell.tile !== null;
-            const hasTentative = tentative !== undefined;
+            const occupied = cell.tile !== null || tentative !== undefined;
+            const label = MULTIPLIER_NAMES[cell.multiplier];
 
             return (
               <button
                 key={`${r}-${c}`}
+                type="button"
+                role="gridcell"
+                aria-label={`Fila ${r + 1}, columna ${c + 1}${label ? `, ${label}` : ""}`}
                 onClick={() => handleCellClick(cell)}
-                className={`
-                  w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center
-                  text-[10px] font-bold rounded-sm
-                  transition-colors duration-100
-                  ${hasTile || hasTentative
-                    ? ""
-                    : `${MULTIPLIER_COLORS[cell.multiplier]} ${
-                        isMyTurn && selectedTile ? "cursor-pointer hover:brightness-125" : ""
-                      }`
-                  }
-                `}
+                disabled={!canPlace || occupied}
+                className={composeClasses(
+                  "relative flex aspect-square items-center justify-center rounded-[3px] p-px",
+                  "text-[0.55rem] font-semibold leading-none sm:text-[0.65rem]",
+                  "transition-colors duration-100 disabled:cursor-default",
+                  !occupied && MULTIPLIER_CLASSES[cell.multiplier],
+                  !occupied && canPlace && "cursor-pointer hover:brightness-125 ring-inset hover:ring-1 hover:ring-accent/70",
+                  occupied && "bg-board-cell"
+                )}
               >
-                {hasTile && cell.tile ? (
+                {cell.tile ? (
                   <ScrabbleTile tile={cell.tile} size="sm" />
-                ) : hasTentative && tentative ? (
+                ) : tentative ? (
                   <ScrabbleTile tile={tentative.tile} size="sm" isPlaced />
                 ) : (
-                  <span className="text-white/40">
+                  <span aria-hidden className="text-white/55">
                     {MULTIPLIER_LABELS[cell.multiplier]}
                   </span>
                 )}
@@ -134,9 +125,9 @@ export function ScrabbleBoard() {
       </div>
 
       <BlankTileModal
-        open={blankModalOpen}
+        open={pendingBlankPlacement !== null}
         onSelect={handleBlankLetterSelect}
-        onCancel={handleBlankCancel}
+        onCancel={() => setPendingBlankPlacement(null)}
       />
     </>
   );

@@ -4,10 +4,10 @@ import { useEffect } from "react";
 import { useScrabbleGameStore, type Notification, type NotificationKind } from "@/stores/scrabble-game.store";
 
 const KIND_CLASSES: Record<NotificationKind, string> = {
-  success: "bg-emerald-600 text-white",
-  error: "bg-red-600 text-white",
-  info: "bg-gray-800 text-gray-100",
-  turn: "bg-amber-400 text-gray-900",
+  success: "bg-success text-success-ink",
+  error: "bg-danger text-danger-ink",
+  info: "bg-surface-raised text-ink border border-edge",
+  turn: "bg-accent text-accent-ink",
 };
 
 const KIND_ICON: Record<NotificationKind, string> = {
@@ -32,7 +32,7 @@ function Toast({ notification }: { notification: Notification }) {
       data-testid="toast"
       data-kind={notification.kind}
       onClick={() => dismiss(notification.id)}
-      className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-lg cursor-pointer select-none ${KIND_CLASSES[notification.kind]}`}
+      className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg cursor-pointer select-none ${KIND_CLASSES[notification.kind]}`}
     >
       <span aria-hidden className="text-xs opacity-80">{KIND_ICON[notification.kind]}</span>
       <span>{notification.text}</span>

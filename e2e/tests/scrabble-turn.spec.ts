@@ -116,7 +116,7 @@ test.describe("Scrabble - Turns", () => {
     // Client must resync with the server: rack restored, board cell empty, still my turn
     await expect(activePlayer.tileRack.locator("button")).toHaveCount(tilesBefore);
     const centerCell = activePlayer.boardGrid.locator("> button").nth(7 * 15 + 7);
-    await expect(centerCell.locator("button")).toHaveCount(0);
+    await expect(centerCell.locator('[data-testid="tile"]')).toHaveCount(0);
     expect(await activePlayer.isMyTurn()).toBe(true);
     await expect(activePlayer.exchangeButton).toBeEnabled();
   });

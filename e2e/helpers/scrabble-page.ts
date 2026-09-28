@@ -37,10 +37,10 @@ export class ScrabblePage {
     this.confirmExchangeButton = page.getByRole("button", { name: /Confirmar cambio/ });
     this.cancelExchangeButton = page.getByRole("button", { name: "Cancelar" });
     this.resetButton = page.getByRole("button", { name: "Nueva Partida" });
-    this.tileRack = page.locator(".bg-amber-800");
+    this.tileRack = page.locator('[data-testid="tile-rack"]');
     this.playerBadges = page.locator('[data-testid="player-badge"]');
     this.connectionBanner = page.locator('[data-testid="connection-banner"]');
-    this.boardGrid = page.locator('[style*="grid-template-columns: repeat(15"]');
+    this.boardGrid = page.locator('[data-testid="board"]');
     this.turnIndicator = page.locator('[data-testid="turn-indicator"]');
     // Transient notifications (turn events, errors). Most recent is last.
     this.messageBox = page.locator('[data-testid="toast"]');
@@ -104,9 +104,8 @@ export class ScrabblePage {
     const count = await tiles.count();
     const letters: string[] = [];
     for (let i = 0; i < count; i++) {
-      const letterSpan = tiles.nth(i).locator("span.text-gray-800");
-      const text = await letterSpan.textContent();
-      if (text) letters.push(text.trim());
+      const letter = await tiles.nth(i).getAttribute("data-letter");
+      if (letter) letters.push(letter);
     }
     return letters;
   }
@@ -174,7 +173,7 @@ export class ScrabblePage {
 
   async getPlayerScore(name: string): Promise<number> {
     const badge = this.playerBadges.filter({ hasText: name });
-    const scoreText = await badge.locator("span.text-xs").textContent();
+    const scoreText = await badge.locator('[data-testid="player-score"]').textContent();
     return parseInt(scoreText?.replace("pts", "").trim() ?? "0", 10);
   }
 
@@ -194,7 +193,7 @@ export class ScrabblePage {
   }
 
   async getTimerText(): Promise<string> {
-    const timer = this.page.locator(".font-mono.tabular-nums");
+    const timer = this.turnIndicator.locator('[role="timer"]');
     if (await timer.isVisible()) {
       return (await timer.textContent()) ?? "";
     }

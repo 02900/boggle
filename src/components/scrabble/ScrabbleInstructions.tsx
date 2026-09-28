@@ -1,42 +1,59 @@
 "use client";
 
+function Rule({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="font-semibold text-ink">{title}</h3>
+      <div className="text-ink-muted">{children}</div>
+    </div>
+  );
+}
+
+// Tailwind only picks up literal class names, so no template interpolation here
+const PREMIUM_BG = { tw: "bg-board-tw", dw: "bg-board-dw", tl: "bg-board-tl", dl: "bg-board-dl" };
+
+function Premium({ kind, children }: { kind: keyof typeof PREMIUM_BG; children: React.ReactNode }) {
+  return (
+    <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${PREMIUM_BG[kind]}`}>
+      {children}
+    </span>
+  );
+}
+
 export function ScrabbleInstructions() {
   return (
-    <div className="bg-gray-800 text-white rounded-lg p-6 max-w-md mx-auto">
-      <h2 className="text-xl font-bold mb-4">Reglas de Scrabble</h2>
+    <div className="space-y-3 text-sm">
+      <h2 className="text-lg font-bold text-ink">Reglas de Scrabble</h2>
 
-      <div className="space-y-3 text-sm text-gray-300">
-        <div>
-          <h3 className="font-semibold text-white">Objetivo</h3>
-          <p>Formar palabras en el tablero usando tus fichas para obtener la mayor puntuacion.</p>
-        </div>
+      <Rule title="Objetivo">
+        Formar palabras en el tablero usando tus fichas para obtener la mayor puntuación.
+      </Rule>
 
-        <div>
-          <h3 className="font-semibold text-white">Turno</h3>
-          <p>Selecciona una ficha de tu atril y haz click en el tablero para colocarla. Las fichas deben formar una linea (horizontal o vertical) y conectar con fichas existentes.</p>
-        </div>
+      <Rule title="Turno">
+        Selecciona una ficha de tu atril y haz click en el tablero para colocarla. Las fichas deben formar una
+        línea (horizontal o vertical) y conectar con fichas existentes. Se admiten palabras de 2 letras.
+      </Rule>
 
-        <div>
-          <h3 className="font-semibold text-white">Puntuacion</h3>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Cada letra tiene un valor en puntos</li>
-            <li><span className="text-red-400">TW</span> = Palabra triple, <span className="text-pink-400">DW</span> = Palabra doble</li>
-            <li><span className="text-blue-400">TL</span> = Letra triple, <span className="text-cyan-400">DL</span> = Letra doble</li>
-            <li>Los multiplicadores solo aplican la primera vez que se cubren</li>
-            <li>Usar las 7 fichas en un turno: +50 puntos bonus</li>
-          </ul>
-        </div>
+      <Rule title="Puntuación">
+        <ul className="list-inside list-disc space-y-1">
+          <li>Cada letra tiene un valor en puntos</li>
+          <li>
+            <Premium kind="tw">3P</Premium> palabra triple · <Premium kind="dw">2P</Premium> palabra doble
+          </li>
+          <li>
+            <Premium kind="tl">3L</Premium> letra triple · <Premium kind="dl">2L</Premium> letra doble
+          </li>
+          <li>Los multiplicadores solo aplican la primera vez que se cubren</li>
+          <li>Usar las 7 fichas en un turno: +50 puntos</li>
+        </ul>
+      </Rule>
 
-        <div>
-          <h3 className="font-semibold text-white">Primer turno</h3>
-          <p>Al menos una ficha debe cubrir la casilla central del tablero.</p>
-        </div>
+      <Rule title="Primer turno">Al menos una ficha debe cubrir la casilla central (★).</Rule>
 
-        <div>
-          <h3 className="font-semibold text-white">Fin del juego</h3>
-          <p>El juego termina cuando la bolsa esta vacia y un jugador coloca todas sus fichas, o cuando todos los jugadores pasan consecutivamente.</p>
-        </div>
-      </div>
+      <Rule title="Fin del juego">
+        Termina cuando la bolsa está vacía y un jugador coloca todas sus fichas, o tras 6 pases consecutivos.
+        Cada jugador resta el valor de las fichas que le quedan; quien se quedó sin fichas suma ese total.
+      </Rule>
     </div>
   );
 }

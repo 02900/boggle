@@ -237,22 +237,25 @@ Eventos server→cliente nuevos, tipados en `src/interfaces/scrabble.ts`:
   en vez de clases Tailwind. Nuevo spec `scrabble-presence.spec.ts` (toasts de turno,
   desconexión con gracia + vuelta, socket propio reconectando).
 
-### Fase 2 — Sistema de diseño mínimo (C)
+### Fase 2 — Sistema de diseño mínimo (C) — ✅ HECHA (dirección: oscuro sobrio)
 
-Objetivo: una sola paleta sobria, tipografía consistente, componentes base.
-
-- **Tokens** en `globals.css` (`@theme` de Tailwind 4): superficie (fondo, card, elevado),
-  texto (primario, secundario, muted), acento (uno solo), semánticos (success/warning/danger),
-  y los 5 colores del tablero como tokens propios (`--board-tw`, `--board-dw`, `--board-tl`,
-  `--board-dl`, `--board-cell`) en tonos apagados que armonicen con la superficie.
-- **Dirección visual sugerida:** fondo neutro oscuro o claro (no verde casino), tablero
-  con marco y casillas premium en tonos pastel desaturados con etiquetas legibles,
-  fichas color marfil con sombra sutil y letra serif/grotesca bold, un solo acento para
-  "tu turno" y CTA primario.
-- **Componentes base** en `src/components/ui/`: `Button` (variants primary/secondary/ghost/danger,
-  sizes), `Card`, `Badge`, `Modal` (focus trap, Escape, animación), `Toast/Toaster`,
-  `Timer`. Reutilizables luego por Boggle.
-- Arreglar `body { font-family: Arial }` → usar la variable de fuente de Next.
+- **Tokens** en `src/app/globals.css` (`@theme` de Tailwind 4 → utilidades `bg-surface`,
+  `text-ink`, `border-edge`, …): `canvas/surface/surface-raised/edge`, `ink/ink-muted/ink-faint`,
+  un único acento `accent` (ámbar) para "tu turno" y CTA, semánticos `success/danger/warning/info`,
+  tablero `board-frame/cell/tw/dw/tl/dl/center` desaturados, fichas `tile/tile-edge/tile-ink/
+  tile-tentative/tile-selected` y atril `rack/rack-edge`, sombras `shadow-tile`/`shadow-tile-lift`.
+- `body` usa la fuente Geist (`--font-sans`) en vez de Arial.
+- **Componentes base** en `src/components/ui/`: `Button` (primary/secondary/ghost/danger ×
+  sm/md/lg, focus ring), `Card`, `Badge` (tones), `Modal` (focus trap, Escape, backdrop,
+  devuelve el foco), `Timer` (estados normal/warning/danger con `role="timer"`).
+- Scrabble migrado a tokens + base: fichas marfil con relieve y valor legible, tentativas y
+  seleccionadas diferenciadas, atril al ancho del contenido con huecos punteados, tablero
+  fluido (`aspect-square`, ya no desborda en móvil) con marco y etiquetas `3P/2P/3L/2L/★`
+  legibles, botones con jerarquía (Confirmar primario, Devolver secundario, Cambiar/Pasar ghost).
+- Fichas del tablero son `<div>` (antes `<button>` anidado en `<button>`, HTML inválido);
+  las del atril son `<button aria-pressed>`; celdas con `role=gridcell` y `aria-label`.
+- E2E: page object 100 % sobre `data-testid` (`tile-rack`, `board`, `tile[data-letter]`,
+  `player-score`) — ya no depende de clases Tailwind.
 
 ### Fase 3 — Rediseño de pantallas (C)
 

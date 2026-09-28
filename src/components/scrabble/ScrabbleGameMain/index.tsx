@@ -3,6 +3,9 @@
 import { useScrabbleSocketListeners } from "@/hooks/use-scrabble-socket-listeners";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
+import { Badge, Button, Card } from "@/components/ui";
+import { composeClasses } from "@/utils/compose-classes";
+import { describeGameEnd } from "@/utils/scrabble-messages";
 import { ScrabbleBoard } from "../ScrabbleBoard";
 import { TileRack } from "../TileRack";
 import { TurnIndicator } from "../TurnIndicator";
@@ -11,12 +14,11 @@ import { ScrabbleInstructions } from "../ScrabbleInstructions";
 import { MoveHistory } from "../MoveHistory";
 import { Toaster } from "../Toaster";
 import { ConnectionBanner } from "../ConnectionBanner";
-import { describeGameEnd } from "@/utils/scrabble-messages";
 import { useState, useEffect } from "react";
 
 function JoinForm() {
   const { joinGame } = useScrabbleSocket();
-  const { isConnected } = useScrabbleGameStore();
+  const isConnected = useScrabbleGameStore((s) => s.isConnected);
   const [name, setName] = useState("");
   const [showInstructions, setShowInstructions] = useState(false);
 
@@ -29,43 +31,34 @@ function JoinForm() {
 
   const handleJoin = () => {
     const finalName = name.trim();
-    if (finalName) {
-      joinGame(finalName);
-    }
+    if (finalName) joinGame(finalName);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-900 to-green-700 p-4">
-      <div className="w-full max-w-sm bg-gray-800 rounded-xl p-6 text-white">
-        <h1 className="text-2xl font-bold text-center mb-1">Scrabble</h1>
-        <p className="text-gray-400 text-sm text-center mb-6">
-          Juego de palabras por turnos
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-canvas p-4">
+      <Card padding="lg" className="w-full max-w-sm">
+        <h1 className="text-center text-3xl font-bold tracking-tight">Scrabble</h1>
+        <p className="mb-6 mt-1 text-center text-sm text-ink-muted">Juego de palabras por turnos</p>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleJoin()}
             placeholder="Tu nombre"
-            className="w-full px-4 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            aria-label="Tu nombre"
+            maxLength={20}
+            className="h-11 w-full rounded-lg border border-edge bg-surface-raised px-4 text-ink! placeholder:text-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
           />
 
-          <button
-            onClick={handleJoin}
-            disabled={!isConnected || !name.trim()}
-            className="w-full py-2 rounded font-medium bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-          >
+          <Button variant="primary" size="lg" fullWidth onClick={handleJoin} disabled={!isConnected || !name.trim()}>
             {isConnected ? "Unirse" : "Conectando..."}
-          </button>
+          </Button>
 
-          <button
-            onClick={() => setShowInstructions(!showInstructions)}
-            className="w-full py-2 rounded font-medium bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
-          >
+          <Button variant="ghost" fullWidth onClick={() => setShowInstructions(!showInstructions)}>
             {showInstructions ? "Ocultar reglas" : "Ver reglas"}
-          </button>
+          </Button>
         </div>
 
         {showInstructions && (
@@ -73,89 +66,96 @@ function JoinForm() {
             <ScrabbleInstructions />
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
 
-function GameView() {
-  const { gameState, currentPlayerId, gameEndSummary } = useScrabbleGameStore();
-
-  const players = gameState?.players ?? [];
-  const isFinished = gameState?.gameState === "finished";
+function PlayerList() {
+  const players = useScrabbleGameStore((s) => s.gameState?.players ?? []);
+  const currentTurnPlayerId = useScrabbleGameStore((s) => s.gameState?.currentTurnPlayerId);
+  const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 to-green-800 p-2 sm:p-4">
-      <div className="max-w-4xl mx-auto space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-white text-lg font-bold">Scrabble</h1>
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {players.map((p) => {
+        const isTurn = p.id === currentTurnPlayerId;
+        const isMe = p.id === currentPlayerId;
+        const offline = p.isConnected === false;
+        return (
+          <Badge
+            key={p.id}
+            tone={isTurn ? "accent" : isMe ? "neutral" : "muted"}
+            data-testid="player-badge"
+            data-connected={!offline}
+            className={composeClasses("flex-shrink-0", offline && "opacity-50 line-through")}
+          >
+            <span className="font-medium">{p.name}</span>
+            <span data-testid="player-score" className="text-xs opacity-75">
+              {p.score}pts
+            </span>
+          </Badge>
+        );
+      })}
+    </div>
+  );
+}
+
+function GameOverSummary() {
+  const players = useScrabbleGameStore((s) => s.gameState?.players ?? []);
+  const gameEndSummary = useScrabbleGameStore((s) => s.gameEndSummary);
+  const ranked = [...players].sort((a, b) => b.score - a.score);
+
+  return (
+    <Card className="text-center">
+      <h2 className="text-xl font-bold">Juego Terminado</h2>
+      {gameEndSummary && <p className="mb-3 text-xs text-ink-muted">{describeGameEnd(gameEndSummary.reason)}</p>}
+      <ol className="space-y-1">
+        {ranked.map((p, i) => {
+          const adj = gameEndSummary?.finalAdjustments.find((a) => a.playerId === p.id);
+          return (
+            <li key={p.id} className={composeClasses("text-sm", i === 0 && "font-semibold text-accent")}>
+              {i === 0 ? "🏆 " : ""}
+              {p.name}: {p.score} puntos
+              {adj && adj.delta !== 0 && (
+                <span className="ml-1 text-xs text-ink-muted">
+                  ({adj.delta > 0 ? "+" : ""}
+                  {adj.delta} por fichas restantes)
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </Card>
+  );
+}
+
+function GameView() {
+  const isFinished = useScrabbleGameStore((s) => s.gameState?.gameState === "finished");
+
+  return (
+    <div className="min-h-screen bg-canvas p-2 text-ink sm:p-4">
+      <div className="mx-auto max-w-4xl space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-lg font-bold tracking-tight">Scrabble</h1>
           <TurnIndicator />
         </div>
 
         <ConnectionBanner />
+        <PlayerList />
 
-        {/* Players */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {players.map((p) => (
-            <div
-              key={p.id}
-              data-testid="player-badge"
-              data-connected={p.isConnected !== false}
-              className={`flex-shrink-0 px-3 py-1.5 rounded text-sm ${
-                p.id === gameState?.currentTurnPlayerId
-                  ? "bg-green-600 text-white"
-                  : p.id === currentPlayerId
-                    ? "bg-gray-600 text-white"
-                    : "bg-gray-700 text-gray-300"
-              } ${p.isConnected === false ? "opacity-50 line-through" : ""}`}
-            >
-              <span className="font-medium">{p.name}</span>
-              <span className="ml-2 text-xs opacity-75">{p.score}pts</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Board */}
-        <div className="flex justify-center overflow-auto">
+        <div className="flex justify-center">
           <ScrabbleBoard />
         </div>
 
-        {/* Rack + Controls */}
-        <div className="space-y-2">
+        <div className="flex flex-col items-center gap-3">
           <TileRack />
           <ScrabbleControls />
         </div>
 
-        {/* Move History */}
         <MoveHistory />
-
-        {/* End game summary */}
-        {isFinished && (
-          <div className="bg-gray-800 rounded-lg p-4 text-center text-white">
-            <h2 className="text-xl font-bold mb-1">Juego Terminado</h2>
-            {gameEndSummary && (
-              <p className="text-xs text-gray-400 mb-3">{describeGameEnd(gameEndSummary.reason)}</p>
-            )}
-            {players
-              .slice()
-              .sort((a, b) => b.score - a.score)
-              .map((p, i) => {
-                const adj = gameEndSummary?.finalAdjustments.find((a) => a.playerId === p.id);
-                return (
-                  <div key={p.id} className="text-sm">
-                    {i === 0 ? "🏆 " : ""}
-                    {p.name}: {p.score} puntos
-                    {adj && adj.delta !== 0 && (
-                      <span className="ml-1 text-xs text-gray-400">
-                        ({adj.delta > 0 ? "+" : ""}{adj.delta} por fichas restantes)
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
-        )}
+        {isFinished && <GameOverSummary />}
       </div>
     </div>
   );
@@ -163,8 +163,7 @@ function GameView() {
 
 export function ScrabbleGameMain() {
   useScrabbleSocketListeners();
-
-  const { isJoined } = useScrabbleGameStore();
+  const isJoined = useScrabbleGameStore((s) => s.isJoined);
 
   return (
     <>

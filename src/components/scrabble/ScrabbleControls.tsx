@@ -2,20 +2,18 @@
 
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
+import { Button } from "@/components/ui";
 
 export function ScrabbleControls() {
-  const {
-    gameState,
-    currentPlayerId,
-    tentativePlacements,
-    rack,
-    exchangeMode,
-    selectedForExchange,
-    setExchangeMode,
-    clearExchangeSelection,
-  } = useScrabbleGameStore();
-  const { startGame, submitTurn, passTurn, recallTiles, exchangeTiles, resetGame } =
-    useScrabbleSocket();
+  const gameState = useScrabbleGameStore((s) => s.gameState);
+  const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
+  const tentativePlacements = useScrabbleGameStore((s) => s.tentativePlacements);
+  const rack = useScrabbleGameStore((s) => s.rack);
+  const exchangeMode = useScrabbleGameStore((s) => s.exchangeMode);
+  const selectedForExchange = useScrabbleGameStore((s) => s.selectedForExchange);
+  const setExchangeMode = useScrabbleGameStore((s) => s.setExchangeMode);
+  const clearExchangeSelection = useScrabbleGameStore((s) => s.clearExchangeSelection);
+  const { startGame, submitTurn, passTurn, recallTiles, exchangeTiles, resetGame } = useScrabbleSocket();
 
   const isPlaying = gameState?.gameState === "playing";
   const isWaiting = gameState?.gameState === "waiting";
@@ -26,9 +24,7 @@ export function ScrabbleControls() {
 
   const handleExchangeConfirm = () => {
     const tileIds = [...selectedForExchange];
-    if (tileIds.length > 0) {
-      exchangeTiles(tileIds);
-    }
+    if (tileIds.length > 0) exchangeTiles(tileIds);
     setExchangeMode(false);
   };
 
@@ -38,87 +34,55 @@ export function ScrabbleControls() {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-center gap-2">
       {exchangeMode && (
-        <div className="text-center text-sm text-orange-300 bg-orange-900/40 rounded px-3 py-1">
-          Selecciona las fichas que quieres cambiar
-        </div>
+        <p className="text-center text-sm text-warning">Selecciona las fichas que quieres cambiar</p>
       )}
 
-      <div className="flex gap-2 flex-wrap justify-center">
+      <div className="flex flex-wrap justify-center gap-2">
         {isWaiting && playerCount >= 2 && (
-          <button
-            onClick={startGame}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded font-medium transition-colors"
-          >
+          <Button variant="primary" size="lg" onClick={startGame}>
             Iniciar Juego
-          </button>
+          </Button>
         )}
 
         {isPlaying && isMyTurn && !exchangeMode && (
           <>
-            <button
-              onClick={submitTurn}
-              disabled={!hasPlacements}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
-            >
+            <Button variant="primary" onClick={submitTurn} disabled={!hasPlacements}>
               Confirmar
-            </button>
-            <button
-              onClick={recallTiles}
-              disabled={!hasPlacements}
-              className="px-3 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
-            >
+            </Button>
+            <Button onClick={recallTiles} disabled={!hasPlacements}>
               Devolver
-            </button>
-            <button
-              onClick={passTurn}
-              className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded font-medium transition-colors"
-            >
-              Pasar
-            </button>
-            <button
-              onClick={() => setExchangeMode(true)}
-              disabled={hasPlacements || rack.length === 0}
-              className="px-3 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
-            >
+            </Button>
+            <Button variant="ghost" onClick={() => setExchangeMode(true)} disabled={hasPlacements || rack.length === 0}>
               Cambiar
-            </button>
+            </Button>
+            <Button variant="ghost" onClick={passTurn}>
+              Pasar
+            </Button>
           </>
         )}
 
         {isPlaying && isMyTurn && exchangeMode && (
           <>
-            <button
-              onClick={handleExchangeConfirm}
-              disabled={selectedForExchange.size === 0}
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
-            >
+            <Button variant="primary" onClick={handleExchangeConfirm} disabled={selectedForExchange.size === 0}>
               Confirmar cambio ({selectedForExchange.size})
-            </button>
-            <button
-              onClick={handleExchangeCancel}
-              className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded font-medium transition-colors"
-            >
+            </Button>
+            <Button variant="ghost" onClick={handleExchangeCancel}>
               Cancelar
-            </button>
+            </Button>
           </>
         )}
 
         {isFinished && (
-          <button
-            onClick={resetGame}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-medium transition-colors"
-          >
+          <Button variant="primary" size="lg" onClick={resetGame}>
             Nueva Partida
-          </button>
+          </Button>
         )}
       </div>
 
       {isPlaying && (
-        <div className="text-center text-xs text-gray-400">
-          Fichas en bolsa: {gameState?.tileBagCount ?? 0}
-        </div>
+        <p className="text-xs text-ink-faint">Fichas en bolsa: {gameState?.tileBagCount ?? 0}</p>
       )}
     </div>
   );
