@@ -276,8 +276,12 @@ Eventos server→cliente nuevos, tipados en `src/interfaces/scrabble.ts`:
 5. ✅ **Resultados** (`GameOverModal`): se abre solo al terminar; "¡Ganaste!"/"Ganó X",
    motivo, ranking con medallas, palabras por jugador, ajuste por fichas restantes (+/-),
    mejor jugada, CTA Nueva Partida y "Ver tablero" (reabrible desde el panel).
-6. Pendiente para Fase 4/6: puntos estimados en Confirmar, click en tentativa para devolverla,
-   botón Mezclar y drag en el atril, coordenadas del tablero.
+6. ✅ (post-Fase 5) Puntos estimados en Confirmar + palabras formadas (`game/scrabble/moveEvaluation.ts`,
+   reglas puras compartidas server/cliente, sin diccionario), click en ficha tentativa para devolverla
+   (`recall-tile`), Mezclar (⇄) y reordenar el atril arrastrando (orden solo en el cliente,
+   `utils/rack-order.ts`), coordenadas A–O / 1–15 (celdas con `aria-label` tipo "H8"), y
+   "← Juegos" en join/lobby/mesa (`leave-game`: salir a propósito = abandonar, sin gracia).
+   Drag & drop del atril es HTML5 → solo con mouse; en táctil queda "Mezclar".
 
 ### Fase 4 — Animaciones (C) — ✅ HECHA
 

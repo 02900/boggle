@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Socket } from "socket.io-client";
+import { moveTile, orderRack, shuffleIds } from "@/utils/rack-order";
 import type {
   ScrabbleGameState,
   ScrabbleTile,
@@ -62,6 +63,8 @@ interface ScrabbleGameStore {
   // Client-side interaction state
   selectedTile: ScrabbleTile | null;
   tentativePlacements: TilePlacement[];
+  /** Player's preferred rack order (tile ids); see utils/rack-order */
+  rackOrder: string[];
   notifications: Notification[];
 
   // Transient visual cues (set by socket events, cleared by timeout)
@@ -90,6 +93,9 @@ interface ScrabbleGameStore {
   removeTentativePlacement: (tileId: string) => void;
   setTentativePlacements: (placements: TilePlacement[]) => void;
   clearTentativePlacements: () => void;
+  shuffleRack: () => void;
+  /** Drag & drop: put `tileId` where `targetId` is (null = at the end). */
+  moveRackTile: (tileId: string, targetId: string | null) => void;
   notify: (kind: NotificationKind, text: string, ttl?: number) => number;
   dismissNotification: (id: number) => void;
   setLastPlayedCells: (cells: string[]) => void;
@@ -118,6 +124,7 @@ const initialState = {
   gameEndSummary: null as GameEndSummary | null,
   selectedTile: null as ScrabbleTile | null,
   tentativePlacements: [] as TilePlacement[],
+  rackOrder: [] as string[],
   notifications: [] as Notification[],
   lastPlayedCells: [] as string[],
   invalidMoveAt: null as number | null,
@@ -158,6 +165,12 @@ export const useScrabbleGameStore = create<ScrabbleGameStore>((set) => ({
     })),
   setTentativePlacements: (tentativePlacements) => set({ tentativePlacements }),
   clearTentativePlacements: () => set({ tentativePlacements: [] }),
+  shuffleRack: () =>
+    set((state) => ({ rackOrder: shuffleIds(orderRack(state.rack, state.rackOrder).map((t) => t.id)) })),
+  moveRackTile: (tileId, targetId) =>
+    set((state) => ({
+      rackOrder: moveTile(orderRack(state.rack, state.rackOrder).map((t) => t.id), tileId, targetId),
+    })),
   notify: (kind, text, ttl = DEFAULT_TTL[kind]) => {
     const id = nextNotificationId++;
     set((state) => ({

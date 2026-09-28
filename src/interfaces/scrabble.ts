@@ -192,10 +192,14 @@ export interface ScrabbleClientEvents {
   "get-scoreboard": () => void;
   "place-tiles": (data: { placements: TilePlacement[] }) => void;
   "recall-tiles": () => void;
+  /** Return one tentative tile (clicked on the board) to the rack. */
+  "recall-tile": (data: { tileId: string }) => void;
   "submit-turn": () => void;
   "pass-turn": () => void;
   "exchange-tiles": (data: { tileIds: string[] }) => void;
   /** Skip the current player's turn; only allowed for another player once the clock is negative. */
   "skip-turn": () => void;
   "rejoin-game": (data: { playerName: string; gameId: string }) => void;
+  /** Leave on purpose (back to the menu): removed at once, no grace period. */
+  "leave-game": () => void;
 }

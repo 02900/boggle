@@ -108,6 +108,25 @@ describe("useScrabbleGameStore", () => {
     });
   });
 
+  describe("rack order", () => {
+    const tiles = ["a", "b", "c", "d"].map((id) => ({ ...mockTile, id }));
+    const order = () => useScrabbleGameStore.getState().rackOrder;
+
+    it("moveRackTile reorders relative to the current display order", () => {
+      useScrabbleGameStore.getState().setRack(tiles);
+      useScrabbleGameStore.getState().moveRackTile("a", "c");
+      expect(order()).toEqual(["b", "c", "a", "d"]);
+      useScrabbleGameStore.getState().moveRackTile("d", null);
+      expect(order()).toEqual(["b", "c", "a", "d"]);
+    });
+
+    it("shuffleRack keeps the same tiles", () => {
+      useScrabbleGameStore.getState().setRack(tiles);
+      useScrabbleGameStore.getState().shuffleRack();
+      expect([...useScrabbleGameStore.getState().rackOrder].sort()).toEqual(["a", "b", "c", "d"]);
+    });
+  });
+
   describe("exchange mode", () => {
     it("toggleExchangeSelection adds and removes tile ids", () => {
       const s = useScrabbleGameStore.getState();

@@ -103,6 +103,32 @@ describe("setupScrabbleHandlers", () => {
     });
   });
 
+  describe("recall-tile", () => {
+    it("recalls one tile, broadcasts public state and resyncs the player", () => {
+      socket._trigger("recall-tile", { tileId: "t1" });
+
+      expect(game.recallTile).toHaveBeenCalledWith("socket-1", "t1");
+      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.objectContaining({ rack: [] }));
+    });
+
+    it("reports a failed recall and still resyncs the player", () => {
+      game.recallTile.mockReturnValue({ success: false, reason: "Esa ficha no está en el tablero" });
+
+      socket._trigger("recall-tile", { tileId: "nope" });
+
+      expect(socket.emit).toHaveBeenCalledWith("word-result", { valid: false, reason: "Esa ficha no está en el tablero" });
+      expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
+    });
+
+    it("rejects invalid data", () => {
+      socket._trigger("recall-tile", {});
+
+      expect(game.recallTile).not.toHaveBeenCalled();
+      expect(socket.emit).toHaveBeenCalledWith("word-result", { valid: false, reason: "Datos inválidos" });
+    });
+  });
+
   describe("submit-turn", () => {
     it("calls game.submitTurn and emits word-result", () => {
       socket._trigger("submit-turn");
@@ -291,6 +317,37 @@ describe("setupScrabbleHandlers", () => {
 
       expect(socket.emit).toHaveBeenCalledWith("word-result", { valid: false, reason: "Todavía le queda tiempo" });
       expect(io.emit).not.toHaveBeenCalledWith("game-state", expect.anything());
+    });
+  });
+
+  describe("leave-game", () => {
+    it("removes the player at once and announces it", () => {
+      game.gameState = "playing";
+
+      socket._trigger("leave-game");
+
+      expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
+      expect(io.emit).toHaveBeenCalledWith("player-left", "socket-1");
+      expect(io.emit).toHaveBeenCalledWith("game-state", expect.anything());
+    });
+
+    it("does not announce player-left when leaving ended the game", () => {
+      game.gameState = "playing";
+      game.removePlayer.mockImplementation(() => {
+        game.gameState = "finished";
+      });
+
+      socket._trigger("leave-game");
+
+      expect(io.emit).not.toHaveBeenCalledWith("player-left", expect.anything());
+    });
+
+    it("ignores sockets that aren't in the game", () => {
+      game.players = new Map() as any;
+
+      socket._trigger("leave-game");
+
+      expect(game.removePlayer).not.toHaveBeenCalled();
     });
   });
 

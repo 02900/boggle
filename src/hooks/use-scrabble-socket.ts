@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import type { TilePlacement } from "@/interfaces/scrabble";
+import { clearSession } from "./use-scrabble-socket-listeners";
 
 export const useScrabbleSocket = () => {
   const { socket } = useScrabbleGameStore();
@@ -28,6 +29,21 @@ export const useScrabbleSocket = () => {
   const recallTiles = useCallback(() => {
     useScrabbleGameStore.getState().clearTentativePlacements();
     socket?.emit("recall-tiles");
+  }, [socket]);
+
+  /** Take one tentative tile back from the board (optimistic; the server resyncs). */
+  const recallTile = useCallback(
+    (tileId: string) => {
+      useScrabbleGameStore.getState().removeTentativePlacement(tileId);
+      socket?.emit("recall-tile", { tileId });
+    },
+    [socket]
+  );
+
+  /** Leave on purpose: the server drops us now instead of waiting out the grace period. */
+  const leaveGame = useCallback(() => {
+    socket?.emit("leave-game");
+    clearSession();
   }, [socket]);
 
   const submitTurn = useCallback(() => {
@@ -63,6 +79,8 @@ export const useScrabbleSocket = () => {
     passTurn,
     exchangeTiles,
     skipTurn,
+    recallTile,
+    leaveGame,
     resetGame,
   };
 };

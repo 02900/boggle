@@ -12,6 +12,7 @@ import { MoveHistory } from "./MoveHistory";
 import { ConnectionBanner } from "./ConnectionBanner";
 import { PlayerPanel } from "./PlayerPanel";
 import { GameOverModal } from "./GameOverModal";
+import { LeaveGameButton } from "./LeaveGameButton";
 
 function RackAndActions() {
   return (
@@ -39,7 +40,10 @@ export function ScrabbleTable() {
   return (
     <div className="flex min-h-screen flex-col bg-canvas text-ink">
       <header className="mx-auto flex w-full max-w-[96rem] items-center justify-between gap-3 px-3 pt-3 sm:px-4">
-        <h1 className="text-lg font-bold tracking-tight">Scrabble</h1>
+        <div className="flex items-center gap-2">
+          <LeaveGameButton />
+          <h1 className="text-lg font-bold tracking-tight">Scrabble</h1>
+        </div>
         <TurnIndicator />
       </header>
 
@@ -50,7 +54,7 @@ export function ScrabbleTable() {
       {/* Desktop: board column (capped by the viewport height, see ScrabbleBoard) and the
           side panel sit together, centered, instead of the panel drifting to the far edge */}
       <main className="mx-auto flex w-full max-w-[96rem] flex-1 flex-col gap-4 px-3 pb-3 pt-2 sm:px-4 lg:flex-row lg:items-start lg:justify-center xl:gap-8">
-        <section className="flex flex-col items-center gap-3 lg:min-w-0 lg:max-w-[calc(100dvh-15rem)] lg:flex-1">
+        <section className="flex flex-col items-center gap-3 lg:min-w-0 lg:max-w-[calc(100dvh-15.5rem)] lg:flex-1">
           {!isDesktop && (
             <div className="w-full">
               <PlayerPanel compact />

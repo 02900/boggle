@@ -7,6 +7,7 @@ import { Button, Card, Modal } from "@/components/ui";
 import { composeClasses } from "@/utils/compose-classes";
 import { ScrabbleInstructions } from "./ScrabbleInstructions";
 import { playerColor } from "./player-colors";
+import { LeaveGameButton } from "./LeaveGameButton";
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
@@ -24,6 +25,9 @@ export function ScrabbleLobby() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas p-4 text-ink">
       <Card padding="lg" className="w-full max-w-md">
+        <div className="-ml-2 -mt-2 mb-2">
+          <LeaveGameButton />
+        </div>
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-bold tracking-tight">Scrabble</h1>
           <p className="mt-1 text-sm text-ink-muted">Sala de espera</p>

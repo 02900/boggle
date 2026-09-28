@@ -36,7 +36,9 @@ export function ScrabbleInstructions() {
       <Rule title="Turno">
         Selecciona una ficha de tu atril y haz click en el tablero para colocarla. Las fichas deben formar una
         línea (horizontal o vertical) y conectar con fichas existentes. Se admiten palabras de 2 letras.
-        Las palabras se validan automáticamente contra el diccionario (no hay desafíos).
+        Las palabras se validan automáticamente contra el diccionario (no hay desafíos). Antes de confirmar ves
+        las palabras que formas y los puntos estimados; haz click en una ficha colocada para devolverla al atril.
+        Puedes mezclar el atril (⇄) o reordenarlo arrastrando las fichas.
       </Rule>
 
       <Rule title="Cambiar y pasar">

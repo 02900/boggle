@@ -513,6 +513,33 @@ describe("ScrabbleGame", () => {
       expect(!tentative || tentative.length === 0).toBe(true);
     });
 
+    it("recallTile returns only the chosen tile and keeps the rest placed", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const a = makeTile("A", 1, "one-a");
+      const b = makeTile("B", 3, "one-b");
+      game.playerRacks.set(playerId, [a, b]);
+      game.placeTiles(playerId, [{ tile: a, row: 7, col: 7 }, { tile: b, row: 7, col: 8 }]);
+
+      expect(game.recallTile(playerId, "one-a").success).toBe(true);
+
+      expect(game.playerRacks.get(playerId)!.map((t) => t.id)).toEqual(["one-a"]);
+      expect(game.tentativePlacements.get(playerId)!.map((p) => p.tile.id)).toEqual(["one-b"]);
+    });
+
+    it("recallTile strips a blank's letter and rejects tiles that aren't placed", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const blank = makeBlank("one-blank");
+      game.playerRacks.set(playerId, [blank]);
+      game.placeTiles(playerId, [{ tile: { ...blank, assignedLetter: "E" }, row: 7, col: 7 }]);
+
+      expect(game.recallTile(playerId, "not-placed").success).toBe(false);
+      expect(game.recallTile(playerId, "one-blank").success).toBe(true);
+      expect(game.playerRacks.get(playerId)).toEqual([blank]);
+      expect(game.tentativePlacements.has(playerId)).toBe(false);
+    });
+
     it("returns a blank to the rack without its assigned letter", () => {
       setupGameForPlay(game);
       const playerId = game.getCurrentTurnPlayerId()!;

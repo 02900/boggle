@@ -28,7 +28,7 @@ function saveSession(gameId: string | null, playerName: string | null) {
   localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, playerName }));
 }
 
-function clearSession() {
+export function clearSession() {
   if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY);
 }
 
@@ -39,6 +39,9 @@ export const useScrabbleSocketListeners = () => {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
+    // Start clean: the store outlives the page, so coming back to /scrabble (after
+    // leaving to the menu) must not show the previous session's screens.
+    useScrabbleGameStore.getState().reset();
     const store = useScrabbleGameStore.getState();
     const newSocket: ScrabbleSocket = io({ query: { game: "scrabble" } });
     store.setSocket(newSocket);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useScrabbleSocketListeners } from "@/hooks/use-scrabble-socket-listeners";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
@@ -31,6 +32,12 @@ function JoinForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas p-4">
       <Card padding="lg" className="w-full max-w-sm">
+        <Link
+          href="/"
+          className="-ml-1 -mt-1 mb-2 inline-flex h-8 items-center rounded-md px-2 text-xs text-ink-muted transition-colors hover:bg-surface-raised hover:text-ink"
+        >
+          ← Juegos
+        </Link>
         <h1 className="text-center text-3xl font-bold tracking-tight">Scrabble</h1>
         <p className="mb-6 mt-1 text-center text-sm text-ink-muted">Juego de palabras por turnos</p>
 

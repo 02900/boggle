@@ -121,6 +121,7 @@ export function createMockScrabbleGame() {
     startGame: vi.fn((): { success: boolean } | false => ({ success: true })),
     placeTiles: vi.fn((): { success: boolean; reason?: string } => ({ success: true })),
     recallTiles: vi.fn(() => ({ success: true })),
+    recallTile: vi.fn((): { success: boolean; reason?: string } => ({ success: true })),
     submitTurn: vi.fn(
       (): { valid: boolean; score?: number; words?: Array<{ word: string; score: number; tiles: unknown[] }>; reason?: string } => ({
         valid: true,

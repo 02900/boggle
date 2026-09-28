@@ -13,11 +13,13 @@ directamente `game/scrabble/ScrabbleGame.ts` vía `this.io`.
 | `start-game` | — | Requiere ≥ 2 jugadores. Mezcla el orden de turnos. |
 | `place-tiles` | `{ placements: TilePlacement[] }` | Colocación tentativa; el server quita las fichas del atril. Solo se usan `tile.id`, la posición y `tile.assignedLetter` (obligatorio para comodines); letra y valor salen del atril del server. |
 | `recall-tiles` | — | Devuelve las tentativas al atril. |
+| `recall-tile` | `{ tileId }` | Devuelve **una** ficha tentativa (click en el tablero). |
 | `submit-turn` | — | Valida colocación + diccionario. |
 | `pass-turn` | — | |
 | `exchange-tiles` | `{ tileIds }` | Requiere ≥ 1 ficha y bolsa con ≥ 7 fichas. |
 | `skip-turn` | — | Otro jugador salta el turno actual; solo con el reloj en ≤ 0. Pase forzado (`turn-played` tipo `timeout` con `skippedByName`). Si se rechaza, responde `word-result` inválido. |
 | `reset-game` | — | Vuelve a `waiting`, limpia sesión y timers de gracia. |
+| `leave-game` | — | Salir a propósito ("← Juegos"): se quita al jugador ya, sin período de gracia. En partida pasa el turno o termina por `abandon`. |
 
 ## Server → Cliente
 

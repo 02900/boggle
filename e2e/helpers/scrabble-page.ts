@@ -30,7 +30,8 @@ export class ScrabblePage {
     this.nameInput = page.locator('input[placeholder="Tu nombre"]');
     this.joinButton = page.getByRole("button", { name: "Unirse" });
     this.startButton = page.getByRole("button", { name: "Iniciar Juego" });
-    this.confirmButton = page.getByRole("button", { name: "Confirmar", exact: true });
+    // Shows the estimated score once the move is valid, e.g. "Confirmar +12"
+    this.confirmButton = page.getByRole("button", { name: /^Confirmar( \+\d+)?$/ });
     this.recallButton = page.getByRole("button", { name: "Devolver" });
     this.passButton = page.getByRole("button", { name: "Pasar" });
     this.exchangeButton = page.getByRole("button", { name: "Cambiar" });

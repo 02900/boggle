@@ -78,6 +78,24 @@ export function setupScrabbleHandlers(
     socket.emit("game-state", game.getGameStateForPlayer(socket.id));
   });
 
+  socket.on("recall-tile", (data) => {
+    debugLog("EVENT: recall-tile", data, socket.id);
+
+    if (typeof data?.tileId !== "string") {
+      socket.emit("word-result", { valid: false, reason: "Datos inválidos" });
+      return;
+    }
+
+    const result = game.recallTile(socket.id, data.tileId);
+    if (result.success) {
+      socket.broadcast.emit("game-state", game.getGameState());
+    } else {
+      socket.emit("word-result", { valid: false, reason: result.reason });
+    }
+    // Always resync the player's rack + tentative placements
+    socket.emit("game-state", game.getGameStateForPlayer(socket.id));
+  });
+
   socket.on("submit-turn", () => {
     debugLog("EVENT: submit-turn", null, socket.id);
 
@@ -227,6 +245,21 @@ export function setupScrabbleHandlers(
       playerName: data.playerName,
       gameId: data.gameId,
     });
+  });
+
+  socket.on("leave-game", () => {
+    debugLog("EVENT: leave-game", null, socket.id);
+
+    if (!game.players.has(socket.id)) return;
+
+    // Leaving on purpose skips the reconnection grace period. During a game this
+    // hands the turn on, or ends the game by abandon if only one player is left.
+    game.removePlayer(socket.id);
+    autoSave(game, gameId);
+    if ((game.gameState as GameStatus) !== "finished") {
+      io.emit("player-left", socket.id);
+      io.emit("game-state", game.getGameState());
+    }
   });
 
   // Grace period disconnect handler (overrides shared handler which is skipped for Scrabble)
