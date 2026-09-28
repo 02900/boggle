@@ -75,6 +75,22 @@ describe("useScrabbleGameStore", () => {
     });
   });
 
+  describe("transient visual cues", () => {
+    it("stores and clears the last played cells", () => {
+      useScrabbleGameStore.getState().setLastPlayedCells(["7,7", "7,8"]);
+      expect(useScrabbleGameStore.getState().lastPlayedCells).toEqual(["7,7", "7,8"]);
+      useScrabbleGameStore.getState().setLastPlayedCells([]);
+      expect(useScrabbleGameStore.getState().lastPlayedCells).toEqual([]);
+    });
+
+    it("stores and clears the invalid-move timestamp", () => {
+      useScrabbleGameStore.getState().setInvalidMoveAt(123);
+      expect(useScrabbleGameStore.getState().invalidMoveAt).toBe(123);
+      useScrabbleGameStore.getState().setInvalidMoveAt(null);
+      expect(useScrabbleGameStore.getState().invalidMoveAt).toBeNull();
+    });
+  });
+
   describe("disconnected players", () => {
     it("markPlayerDisconnected stores a grace deadline", () => {
       const before = Date.now();

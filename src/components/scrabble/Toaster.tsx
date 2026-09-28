@@ -32,7 +32,7 @@ function Toast({ notification }: { notification: Notification }) {
       data-testid="toast"
       data-kind={notification.kind}
       onClick={() => dismiss(notification.id)}
-      className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg cursor-pointer select-none ${KIND_CLASSES[notification.kind]}`}
+      className={`flex animate-slide-down items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg cursor-pointer select-none ${KIND_CLASSES[notification.kind]}`}
     >
       <span aria-hidden className="text-xs opacity-80">{KIND_ICON[notification.kind]}</span>
       <span>{notification.text}</span>

@@ -11,6 +11,8 @@ interface Props {
   isPlaced?: boolean;
   onClick?: () => void;
   size?: "sm" | "md";
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const SIZE = {
@@ -25,6 +27,8 @@ export const ScrabbleTile = memo(function ScrabbleTile({
   isPlaced,
   onClick,
   size = "md",
+  className,
+  style,
 }: Props) {
   const letter = tile.isBlank ? tile.assignedLetter || "" : tile.letter;
   const isDigraph = letter.length > 1;
@@ -39,7 +43,9 @@ export const ScrabbleTile = memo(function ScrabbleTile({
       aria-label={ariaLabel}
       data-testid="tile"
       data-letter={letter}
+      style={style}
       className={composeClasses(
+        className,
         SIZE[size],
         "relative flex items-center justify-center rounded-md font-bold select-none",
         "text-tile-ink transition-[transform,background-color,box-shadow] duration-150",

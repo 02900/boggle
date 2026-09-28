@@ -42,7 +42,7 @@ export function ScrabbleLobby() {
               key={p.id}
               data-testid="player-badge"
               data-connected={p.isConnected !== false}
-              className="flex items-center gap-3 rounded-lg bg-surface-raised px-3 py-2.5"
+              className="flex animate-slide-down items-center gap-3 rounded-lg bg-surface-raised px-3 py-2.5"
             >
               <span aria-hidden className={composeClasses("h-2.5 w-2.5 rounded-full", playerColor(i))} />
               <span data-testid="player-name" className="font-medium">{p.name}</span>

@@ -159,7 +159,11 @@ export const useScrabbleSocketListeners = () => {
 
     newSocket.on("word-result", (result) => {
       // Successes are announced via turn-played; here we only surface rejections
-      if (!result.valid) get().notify("error", result.reason ?? "Jugada inválida");
+      if (result.valid) return;
+      const s = get();
+      s.notify("error", result.reason ?? "Jugada inválida");
+      s.setInvalidMoveAt(Date.now());
+      setTimeout(() => get().setInvalidMoveAt(null), 500);
     });
 
     newSocket.on("turn-played", (event) => {
@@ -167,6 +171,12 @@ export const useScrabbleSocketListeners = () => {
       const isMe = event.playerId === s.currentPlayerId;
       const kind = event.type === "place" ? "success" : event.type === "timeout" ? "error" : "info";
       s.notify(kind, describeTurnPlayed(event, isMe));
+      if (event.type === "place" && event.words) {
+        // Flash every tile of every word formed, for everyone at the table
+        const cells = [...new Set(event.words.flatMap((w) => w.tiles.map((t) => `${t.row},${t.col}`)))];
+        s.setLastPlayedCells(cells);
+        setTimeout(() => get().setLastPlayedCells([]), 1500);
+      }
     });
 
     newSocket.on("turn-changed", (event) => {

@@ -42,6 +42,8 @@ export function ScrabbleBoard() {
   const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
   const setSelectedTile = useScrabbleGameStore((s) => s.setSelectedTile);
   const addTentativePlacement = useScrabbleGameStore((s) => s.addTentativePlacement);
+  const lastPlayedCells = useScrabbleGameStore((s) => s.lastPlayedCells);
+  const invalidMoveAt = useScrabbleGameStore((s) => s.invalidMoveAt);
   const { placeTiles } = useScrabbleSocket();
 
   const [pendingBlankPlacement, setPendingBlankPlacement] = useState<{ row: number; col: number } | null>(null);
@@ -50,6 +52,7 @@ export function ScrabbleBoard() {
     () => new Map(tentativePlacements.map((p) => [`${p.row},${p.col}`, p])),
     [tentativePlacements]
   );
+  const flashSet = useMemo(() => new Set(lastPlayedCells), [lastPlayedCells]);
 
   if (!gameState) return null;
 
@@ -83,14 +86,21 @@ export function ScrabbleBoard() {
         data-testid="board"
         role="grid"
         aria-label="Tablero"
-        className="inline-grid w-full max-w-[min(100%,34rem)] gap-px rounded-lg border-4 border-board-frame bg-board-frame p-0.5 shadow-2xl"
+        // Re-keying on a rejected move replays the shake animation
+        key={invalidMoveAt ?? "board"}
+        className={composeClasses(
+          "inline-grid w-full max-w-[min(100%,34rem)] gap-px rounded-lg border-4 border-board-frame bg-board-frame p-0.5 shadow-2xl",
+          invalidMoveAt !== null && "animate-shake ring-2 ring-danger/70"
+        )}
         style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}
       >
         {gameState.board.map((row, r) =>
           row.map((cell, c) => {
-            const tentative = tentativeMap.get(`${r},${c}`);
+            const key = `${r},${c}`;
+            const tentative = tentativeMap.get(key);
             const occupied = cell.tile !== null || tentative !== undefined;
             const label = MULTIPLIER_NAMES[cell.multiplier];
+            const flash = flashSet.has(key);
 
             return (
               <button
@@ -110,9 +120,9 @@ export function ScrabbleBoard() {
                 )}
               >
                 {cell.tile ? (
-                  <ScrabbleTile tile={cell.tile} size="sm" />
+                  <ScrabbleTile tile={cell.tile} size="sm" className={flash ? "animate-word-flash z-10" : undefined} />
                 ) : tentative ? (
-                  <ScrabbleTile tile={tentative.tile} size="sm" isPlaced />
+                  <ScrabbleTile tile={tentative.tile} size="sm" isPlaced className="animate-tile-drop" />
                 ) : (
                   <span aria-hidden className="text-white/55">
                     {MULTIPLIER_LABELS[cell.multiplier]}

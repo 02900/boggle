@@ -64,6 +64,12 @@ interface ScrabbleGameStore {
   tentativePlacements: TilePlacement[];
   notifications: Notification[];
 
+  // Transient visual cues (set by socket events, cleared by timeout)
+  /** "row,col" keys of the tiles just confirmed by the last play, for a highlight flash */
+  lastPlayedCells: string[];
+  /** Timestamp of the last rejected submission, to trigger a shake */
+  invalidMoveAt: number | null;
+
   // Exchange mode
   exchangeMode: boolean;
   selectedForExchange: Set<string>;
@@ -86,6 +92,8 @@ interface ScrabbleGameStore {
   clearTentativePlacements: () => void;
   notify: (kind: NotificationKind, text: string, ttl?: number) => number;
   dismissNotification: (id: number) => void;
+  setLastPlayedCells: (cells: string[]) => void;
+  setInvalidMoveAt: (at: number | null) => void;
   markPlayerDisconnected: (playerId: string, playerName: string, graceSeconds: number) => void;
   markPlayerReconnected: (playerName: string) => void;
   clearDisconnectedPlayers: () => void;
@@ -111,6 +119,8 @@ const initialState = {
   selectedTile: null as ScrabbleTile | null,
   tentativePlacements: [] as TilePlacement[],
   notifications: [] as Notification[],
+  lastPlayedCells: [] as string[],
+  invalidMoveAt: null as number | null,
   exchangeMode: false,
   selectedForExchange: new Set<string>(),
   gameId: null as string | null,
@@ -157,6 +167,8 @@ export const useScrabbleGameStore = create<ScrabbleGameStore>((set) => ({
   },
   dismissNotification: (id) =>
     set((state) => ({ notifications: state.notifications.filter((n) => n.id !== id) })),
+  setLastPlayedCells: (lastPlayedCells) => set({ lastPlayedCells }),
+  setInvalidMoveAt: (invalidMoveAt) => set({ invalidMoveAt }),
   markPlayerDisconnected: (playerId, playerName, graceSeconds) =>
     set((state) => ({
       disconnectedPlayers: {

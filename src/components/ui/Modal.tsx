@@ -57,7 +57,7 @@ export function Modal({ open, onClose, title, children, className }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/70 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -66,7 +66,7 @@ export function Modal({ open, onClose, title, children, className }: Props) {
         aria-modal="true"
         aria-label={title}
         className={composeClasses(
-          "w-full max-w-xs rounded-2xl border border-edge bg-surface p-4 text-ink shadow-2xl",
+          "w-full max-w-xs animate-modal-in rounded-2xl border border-edge bg-surface p-4 text-ink shadow-2xl",
           className
         )}
       >

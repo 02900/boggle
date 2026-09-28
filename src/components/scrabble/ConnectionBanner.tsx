@@ -29,7 +29,7 @@ export function ConnectionBanner() {
       <div
         role="alert"
         data-testid="connection-banner"
-        className="flex items-center justify-center gap-2 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-danger-ink"
+        className="flex animate-slide-down items-center justify-center gap-2 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-danger-ink"
       >
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-danger-ink" />
         Conexión perdida · reconectando…
@@ -43,7 +43,7 @@ export function ConnectionBanner() {
     <div
       role="status"
       data-testid="connection-banner"
-      className="flex flex-col items-center gap-1 rounded-lg border border-warning/40 bg-warning/15 px-4 py-2 text-sm font-medium text-warning"
+      className="flex animate-slide-down flex-col items-center gap-1 rounded-lg border border-warning/40 bg-warning/15 px-4 py-2 text-sm font-medium text-warning"
     >
       {entries.map((p) => {
         const secondsLeft = Math.max(0, Math.ceil((p.graceEndsAt - now) / 1000));

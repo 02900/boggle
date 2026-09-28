@@ -47,8 +47,13 @@ export function PlayerPanel({ compact = false }: { compact?: boolean }) {
               </span>
             )}
             <span
+              // Re-keying on score change replays the pop
+              key={p.score}
               data-testid="player-score"
-              className={composeClasses("ml-auto font-mono tabular-nums", compact ? "text-xs" : "text-sm font-semibold")}
+              className={composeClasses(
+                "ml-auto inline-block animate-pop font-mono tabular-nums",
+                compact ? "text-xs" : "text-sm font-semibold"
+              )}
             >
               {p.score}pts
             </span>

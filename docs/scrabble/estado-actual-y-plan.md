@@ -279,24 +279,26 @@ Eventos server→cliente nuevos, tipados en `src/interfaces/scrabble.ts`:
 6. Pendiente para Fase 4/6: puntos estimados en Confirmar, click en tentativa para devolverla,
    botón Mezclar y drag en el atril, coordenadas del tablero.
 
-### Fase 4 — Animaciones (C)
+### Fase 4 — Animaciones (C) — ✅ HECHA
 
-Usar CSS transitions + `@keyframes` en `globals.css` (sin librería nueva salvo que se
-justifique; si se necesita layout animation evaluar `motion`, verificando que no exista ya):
+Solo CSS: `@keyframes` + tokens `--animate-*` en `@theme` (`globals.css`) → utilidades
+`animate-tile-drop`, `animate-deal`, `animate-shake`, `animate-word-flash`, `animate-pop`,
+`animate-slide-down`, `animate-fade-in`, `animate-modal-in`, `animate-glow`. Sin librerías.
+`prefers-reduced-motion: reduce` anula duraciones globalmente.
 
-| Momento | Animación |
+| Momento | Implementación |
 |---|---|
-| Ficha atril → tablero | `transform` desde posición del atril (FLIP) o scale-in 150ms |
-| Devolver | scale-out en tablero + fade-in en atril |
-| Inválida | shake 300ms en fichas tentativas + borde danger |
-| Válida | highlight de la palabra 600ms + score counter tick |
-| Cambio de turno | badge slide/fade + pulso en el jugador activo |
-| Timer < 30s / < 10s | color ámbar / rojo + `animate-pulse` |
-| Reparto inicial | fichas entran escalonadas (stagger 60ms) |
-| Modal / Toast | fade + scale 150ms in, 100ms out |
-| Resultados | podio con stagger |
+| Ficha atril → tablero | `animate-tile-drop` en la ficha tentativa (cae y se asienta, 220ms) |
+| Devolver / reparto / fichas nuevas | Fichas del atril keyed por id con `animate-deal` y stagger de 45ms |
+| Jugada inválida | `invalidMoveAt` en el store (desde `word-result`): tablero y atril se re-keyean → `animate-shake` + `ring-danger` 420ms |
+| Jugada válida | `lastPlayedCells` en el store (desde `turn-played`, para todos): fichas de las palabras formadas con `animate-word-flash` (halo ámbar 1.4s); score del jugador `animate-pop` (keyed por score) |
+| Cambio de turno | `TurnIndicator` keyed por jugador → `animate-pop`; atril con `animate-glow` mientras es tu turno |
+| Timer < 30s / < 10s | `Timer` ya cambia a warning / danger + pulse (Fase 2) |
+| Toast / banners / filas del lobby | `animate-slide-down` al montar |
+| Modal | backdrop `animate-fade-in`, panel `animate-modal-in` |
 
-Respetar `prefers-reduced-motion`.
+No hecho (bajo valor / complejidad): FLIP real desde la posición del atril, animación de
+salida de toasts, stagger del podio.
 
 ### Fase 5 — Reglas restantes (S)
 

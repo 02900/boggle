@@ -67,6 +67,67 @@ input {
 
   --shadow-tile: 0 1px 0 var(--color-tile-edge), 0 2px 4px rgb(0 0 0 / 0.35);
   --shadow-tile-lift: 0 1px 0 var(--color-tile-edge), 0 6px 14px rgb(0 0 0 / 0.45);
+
+  /* Motion. Short and physical: things drop, pop and settle. Utilities: animate-tile-drop, … */
+  --ease-out-back: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-tile-drop: tile-drop 220ms var(--ease-out-back) both;
+  --animate-deal: deal 320ms var(--ease-out-back) both;
+  --animate-shake: shake 420ms ease-in-out both;
+  --animate-word-flash: word-flash 1400ms ease-out both;
+  --animate-pop: pop 300ms var(--ease-out-back) both;
+  --animate-slide-down: slide-down 220ms var(--ease-out-back) both;
+  --animate-fade-in: fade-in 160ms ease-out both;
+  --animate-modal-in: modal-in 220ms var(--ease-out-back) both;
+  --animate-glow: glow 1600ms ease-in-out infinite;
+
+  @keyframes tile-drop {
+    from { opacity: 0; transform: translateY(-10px) scale(1.25); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes deal {
+    from { opacity: 0; transform: translateY(14px) rotate(-6deg) scale(0.9); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+  }
+  @keyframes word-flash {
+    0%   { box-shadow: 0 0 0 0 var(--color-accent), 0 0 18px 4px var(--color-accent); }
+    100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+  }
+  @keyframes pop {
+    0%   { transform: scale(0.85); opacity: 0.6; }
+    60%  { transform: scale(1.08); opacity: 1; }
+    100% { transform: none; }
+  }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.96); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgb(242 181 68 / 0); }
+    50%      { box-shadow: 0 0 0 4px rgb(242 181 68 / 0.25); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

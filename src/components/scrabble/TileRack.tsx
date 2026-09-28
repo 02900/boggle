@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { ScrabbleTile } from "./ScrabbleTile";
+import { composeClasses } from "@/utils/compose-classes";
 import { SCRABBLE_RACK_SIZE } from "../../../config/scrabbleConstants";
 
 export function TileRack() {
@@ -19,20 +20,32 @@ export function TileRack() {
     [rack, tentativePlacements]
   );
   const emptySlots = Math.max(0, SCRABBLE_RACK_SIZE - displayRack.length);
+  const isMyTurn = useScrabbleGameStore(
+    (s) => s.gameState?.gameState === "playing" && s.gameState.currentTurnPlayerId === s.currentPlayerId
+  );
+  const invalidMoveAt = useScrabbleGameStore((s) => s.invalidMoveAt);
 
   return (
     <div
+      key={invalidMoveAt ?? "rack"}
       data-testid="tile-rack"
       role="group"
       aria-label="Tu atril"
-      className="mx-auto inline-flex items-center gap-1.5 rounded-xl border border-rack-edge bg-rack px-3 py-2.5 shadow-inner"
+      className={composeClasses(
+        "mx-auto inline-flex items-center gap-1.5 rounded-xl border border-rack-edge bg-rack px-3 py-2.5 shadow-inner",
+        isMyTurn && "animate-glow",
+        invalidMoveAt !== null && "animate-shake"
+      )}
     >
-      {displayRack.map((tile) => {
+      {displayRack.map((tile, i) => {
         const isExchangeSelected = exchangeMode && selectedForExchange.has(tile.id);
         return (
           <div key={tile.id} className="relative">
+            {/* Keyed by tile id: freshly drawn tiles are dealt in with a stagger */}
             <ScrabbleTile
               tile={tile}
+              className="animate-deal"
+              style={{ animationDelay: `${i * 45}ms` }}
               isSelected={exchangeMode ? isExchangeSelected : selectedTile?.id === tile.id}
               onClick={() =>
                 exchangeMode
