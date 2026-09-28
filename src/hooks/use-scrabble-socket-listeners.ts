@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
-import { describeGameEnd, describeTurnChanged, describeTurnPlayed } from "@/utils/scrabble-messages";
+import { describeGameEnd, describeOvertime, describeTurnChanged, describeTurnPlayed } from "@/utils/scrabble-messages";
 import type { ScrabbleGameEvents, ScrabbleClientEvents } from "@/interfaces/scrabble";
 
 type ScrabbleSocket = Socket<ScrabbleGameEvents, ScrabbleClientEvents>;
@@ -89,7 +89,7 @@ export const useScrabbleSocketListeners = () => {
           ...prev,
           players: [
             ...prev.players,
-            { id: playerId, name: playerName, score: 0, rackSize: 0, isCurrentTurn: false, isConnected: true, wordsFound: [] },
+            { id: playerId, name: playerName, score: 0, rackSize: 0, isCurrentTurn: false, isConnected: true, wordsFound: [], timeUsed: 0, overtime: 0 },
           ],
         };
       });
@@ -157,6 +157,10 @@ export const useScrabbleSocketListeners = () => {
       get().notify("error", reason);
     });
 
+    newSocket.on("join-failed", ({ reason }) => {
+      get().notify("error", `No puedes unirte: ${reason}`);
+    });
+
     newSocket.on("word-result", (result) => {
       // Successes are announced via turn-played; here we only surface rejections
       if (result.valid) return;
@@ -180,6 +184,8 @@ export const useScrabbleSocketListeners = () => {
     });
 
     newSocket.on("turn-changed", (event) => {
+      // The first player is already announced by game-started
+      if (event.reason === "start") return;
       const s = get();
       const isMe = event.currentPlayerId === s.currentPlayerId;
       s.notify("turn", describeTurnChanged(event, isMe));
@@ -207,7 +213,13 @@ export const useScrabbleSocketListeners = () => {
     });
 
     newSocket.on("turn-timer-update", (timeLeft) => {
-      get().setGameState((prev) => (prev ? { ...prev, turnTimeLeft: timeLeft } : prev));
+      const s = get();
+      s.setGameState((prev) => (prev ? { ...prev, turnTimeLeft: timeLeft } : prev));
+      if (timeLeft === 0 && s.gameState) {
+        const late = s.gameState.players.find((p) => p.id === s.gameState?.currentTurnPlayerId);
+        const isMe = s.gameState.currentTurnPlayerId === s.currentPlayerId;
+        s.notify("error", describeOvertime(late?.name ?? "...", isMe));
+      }
     });
 
     newSocket.on("rejoin-success", (state) => {

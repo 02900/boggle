@@ -4,12 +4,15 @@ import {
   SCRABBLE_BOARD_SIZE,
   SCRABBLE_MIN_WORD_LENGTH,
   SCRABBLE_MAX_CONSECUTIVE_PASSES,
+  SCRABBLE_MAX_PLAYERS,
+  SCRABBLE_MIN_BAG_FOR_EXCHANGE,
 } from "../../config/scrabbleConstants";
 import {
   createEmptyBoard,
   createTileBag,
   calculateWordScore,
   calculateTurnScore,
+  VALID_BLANK_LETTERS,
 } from "./scrabbleConfig";
 import { updateScoreboard } from "../../utils/scoreboard";
 import { debugLog } from "../../utils/debug";
@@ -31,6 +34,12 @@ import type {
   FinalAdjustment,
 } from "../../src/interfaces/scrabble";
 
+function withoutAssignedLetter(tile: ScrabbleTile): ScrabbleTile {
+  const copy = { ...tile };
+  delete copy.assignedLetter;
+  return copy;
+}
+
 export class ScrabbleGame extends WordGame {
   board: ScrabbleBoardCell[][];
   tileBag: ScrabbleTile[];
@@ -43,6 +52,8 @@ export class ScrabbleGame extends WordGame {
   tentativePlacements: Map<string, TilePlacement[]>;
   isFirstTurn: boolean;
   moveHistory: MoveRecord[];
+  /** Per-player clock totals for the current game, keyed like playerRacks. */
+  turnTimes: Map<string, { timeUsed: number; overtime: number }>;
 
   constructor() {
     super({ timeLimit: SCRABBLE_TURN_TIME_LIMIT, minWordLength: SCRABBLE_MIN_WORD_LENGTH });
@@ -57,6 +68,7 @@ export class ScrabbleGame extends WordGame {
     this.tentativePlacements = new Map();
     this.isFirstTurn = true;
     this.moveHistory = [];
+    this.turnTimes = new Map();
   }
 
   // ---- Overridden WordGame methods ----
@@ -66,10 +78,6 @@ export class ScrabbleGame extends WordGame {
     this.playerOrder.push(playerId);
     this.playerRacks.set(playerId, []);
 
-    if (this.gameState === "playing") {
-      this.drawTiles(playerId, SCRABBLE_RACK_SIZE);
-    }
-
     debugLog("SCRABBLE_PLAYER_ADDED", {
       playerId,
       playerName,
@@ -78,11 +86,24 @@ export class ScrabbleGame extends WordGame {
     });
   }
 
+  /** Whether a new player may join right now (rejoins go through reconnectPlayer instead). */
+  canJoin(): { ok: true } | { ok: false; reason: string } {
+    if (this.gameState !== "waiting") {
+      return { ok: false, reason: "La partida ya empezó" };
+    }
+    if (this.players.size >= SCRABBLE_MAX_PLAYERS) {
+      return { ok: false, reason: `La partida está llena (${SCRABBLE_MAX_PLAYERS}/${SCRABBLE_MAX_PLAYERS})` };
+    }
+    return { ok: true };
+  }
+
   removePlayer(playerId: string): void {
-    // Return rack tiles to the bag
+    // Return tentative + rack tiles to the bag
+    this.recallTiles(playerId);
     const rack = this.playerRacks.get(playerId);
-    if (rack) {
+    if (rack && rack.length > 0) {
       this.tileBag.push(...rack);
+      this.shuffleTileBag();
     }
 
     // Remove from turn order
@@ -94,20 +115,25 @@ export class ScrabbleGame extends WordGame {
       if (orderIndex < this.currentTurnIndex) {
         this.currentTurnIndex--;
       } else if (wasCurrentTurn) {
-        if (this.currentTurnIndex >= this.playerOrder.length) {
-          this.currentTurnIndex = 0;
-        }
+        // Step back one so advanceTurn() lands on the removed player's successor
+        const remaining = this.playerOrder.length;
+        this.currentTurnIndex = remaining > 0 ? (orderIndex - 1 + remaining) % remaining : 0;
       }
     }
 
     this.playerRacks.delete(playerId);
     this.tentativePlacements.delete(playerId);
-
-    if (wasCurrentTurn && this.gameState === "playing" && this.playerOrder.length > 0) {
-      this.advanceTurn("disconnect");
-    }
+    this.turnTimes.delete(playerId);
 
     super.removePlayer(playerId);
+
+    if (this.gameState === "playing") {
+      if (this.playerOrder.length < 2) {
+        this.endGame("abandon");
+      } else if (wasCurrentTurn) {
+        this.advanceTurn("disconnect", playerId);
+      }
+    }
 
     debugLog("SCRABBLE_PLAYER_REMOVED", {
       playerId,
@@ -131,6 +157,7 @@ export class ScrabbleGame extends WordGame {
     this.consecutivePasses = 0;
     this.moveHistory = [];
     this.tentativePlacements.clear();
+    this.turnTimes.clear();
 
     // Draw initial tiles for each player
     for (const playerId of this.playerOrder) {
@@ -139,10 +166,19 @@ export class ScrabbleGame extends WordGame {
     }
 
     this.gameState = "playing";
+    this.shufflePlayerOrder();
     this.currentTurnIndex = 0;
 
     // Start the first turn
     this.startTurnTimer();
+
+    const firstPlayerId = this.getCurrentTurnPlayerId();
+    this.io?.emit("turn-changed", {
+      previousPlayerId: null,
+      currentPlayerId: firstPlayerId,
+      currentPlayerName: firstPlayerId ? this.players.get(firstPlayerId)?.name ?? null : null,
+      reason: "start",
+    });
 
     debugLog("SCRABBLE_GAME_STARTED", {
       playerCount: this.players.size,
@@ -163,16 +199,19 @@ export class ScrabbleGame extends WordGame {
     let otherPlayersRemainingValue = 0;
     const finalAdjustments: FinalAdjustment[] = [];
 
+    // An abandoned game ends as-is: the remaining player keeps their score
+    const racksToSettle = reason === "abandon" ? new Map<string, ScrabbleTile[]>() : this.playerRacks;
+
     // Find if any player went out (empty rack and empty bag)
-    for (const [playerId, rack] of this.playerRacks) {
+    for (const [playerId, rack] of racksToSettle) {
       if (rack.length === 0) {
         goOutPlayerId = playerId;
         break;
       }
     }
 
-    // Deduct remaining tile values from each player's score
-    for (const [playerId, rack] of this.playerRacks) {
+    // Deduct remaining tile values from each player's score (may go negative)
+    for (const [playerId, rack] of racksToSettle) {
       const remainingValue = rack.reduce((sum, tile) => sum + tile.value, 0);
 
       if (playerId !== goOutPlayerId) {
@@ -182,8 +221,6 @@ export class ScrabbleGame extends WordGame {
         if (player) {
           const before = player.score;
           player.score -= remainingValue;
-          // Don't let score go below 0
-          if (player.score < 0) player.score = 0;
           finalAdjustments.push({
             playerId,
             playerName: player.name,
@@ -252,6 +289,8 @@ export class ScrabbleGame extends WordGame {
       rackSize: this.playerRacks.get(player.id)?.length ?? 0,
       isCurrentTurn: player.id === currentTurnPlayerId,
       isConnected: player.isConnected,
+      timeUsed: this.turnTimes.get(player.id)?.timeUsed ?? 0,
+      overtime: this.turnTimes.get(player.id)?.overtime ?? 0,
     }));
 
     return {
@@ -276,6 +315,7 @@ export class ScrabbleGame extends WordGame {
     this.tentativePlacements.clear();
     this.isFirstTurn = true;
     this.moveHistory = [];
+    this.turnTimes.clear();
 
     // Remove disconnected players before resetting
     for (const [playerId, player] of this.players) {
@@ -337,13 +377,25 @@ export class ScrabbleGame extends WordGame {
       return { success: false, reason: "Fichas duplicadas en la colocación" };
     }
 
-    // Validate each tile is in the player's rack
+    // Rebuild each placement from the server's own rack tile: the client only
+    // chooses which tile, where, and (for blanks) which letter it stands for.
+    const trusted: TilePlacement[] = [];
     for (const placement of placements) {
-      const tileIndex = rack.findIndex((t) => t.id === placement.tile.id);
-      if (tileIndex === -1) {
+      const rackTile = rack.find((t) => t.id === placement.tile.id);
+      if (!rackTile) {
         return { success: false, reason: `Ficha ${placement.tile.id} no está en tu atril` };
       }
+      if (rackTile.isBlank) {
+        const letter = placement.tile.assignedLetter?.toUpperCase();
+        if (!letter || !VALID_BLANK_LETTERS.has(letter)) {
+          return { success: false, reason: "Elige una letra válida para el comodín" };
+        }
+        trusted.push({ row: placement.row, col: placement.col, tile: { ...rackTile, assignedLetter: letter } });
+      } else {
+        trusted.push({ row: placement.row, col: placement.col, tile: withoutAssignedLetter(rackTile) });
+      }
     }
+    placements = trusted;
 
     // Collect existing tentative positions
     const existingTentative = this.tentativePlacements.get(playerId) ?? [];
@@ -401,7 +453,8 @@ export class ScrabbleGame extends WordGame {
     const rack = this.playerRacks.get(playerId);
     if (rack) {
       for (const placement of placements) {
-        rack.push(placement.tile);
+        // A blank goes back to the rack without its chosen letter
+        rack.push(withoutAssignedLetter(placement.tile));
       }
     }
 
@@ -528,11 +581,12 @@ export class ScrabbleGame extends WordGame {
 
   /**
    * Ends the current player's turn without playing. `reason` distinguishes a
-   * voluntary pass from forced ones (timer expiry, disconnection).
+   * voluntary pass from forced ones (skipped after the clock ran out, disconnection).
    */
   passTurn(
     playerId: string,
-    reason: Extract<TurnEndReason, "pass" | "timeout" | "disconnect"> = "pass"
+    reason: Extract<TurnEndReason, "pass" | "timeout" | "disconnect"> = "pass",
+    skippedByName?: string
   ): { success: boolean; reason?: string } {
     if (this.getCurrentTurnPlayerId() !== playerId) {
       return { success: false, reason: "No es tu turno" };
@@ -549,7 +603,12 @@ export class ScrabbleGame extends WordGame {
       type: "pass",
       score: 0,
     });
-    this.emitTurnPlayed({ playerId, playerName: player?.name ?? "Unknown", type: reason });
+    this.emitTurnPlayed({
+      playerId,
+      playerName: player?.name ?? "Unknown",
+      type: reason,
+      ...(skippedByName ? { skippedByName } : {}),
+    });
 
     debugLog("SCRABBLE_TURN_PASSED", {
       playerId,
@@ -562,6 +621,30 @@ export class ScrabbleGame extends WordGame {
     return { success: true };
   }
 
+  /**
+   * Another player ends the current turn once its clock has run out. The turn
+   * counts as a forced pass ("timeout") for the player who ran out of time.
+   */
+  skipTurn(requesterId: string): { success: boolean; reason?: string; skippedPlayerId?: string } {
+    const requester = this.players.get(requesterId);
+    if (this.gameState !== "playing" || !requester) {
+      return { success: false, reason: "No estás en una partida en curso" };
+    }
+
+    const currentPlayerId = this.getCurrentTurnPlayerId();
+    if (!currentPlayerId || currentPlayerId === requesterId) {
+      return { success: false, reason: "No puedes saltar tu propio turno" };
+    }
+
+    if (this.turnTimeLeft > 0) {
+      return { success: false, reason: "Todavía le queda tiempo" };
+    }
+
+    debugLog("SCRABBLE_TURN_SKIPPED", { skippedPlayerId: currentPlayerId, requesterId, turnTimeLeft: this.turnTimeLeft });
+    this.passTurn(currentPlayerId, "timeout", requester.name);
+    return { success: true, skippedPlayerId: currentPlayerId };
+  }
+
   exchangeTiles(
     playerId: string,
     tileIds: string[]
@@ -570,10 +653,18 @@ export class ScrabbleGame extends WordGame {
       return { success: false, reason: "No es tu turno" };
     }
 
-    if (this.tileBag.length < tileIds.length) {
+    if (tileIds.length === 0) {
+      return { success: false, reason: "Selecciona al menos una ficha para cambiar" };
+    }
+
+    if (new Set(tileIds).size !== tileIds.length) {
+      return { success: false, reason: "Fichas duplicadas en el cambio" };
+    }
+
+    if (this.tileBag.length < SCRABBLE_MIN_BAG_FOR_EXCHANGE) {
       return {
         success: false,
-        reason: "No hay suficientes fichas en la bolsa para intercambiar",
+        reason: `Solo puedes cambiar fichas si quedan al menos ${SCRABBLE_MIN_BAG_FOR_EXCHANGE} en la bolsa`,
       };
     }
 
@@ -625,7 +716,7 @@ export class ScrabbleGame extends WordGame {
       type: "exchange",
       exchangedCount: removedTiles.length,
     });
-    this.advanceTurn("exchange");
+    this.finishTurn("exchange");
 
     return { success: true };
   }
@@ -638,6 +729,7 @@ export class ScrabbleGame extends WordGame {
 
   /** After a completed turn: end the game if a game-over condition holds, else pass the turn. */
   private finishTurn(reason: TurnEndReason): void {
+    this.recordTurnTime();
     const gameOverReason = this.getGameOverReason();
     if (gameOverReason) {
       this.endGame(gameOverReason);
@@ -646,12 +738,25 @@ export class ScrabbleGame extends WordGame {
     }
   }
 
-  advanceTurn(reason: TurnEndReason = "pass"): void {
+  /** Adds the clock of the turn that just ended to its player's totals. */
+  private recordTurnTime(): void {
+    const playerId = this.getCurrentTurnPlayerId();
+    if (!playerId) return;
+    const elapsed = SCRABBLE_TURN_TIME_LIMIT - this.turnTimeLeft;
+    const totals = this.turnTimes.get(playerId) ?? { timeUsed: 0, overtime: 0 };
+    totals.timeUsed += Math.max(0, elapsed);
+    totals.overtime += Math.max(0, -this.turnTimeLeft);
+    this.turnTimes.set(playerId, totals);
+  }
+
+  advanceTurn(
+    reason: TurnEndReason = "pass",
+    previousPlayerId: string | null = this.getCurrentTurnPlayerId()
+  ): void {
     this.clearTurnTimer();
 
     if (this.playerOrder.length === 0) return;
 
-    const previousPlayerId = this.getCurrentTurnPlayerId();
 
     // Move to next player, skipping disconnected ones
     let attempts = 0;
@@ -700,6 +805,13 @@ export class ScrabbleGame extends WordGame {
     }
   }
 
+  /** Restarts the current turn's timer, e.g. after restoring a persisted session. */
+  resumeTurnTimer(): void {
+    if (this.gameState === "playing") {
+      this.startTurnTimer();
+    }
+  }
+
   private startTurnTimer(): void {
     this.clearTurnTimer();
     this.turnTimeLeft = SCRABBLE_TURN_TIME_LIMIT;
@@ -707,20 +819,12 @@ export class ScrabbleGame extends WordGame {
     this.turnTimer = setInterval(() => {
       this.turnTimeLeft--;
 
-      if (this.io) {
-        this.io.emit("turn-timer-update", this.turnTimeLeft);
-      }
+      // No auto-pass: the clock keeps running into negative (overtime) until the
+      // player moves or another player skips the turn (skipTurn).
+      this.io?.emit("turn-timer-update", this.turnTimeLeft);
 
-      if (this.turnTimeLeft <= 0) {
-        const currentPlayerId = this.getCurrentTurnPlayerId();
-        if (currentPlayerId) {
-          debugLog("SCRABBLE_TURN_TIMEOUT", { playerId: currentPlayerId });
-          this.passTurn(currentPlayerId, "timeout");
-          // Notify clients since this auto-pass bypasses the socket handler
-          if (this.io) {
-            this.io.emit("game-state", this.getGameState());
-          }
-        }
+      if (this.turnTimeLeft === 0) {
+        debugLog("SCRABBLE_TURN_OVERTIME", { playerId: this.getCurrentTurnPlayerId() });
       }
     }, 1000);
   }
@@ -949,6 +1053,14 @@ export class ScrabbleGame extends WordGame {
 
   // ---- Helpers ----
 
+  /** Random turn order for a new game. Protected so tests can make it deterministic. */
+  protected shufflePlayerOrder(): void {
+    for (let i = this.playerOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.playerOrder[i], this.playerOrder[j]] = [this.playerOrder[j], this.playerOrder[i]];
+    }
+  }
+
   private shuffleTileBag(): void {
     for (let i = this.tileBag.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -990,6 +1102,7 @@ export class ScrabbleGame extends WordGame {
         score: player?.score ?? 0,
         rack: [...rack],
         wordsFound: [...(player?.wordsFound ?? [])],
+        ...(this.turnTimes.get(playerId) ?? {}),
       };
     });
 
@@ -1047,6 +1160,10 @@ export class ScrabbleGame extends WordGame {
       });
       game.playerOrder.push(placeholderId);
       game.playerRacks.set(placeholderId, [...playerData.rack]);
+      game.turnTimes.set(placeholderId, {
+        timeUsed: playerData.timeUsed ?? 0,
+        overtime: playerData.overtime ?? 0,
+      });
     }
 
     // Restore current turn by player name
@@ -1108,6 +1225,12 @@ export class ScrabbleGame extends WordGame {
 
     this.tentativePlacements.delete(oldId);
     this.tentativePlacements.set(newSocketId, tentative);
+
+    const times = this.turnTimes.get(oldId);
+    if (times) {
+      this.turnTimes.delete(oldId);
+      this.turnTimes.set(newSocketId, times);
+    }
 
     const orderIndex = this.playerOrder.indexOf(oldId);
     if (orderIndex !== -1) {

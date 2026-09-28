@@ -3,6 +3,7 @@
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { Button } from "@/components/ui";
+import { SCRABBLE_MIN_BAG_FOR_EXCHANGE } from "../../../config/scrabbleConstants";
 
 export function ScrabbleControls() {
   const gameState = useScrabbleGameStore((s) => s.gameState);
@@ -13,12 +14,14 @@ export function ScrabbleControls() {
   const selectedForExchange = useScrabbleGameStore((s) => s.selectedForExchange);
   const setExchangeMode = useScrabbleGameStore((s) => s.setExchangeMode);
   const clearExchangeSelection = useScrabbleGameStore((s) => s.clearExchangeSelection);
-  const { submitTurn, passTurn, recallTiles, exchangeTiles } = useScrabbleSocket();
+  const { submitTurn, passTurn, recallTiles, exchangeTiles, skipTurn } = useScrabbleSocket();
 
   const isPlaying = gameState?.gameState === "playing";
   const isMyTurn = gameState?.currentTurnPlayerId === currentPlayerId;
   const hasPlacements = tentativePlacements.length > 0;
   const currentTurnPlayer = gameState?.players.find((p) => p.id === gameState.currentTurnPlayerId);
+  const isOvertime = (gameState?.turnTimeLeft ?? 1) <= 0;
+  const bagTooSmall = (gameState?.tileBagCount ?? 0) < SCRABBLE_MIN_BAG_FOR_EXCHANGE;
 
   const handleExchangeConfirm = () => {
     const tileIds = [...selectedForExchange];
@@ -45,6 +48,12 @@ export function ScrabbleControls() {
           </p>
         )}
 
+        {isPlaying && !isMyTurn && isOvertime && (
+          <Button variant="danger" size="sm" onClick={skipTurn} data-testid="skip-turn">
+            Saltar turno de {currentTurnPlayer?.name ?? "..."}
+          </Button>
+        )}
+
         {isPlaying && isMyTurn && !exchangeMode && (
           <>
             <Button variant="primary" onClick={submitTurn} disabled={!hasPlacements}>
@@ -53,7 +62,12 @@ export function ScrabbleControls() {
             <Button onClick={recallTiles} disabled={!hasPlacements}>
               Devolver
             </Button>
-            <Button variant="ghost" onClick={() => setExchangeMode(true)} disabled={hasPlacements || rack.length === 0}>
+            <Button
+              variant="ghost"
+              onClick={() => setExchangeMode(true)}
+              disabled={hasPlacements || rack.length === 0 || bagTooSmall}
+              title={bagTooSmall ? `Solo se puede cambiar con al menos ${SCRABBLE_MIN_BAG_FOR_EXCHANGE} fichas en la bolsa` : undefined}
+            >
               Cambiar
             </Button>
             <Button variant="ghost" onClick={passTurn}>

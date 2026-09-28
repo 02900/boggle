@@ -62,6 +62,9 @@ test.describe("Scrabble - Game end", () => {
     await expect(first.resultRow("Alice")).toBeVisible();
     await expect(first.resultRow("Bob")).toBeVisible();
     await expect(second.resultRow("Alice")).toHaveAttribute("data-score", /\d+/);
+
+    // Each player's total time is listed
+    await expect(first.resultRow("Alice").getByTestId("player-time")).toContainText(/\d+:\d{2} en total/);
   });
 
   test("'Nueva Partida' resets the game", async () => {

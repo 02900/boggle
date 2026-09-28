@@ -6,6 +6,8 @@ import type { TypedServer, TypedSocket } from "../../src/interfaces/server";
 export interface SharedHandlerHooks {
   onPlayerJoined?: (socket: TypedSocket, playerName: string) => void;
   skipDisconnect?: boolean;
+  /** Game-specific admission check; a rejected join gets `join-failed` instead of joining. */
+  canJoin?: () => { ok: boolean; reason?: string };
 }
 
 export function setupSharedHandlers(
@@ -16,6 +18,13 @@ export function setupSharedHandlers(
 ): void {
   socket.on("join-game", (playerName: string) => {
     debugLog("EVENT: join-game", { playerName }, socket.id);
+
+    const admission = hooks?.canJoin?.();
+    if (admission && !admission.ok) {
+      debugLog("EMIT: join-failed", { reason: admission.reason }, socket.id);
+      socket.emit("join-failed", { reason: admission.reason ?? "No puedes unirte a esta partida" });
+      return;
+    }
 
     const finalName =
       playerName && playerName.trim()

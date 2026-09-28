@@ -18,6 +18,8 @@ import {
   SCRABBLE_BOARD_SIZE,
   SCRABBLE_TURN_TIME_LIMIT,
   SCRABBLE_MAX_CONSECUTIVE_PASSES,
+  SCRABBLE_MAX_PLAYERS,
+  SCRABBLE_MIN_BAG_FOR_EXCHANGE,
 } from "../../../config/scrabbleConstants";
 
 // ---- Helpers ----
@@ -28,6 +30,17 @@ function setupGameForPlay(game: ScrabbleGame): { p1: string; p2: string } {
   game.startGame();
   game.clearTimers();
   return { p1: "p1", p2: "p2" };
+}
+
+/** The turn order is shuffled on start; tests pin it to join order unless they opt out. */
+function stubShuffle(game: ScrabbleGame) {
+  return vi
+    .spyOn(game as unknown as { shufflePlayerOrder(): void }, "shufflePlayerOrder")
+    .mockImplementation(() => {});
+}
+
+function makeBlank(id: string): ScrabbleTile {
+  return { id, letter: "", value: 0, isBlank: true };
 }
 
 function makeTile(letter: string, value: number, id?: string): ScrabbleTile {
@@ -91,6 +104,7 @@ describe("ScrabbleGame", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     game = new ScrabbleGame();
+    stubShuffle(game);
   });
 
   afterEach(() => {
@@ -172,13 +186,20 @@ describe("ScrabbleGame", () => {
       expect(game.playerRacks.get("p1")).toHaveLength(0);
     });
 
-    it("addPlayer during an active game draws tiles for the new player", () => {
+    it("canJoin allows players while waiting and below the limit", () => {
+      game.addPlayer("p1", "Alice");
+      expect(game.canJoin()).toEqual({ ok: true });
+    });
+
+    it("canJoin rejects once the game has started", () => {
       setupGameForPlay(game);
-      const bagBefore = game.tileBag.length;
-      game.addPlayer("p3", "Charlie");
-      const rack = game.playerRacks.get("p3")!;
-      expect(rack.length).toBe(SCRABBLE_RACK_SIZE);
-      expect(game.tileBag.length).toBe(bagBefore - SCRABBLE_RACK_SIZE);
+      expect(game.canJoin()).toEqual({ ok: false, reason: "La partida ya empezó" });
+    });
+
+    it("canJoin rejects when the game is full", () => {
+      for (let i = 0; i < SCRABBLE_MAX_PLAYERS; i++) game.addPlayer(`p${i}`, `P${i}`);
+      const result = game.canJoin();
+      expect(result.ok).toBe(false);
     });
 
     it("removePlayer removes from playerOrder and playerRacks", () => {
@@ -197,6 +218,57 @@ describe("ScrabbleGame", () => {
       expect(game.tileBag.length).toBe(bagBefore + rackSize);
     });
 
+    it("removePlayer returns tentative tiles to the bag too, blanks without their letter", () => {
+      game.addPlayer("p1", "Alice");
+      game.addPlayer("p2", "Bob");
+      game.addPlayer("p3", "Carol");
+      game.startGame();
+      game.clearTimers();
+      const blank = makeBlank("rm-blank");
+      game.playerRacks.set("p1", [blank, makeTile("A", 1, "rm-A")]);
+      game.placeTiles("p1", [{ tile: { ...blank, assignedLetter: "E" }, row: 7, col: 7 }]);
+      const bagBefore = game.tileBag.length;
+
+      game.removePlayer("p1");
+      game.clearTimers();
+
+      expect(game.tileBag.length).toBe(bagBefore + 2);
+      const returned = game.tileBag.find((t) => t.id === "rm-blank")!;
+      expect(returned.assignedLetter).toBeUndefined();
+    });
+
+    it("removePlayer hands the turn to the removed player's successor", () => {
+      game.addPlayer("p1", "Alice");
+      game.addPlayer("p2", "Bob");
+      game.addPlayer("p3", "Carol");
+      game.startGame();
+      game.clearTimers();
+      const io = { emit: vi.fn() };
+      game.setIO(io);
+
+      game.removePlayer("p1");
+      game.clearTimers();
+
+      expect(game.getCurrentTurnPlayerId()).toBe("p2");
+      const changed = io.emit.mock.calls.find((c) => c[0] === "turn-changed")![1];
+      expect(changed).toMatchObject({ previousPlayerId: "p1", currentPlayerId: "p2", reason: "disconnect" });
+    });
+
+    it("removePlayer ends the game by abandon when fewer than 2 players remain", () => {
+      setupGameForPlay(game);
+      const io = { emit: vi.fn() };
+      game.setIO(io);
+      game.players.get("p2")!.score = 12;
+
+      game.removePlayer("p1");
+
+      expect(game.gameState).toBe("finished");
+      const ended = io.emit.mock.calls.find((c) => c[0] === "game-ended")![1];
+      expect(ended.reason).toBe("abandon");
+      expect(ended.finalAdjustments).toEqual([]);
+      expect(game.players.get("p2")!.score).toBe(12);
+    });
+
     it("removePlayer advances turn if it was that player's turn", () => {
       setupGameForPlay(game);
       const currentPlayer = game.getCurrentTurnPlayerId();
@@ -211,6 +283,32 @@ describe("ScrabbleGame", () => {
   // startGame
   // ===========================================================================
   describe("startGame", () => {
+    it("shuffles the turn order and announces the first player", () => {
+      const shuffle = stubShuffle(game).mockImplementation(() => {
+        game.playerOrder.reverse();
+      });
+      const io = { emit: vi.fn() };
+      game.setIO(io);
+      game.addPlayer("p1", "Alice");
+      game.addPlayer("p2", "Bob");
+
+      game.startGame();
+      game.clearTimers();
+
+      expect(shuffle).toHaveBeenCalledTimes(1);
+      expect(game.getCurrentTurnPlayerId()).toBe("p2");
+      const changed = io.emit.mock.calls.find((c) => c[0] === "turn-changed")![1];
+      expect(changed).toEqual({ previousPlayerId: null, currentPlayerId: "p2", currentPlayerName: "Bob", reason: "start" });
+    });
+
+    it("the real shuffle keeps every player exactly once", () => {
+      const fresh = new ScrabbleGame();
+      for (const id of ["a", "b", "c", "d"]) fresh.addPlayer(id, id.toUpperCase());
+      fresh.startGame();
+      fresh.clearTimers();
+      expect([...fresh.playerOrder].sort()).toEqual(["a", "b", "c", "d"]);
+    });
+
     it("returns false with fewer than 2 players", () => {
       game.addPlayer("p1", "Alice");
       const result = game.startGame();
@@ -332,6 +430,42 @@ describe("ScrabbleGame", () => {
       expect(result.success).toBe(false);
     });
 
+    it("uses the server's rack tile, ignoring a forged letter/value", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const tile = makeTile("A", 1, "forge-me");
+      game.playerRacks.set(playerId, [tile]);
+
+      game.placeTiles(playerId, [{ tile: { ...tile, letter: "Z", value: 10 }, row: 7, col: 7 }]);
+
+      expect(game.tentativePlacements.get(playerId)![0].tile).toEqual(tile);
+    });
+
+    it("drops an assignedLetter sent for a non-blank tile", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const tile = makeTile("A", 1, "not-blank");
+      game.playerRacks.set(playerId, [tile]);
+
+      game.placeTiles(playerId, [{ tile: { ...tile, isBlank: true, assignedLetter: "Z" }, row: 7, col: 7 }]);
+
+      const placed = game.tentativePlacements.get(playerId)![0].tile;
+      expect(placed.isBlank).toBe(false);
+      expect(placed.assignedLetter).toBeUndefined();
+    });
+
+    it("requires a valid letter for a blank tile", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const blank = makeBlank("blank-1");
+      game.playerRacks.set(playerId, [blank]);
+
+      expect(game.placeTiles(playerId, [{ tile: blank, row: 7, col: 7 }]).success).toBe(false);
+      expect(game.placeTiles(playerId, [{ tile: { ...blank, assignedLetter: "1" }, row: 7, col: 7 }]).success).toBe(false);
+      expect(game.placeTiles(playerId, [{ tile: { ...blank, assignedLetter: "ll" }, row: 7, col: 7 }]).success).toBe(true);
+      expect(game.tentativePlacements.get(playerId)![0].tile.assignedLetter).toBe("LL");
+    });
+
     it("removes placed tiles from the player's rack", () => {
       setupGameForPlay(game);
       const playerId = game.getCurrentTurnPlayerId()!;
@@ -377,6 +511,18 @@ describe("ScrabbleGame", () => {
 
       const tentative = game.tentativePlacements.get(playerId);
       expect(!tentative || tentative.length === 0).toBe(true);
+    });
+
+    it("returns a blank to the rack without its assigned letter", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const blank = makeBlank("recall-blank");
+      game.playerRacks.set(playerId, [blank]);
+      game.placeTiles(playerId, [{ tile: { ...blank, assignedLetter: "E" }, row: 7, col: 7 }]);
+
+      game.recallTiles(playerId);
+
+      expect(game.playerRacks.get(playerId)).toEqual([blank]);
     });
 
     it("works when no placements exist (no crash)", () => {
@@ -630,6 +776,120 @@ describe("ScrabbleGame", () => {
   });
 
   // ===========================================================================
+  // skipTurn (overtime)
+  // ===========================================================================
+  describe("skipTurn", () => {
+    it("is rejected while the current player still has time", () => {
+      const { p2 } = setupGameForPlay(game);
+      game.turnTimeLeft = 1;
+
+      expect(game.skipTurn(p2)).toMatchObject({ success: false, reason: "Todavía le queda tiempo" });
+      expect(game.getCurrentTurnPlayerId()).toBe("p1");
+    });
+
+    it("is rejected for the player whose turn it is", () => {
+      const { p1 } = setupGameForPlay(game);
+      game.turnTimeLeft = -3;
+
+      expect(game.skipTurn(p1).success).toBe(false);
+    });
+
+    it("is rejected for someone who is not in the game", () => {
+      setupGameForPlay(game);
+      game.turnTimeLeft = -3;
+
+      expect(game.skipTurn("stranger").success).toBe(false);
+    });
+
+    it("in overtime, another player can skip: forced pass, tiles recalled, skipper named", () => {
+      const { p1, p2 } = setupGameForPlay(game);
+      const io = { emit: vi.fn() };
+      game.setIO(io);
+      const tile = game.playerRacks.get(p1)![0];
+      game.placeTiles(p1, [{ tile, row: 7, col: 7 }]);
+      game.turnTimeLeft = -10;
+
+      const result = game.skipTurn(p2);
+      game.clearTimers();
+
+      expect(result).toEqual({ success: true, skippedPlayerId: p1 });
+      expect(game.getCurrentTurnPlayerId()).toBe(p2);
+      expect(game.playerRacks.get(p1)).toHaveLength(SCRABBLE_RACK_SIZE);
+      expect(game.consecutivePasses).toBe(1);
+      const played = io.emit.mock.calls.find((c) => c[0] === "turn-played")![1];
+      expect(played).toMatchObject({ playerId: p1, type: "timeout", skippedByName: "Bob" });
+    });
+  });
+
+  // ===========================================================================
+  // Time tracking
+  // ===========================================================================
+  describe("time tracking", () => {
+    const timesOf = (g: ScrabbleGame, id: string) => {
+      const p = g.getGameState().players.find((x) => x.id === id)!;
+      return { timeUsed: p.timeUsed, overtime: p.overtime };
+    };
+
+    it("adds each finished turn's elapsed time to its player", () => {
+      const { p1, p2 } = setupGameForPlay(game);
+      game.turnTimeLeft = SCRABBLE_TURN_TIME_LIMIT - 30;
+      game.passTurn(p1);
+      game.turnTimeLeft = SCRABBLE_TURN_TIME_LIMIT - 12;
+      game.passTurn(p2);
+      game.turnTimeLeft = SCRABBLE_TURN_TIME_LIMIT - 5;
+      game.passTurn(p1);
+      game.clearTimers();
+
+      expect(timesOf(game, p1)).toEqual({ timeUsed: 35, overtime: 0 });
+      expect(timesOf(game, p2)).toEqual({ timeUsed: 12, overtime: 0 });
+    });
+
+    it("counts overtime, including on skipped turns", () => {
+      const { p1, p2 } = setupGameForPlay(game);
+      game.turnTimeLeft = -20;
+      game.skipTurn(p2);
+      game.clearTimers();
+
+      expect(timesOf(game, p1)).toEqual({ timeUsed: SCRABBLE_TURN_TIME_LIMIT + 20, overtime: 20 });
+    });
+
+    it("records exchanges and the turn that ends the game", () => {
+      const { p1, p2 } = setupGameForPlay(game);
+      game.turnTimeLeft = SCRABBLE_TURN_TIME_LIMIT - 7;
+      game.exchangeTiles(p1, [game.playerRacks.get(p1)![0].id]);
+      game.consecutivePasses = SCRABBLE_MAX_CONSECUTIVE_PASSES - 1;
+      game.turnTimeLeft = SCRABBLE_TURN_TIME_LIMIT - 9;
+      game.passTurn(p2);
+
+      expect(game.gameState).toBe("finished");
+      expect(timesOf(game, p1).timeUsed).toBe(7);
+      expect(timesOf(game, p2).timeUsed).toBe(9);
+    });
+
+    it("survives serialize/deserialize and reconnection", () => {
+      const { p1 } = setupGameForPlay(game);
+      game.turnTimeLeft = -4;
+      game.passTurn(p1);
+      game.clearTimers();
+
+      const restored = ScrabbleGame.deserialize(game.serialize("g1"));
+      restored.reconnectPlayer("Alice", "new-socket");
+
+      expect(timesOf(restored, "new-socket")).toEqual({ timeUsed: SCRABBLE_TURN_TIME_LIMIT + 4, overtime: 4 });
+    });
+
+    it("starts from zero on a new game", () => {
+      const { p1 } = setupGameForPlay(game);
+      game.passTurn(p1);
+      game.endGame();
+      game.startGame();
+      game.clearTimers();
+
+      expect(timesOf(game, p1)).toEqual({ timeUsed: 0, overtime: 0 });
+    });
+  });
+
+  // ===========================================================================
   // exchangeTiles
   // ===========================================================================
   describe("exchangeTiles", () => {
@@ -662,6 +922,29 @@ describe("ScrabbleGame", () => {
       game.clearTimers();
 
       expect(result.success).toBe(false);
+    });
+
+    it(`rejects exchange when the bag has fewer than ${SCRABBLE_MIN_BAG_FOR_EXCHANGE} tiles`, () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const rack = game.playerRacks.get(playerId)!;
+      game.tileBag.splice(SCRABBLE_MIN_BAG_FOR_EXCHANGE - 1);
+
+      const result = game.exchangeTiles(playerId, [rack[0].id]);
+
+      expect(result.success).toBe(false);
+      expect(game.getCurrentTurnPlayerId()).toBe(playerId);
+    });
+
+    it("rejects an empty or duplicated selection without consuming the turn", () => {
+      setupGameForPlay(game);
+      const playerId = game.getCurrentTurnPlayerId()!;
+      const rack = game.playerRacks.get(playerId)!;
+
+      expect(game.exchangeTiles(playerId, []).success).toBe(false);
+      expect(game.exchangeTiles(playerId, [rack[0].id, rack[0].id]).success).toBe(false);
+      expect(game.playerRacks.get(playerId)).toHaveLength(SCRABBLE_RACK_SIZE);
+      expect(game.getCurrentTurnPlayerId()).toBe(playerId);
     });
 
     it("rejects exchange if not the player's turn", () => {
@@ -894,6 +1177,16 @@ describe("ScrabbleGame", () => {
       expect(finalScore).toBe(20 - 15);
     });
 
+    it("lets a final score go negative", () => {
+      const { p1 } = setupGameForPlay(game);
+      game.players.get(p1)!.score = 3;
+      game.playerRacks.set(p1, [makeTile("Z", 10, "neg-Z")]);
+
+      game.endGame();
+
+      expect(game.players.get(p1)!.score).toBe(-7);
+    });
+
     it("calls updateScoreboard", () => {
       setupGameForPlay(game);
       game.endGame();
@@ -982,6 +1275,32 @@ describe("ScrabbleGame", () => {
       expect(events("turn-played")).toEqual([
         expect.objectContaining({ playerId: p1, type: "exchange", exchangedCount: 2 }),
       ]);
+    });
+
+    it("the clock keeps running into negative instead of passing the turn", () => {
+      vi.useFakeTimers();
+      game.addPlayer("p1", "Alice");
+      game.addPlayer("p2", "Bob");
+      game.startGame();
+      const { events } = withIO();
+
+      vi.advanceTimersByTime((SCRABBLE_TURN_TIME_LIMIT + 5) * 1000);
+
+      expect(game.turnTimeLeft).toBe(-5);
+      expect(game.getCurrentTurnPlayerId()).toBe("p1");
+      expect(events("turn-played")).toEqual([]);
+      expect(events("turn-timer-update").at(-1)).toBe(-5);
+    });
+
+    it("resumeTurnTimer restarts the clock only while playing", () => {
+      vi.useFakeTimers();
+      game.resumeTurnTimer();
+      expect(game.turnTimer).toBeNull();
+
+      setupGameForPlay(game);
+      game.resumeTurnTimer();
+      vi.advanceTimersByTime(3000);
+      expect(game.turnTimeLeft).toBe(SCRABBLE_TURN_TIME_LIMIT - 3);
     });
 
     it("does not emit turn-changed when the turn ends the game", () => {

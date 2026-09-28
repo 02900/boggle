@@ -46,6 +46,10 @@ export const useScrabbleSocket = () => {
     [socket]
   );
 
+  const skipTurn = useCallback(() => {
+    socket?.emit("skip-turn");
+  }, [socket]);
+
   const resetGame = useCallback(() => {
     socket?.emit("reset-game");
   }, [socket]);
@@ -58,6 +62,7 @@ export const useScrabbleSocket = () => {
     submitTurn,
     passTurn,
     exchangeTiles,
+    skipTurn,
     resetGame,
   };
 };

@@ -27,11 +27,18 @@ export interface ScrabblePlayer extends Player {
   isCurrentTurn: boolean;
   /** False while the player is in the reconnection grace period. */
   isConnected: boolean;
+  /** Seconds spent on this player's completed turns, overtime included. */
+  timeUsed: number;
+  /** Seconds spent past the turn limit, summed over the game. */
+  overtime: number;
 }
 
 // ---- Scrabble turn/game lifecycle events ----
 
-/** Why a turn ended. "timeout" and "disconnect" are forced passes. */
+/**
+ * Why a turn ended. "timeout" (another player skipped it once the clock ran out)
+ * and "disconnect" are forced passes.
+ */
 export type TurnEndReason = "place" | "pass" | "exchange" | "timeout" | "disconnect";
 
 export type GameEndReason = "passes" | "bag-empty" | "abandon";
@@ -45,13 +52,16 @@ export interface TurnPlayedEvent {
   score?: number;
   /** Only for type "exchange" */
   exchangedCount?: number;
+  /** Only for type "timeout": who skipped the turn */
+  skippedByName?: string;
 }
 
 export interface TurnChangedEvent {
   previousPlayerId: string | null;
   currentPlayerId: string | null;
   currentPlayerName: string | null;
-  reason: TurnEndReason;
+  /** "start" announces the (randomly chosen) first player of a new game. */
+  reason: TurnEndReason | "start";
 }
 
 export interface FinalAdjustment {
@@ -80,6 +90,7 @@ export interface ScrabbleGameState {
   players: ScrabblePlayer[];
   gameState: GameStatus;
   currentTurnPlayerId: string | null;
+  /** Negative once the turn is in overtime (the clock keeps running). */
   turnTimeLeft: number;
   tileBagCount: number;
   consecutivePasses: number;
@@ -130,6 +141,8 @@ export interface SerializedScrabbleGame {
     score: number;
     rack: ScrabbleTile[];
     wordsFound: string[];
+    timeUsed?: number;
+    overtime?: number;
   }>;
   currentTurnPlayerName: string | null;
   turnTimeLeft: number;
@@ -153,6 +166,7 @@ export interface ScrabbleGameEvents {
   "game-state": (state: ScrabbleGameState | ScrabblePlayerGameState) => void;
   "game-started": (state: ScrabbleGameState & { gameId?: string }) => void;
   "start-failed": (data: { reason: string }) => void;
+  "join-failed": (data: { reason: string }) => void;
   "game-ended": (state: GameEndedEvent) => void;
   "game-reset": (state: ScrabbleGameState) => void;
   "word-result": (result: WordResult) => void;
@@ -181,5 +195,7 @@ export interface ScrabbleClientEvents {
   "submit-turn": () => void;
   "pass-turn": () => void;
   "exchange-tiles": (data: { tileIds: string[] }) => void;
+  /** Skip the current player's turn; only allowed for another player once the clock is negative. */
+  "skip-turn": () => void;
   "rejoin-game": (data: { playerName: string; gameId: string }) => void;
 }

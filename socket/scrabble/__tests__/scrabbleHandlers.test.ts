@@ -241,6 +241,23 @@ describe("setupScrabbleHandlers", () => {
       vi.useRealTimers();
     });
 
+    it("does not announce player-left when the removal ended the game by abandon", () => {
+      vi.useFakeTimers();
+      const player = { id: "socket-1", name: "Alice", isConnected: true };
+      game.players = new Map([["socket-1", player]]) as any;
+      game.gameState = "playing" as any;
+      game.removePlayer.mockImplementation(() => {
+        game.gameState = "finished";
+      });
+
+      socket._trigger("disconnect");
+      vi.advanceTimersByTime(30_000);
+
+      expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
+      expect(io.emit).not.toHaveBeenCalledWith("player-left", expect.anything());
+      vi.useRealTimers();
+    });
+
     it("ignores disconnects of sockets already remapped by a reconnect", () => {
       game.players = new Map() as any;
       game.gameState = "playing" as any;
@@ -249,6 +266,31 @@ describe("setupScrabbleHandlers", () => {
 
       expect(game.removePlayer).not.toHaveBeenCalled();
       expect(socket.broadcast.emit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("skip-turn", () => {
+    it("skips, syncs the skipped player's private state and saves", async () => {
+      const { saveSession } = await import("../../../game/scrabble/gameSessionStore");
+      const skipped = createMockSocket("socket-2", "scrabble");
+      io._addSocket(skipped);
+
+      socket._trigger("skip-turn");
+
+      expect(game.skipTurn).toHaveBeenCalledWith("socket-1");
+      expect(io.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(game.getGameStateForPlayer).toHaveBeenCalledWith("socket-2");
+      expect(skipped.emit).toHaveBeenCalledWith("game-state", expect.objectContaining({ rack: [] }));
+      expect(saveSession).toHaveBeenCalled();
+    });
+
+    it("tells the requester why a skip was rejected", () => {
+      game.skipTurn.mockReturnValue({ success: false, reason: "Todavía le queda tiempo" });
+
+      socket._trigger("skip-turn");
+
+      expect(socket.emit).toHaveBeenCalledWith("word-result", { valid: false, reason: "Todavía le queda tiempo" });
+      expect(io.emit).not.toHaveBeenCalledWith("game-state", expect.anything());
     });
   });
 
@@ -383,6 +425,29 @@ describe("setupScrabbleHandlers", () => {
       expect(stalePlayer.isConnected).toBe(false);
       expect(game.reconnectPlayer).toHaveBeenCalledWith("Alice", "socket-1");
       expect(socket.emit).toHaveBeenCalledWith("rejoin-success", expect.anything());
+    });
+
+    it("resumes the turn timer when restoring a persisted session", async () => {
+      const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
+      vi.mocked(loadSession).mockReturnValue({
+        gameId: "g1",
+        createdAt: "",
+        lastUpdatedAt: "",
+        board: [],
+        tileBag: [],
+        players: [{ name: "Alice", score: 5, rack: [], wordsFound: [] }],
+        currentTurnPlayerName: "Alice",
+        turnTimeLeft: 120,
+        consecutivePasses: 0,
+        gameState: "playing",
+        moveHistory: [],
+        isFirstTurn: false,
+      });
+      game.gameState = "waiting";
+
+      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+
+      expect(game.resumeTurnTimer).toHaveBeenCalled();
     });
 
     it("emits rejoin-failed when data is missing", () => {

@@ -29,10 +29,26 @@ export function ScrabbleInstructions() {
         Formar palabras en el tablero usando tus fichas para obtener la mayor puntuación.
       </Rule>
 
+      <Rule title="Jugadores">
+        De 2 a 4. No se puede entrar a una partida ya empezada. El orden de turnos se sortea al iniciar.
+      </Rule>
+
       <Rule title="Turno">
         Selecciona una ficha de tu atril y haz click en el tablero para colocarla. Las fichas deben formar una
         línea (horizontal o vertical) y conectar con fichas existentes. Se admiten palabras de 2 letras.
+        Las palabras se validan automáticamente contra el diccionario (no hay desafíos).
       </Rule>
+
+      <Rule title="Cambiar y pasar">
+        En vez de jugar puedes cambiar fichas (solo si quedan al menos 7 en la bolsa) o pasar.
+      </Rule>
+
+      <Rule title="Tiempo">
+        Cada turno dura 2 minutos. Si se agota, el reloj sigue corriendo en negativo y los demás jugadores pueden
+        saltar el turno (cuenta como pase). Al final se muestra cuánto tiempo usó cada jugador.
+      </Rule>
+
+      <Rule title="Comodín">El comodín vale 0 puntos y representa la letra que elijas al colocarlo.</Rule>
 
       <Rule title="Puntuación">
         <ul className="list-inside list-disc space-y-1">
@@ -52,7 +68,9 @@ export function ScrabbleInstructions() {
 
       <Rule title="Fin del juego">
         Termina cuando la bolsa está vacía y un jugador coloca todas sus fichas, o tras 6 pases consecutivos.
-        Cada jugador resta el valor de las fichas que le quedan; quien se quedó sin fichas suma ese total.
+        Cada jugador resta el valor de las fichas que le quedan (el puntaje puede quedar negativo); quien se
+        quedó sin fichas suma ese total. Si un jugador abandona y queda uno solo, la partida termina con los
+        puntajes actuales.
       </Rule>
     </div>
   );

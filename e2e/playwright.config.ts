@@ -13,7 +13,9 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "cross-env PORT=3001 NEXT_DIST_DIR=.next-e2e pnpm dev",
+    // Short turns so the overtime/skip flow is testable (turns never auto-pass, so
+    // other specs are unaffected by the clock running out)
+    command: "cross-env PORT=3001 NEXT_DIST_DIR=.next-e2e SCRABBLE_TURN_TIME_LIMIT=15 pnpm dev",
     port: 3001,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

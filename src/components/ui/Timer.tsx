@@ -1,7 +1,7 @@
 import { composeClasses } from "@/utils/compose-classes";
 
 interface Props {
-  /** Seconds remaining */
+  /** Seconds remaining; negative means overtime (shown as -m:ss) */
   seconds: number;
   /** Below this the timer turns to warning; below `dangerAt` it turns to danger and pulses */
   warningAt?: number;
@@ -10,13 +10,15 @@ interface Props {
 }
 
 export function formatClock(totalSeconds: number): string {
-  const s = Math.max(0, totalSeconds);
-  return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+  const s = Math.abs(totalSeconds);
+  const sign = totalSeconds < 0 ? "-" : "";
+  return `${sign}${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
-/** mm:ss countdown with urgency states. */
+/** mm:ss countdown with urgency states; keeps counting below zero as overtime. */
 export function Timer({ seconds, warningAt = 30, dangerAt = 10, className }: Props) {
-  const state = seconds <= dangerAt ? "danger" : seconds <= warningAt ? "warning" : "normal";
+  const state =
+    seconds < 0 ? "overtime" : seconds <= dangerAt ? "danger" : seconds <= warningAt ? "warning" : "normal";
   return (
     <span
       role="timer"
@@ -25,7 +27,7 @@ export function Timer({ seconds, warningAt = 30, dangerAt = 10, className }: Pro
       className={composeClasses(
         "font-mono tabular-nums font-semibold",
         state === "warning" && "text-warning",
-        state === "danger" && "text-danger animate-pulse",
+        (state === "danger" || state === "overtime") && "text-danger animate-pulse",
         className
       )}
     >

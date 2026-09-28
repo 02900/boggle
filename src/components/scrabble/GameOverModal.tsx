@@ -5,7 +5,7 @@ import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { Button, Modal } from "@/components/ui";
 import { composeClasses } from "@/utils/compose-classes";
-import { describeGameEnd } from "@/utils/scrabble-messages";
+import { describeGameEnd, describePlayerTime } from "@/utils/scrabble-messages";
 import { playerColor } from "./player-colors";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -76,6 +76,9 @@ export function GameOverModal({ open, onClose }: Props) {
                       por fichas restantes
                     </>
                   )}
+                </div>
+                <div data-testid="player-time" className="text-xs text-ink-faint">
+                  ⏱ {describePlayerTime(p.timeUsed ?? 0, p.overtime ?? 0)}
                 </div>
               </div>
               <span className="font-mono text-lg font-semibold tabular-nums">{p.score}</span>

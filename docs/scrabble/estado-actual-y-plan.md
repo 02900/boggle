@@ -55,13 +55,13 @@ Archivos: `game/scrabble/ScrabbleGame.ts` (1059 líneas), `scrabbleConfig.ts`,
 | L3 ✅ | **Reconexión rota** | `socket/shared/sharedHandlers.ts:39`, `use-scrabble-socket-listeners.ts:85` | `join-confirmed` y `game-started` no incluyen `gameId`; el cliente solo guarda sesión si `s.gameId` existe → nunca. |
 | L4 ✅ | Fin por pases demasiado agresivo | `ScrabbleGame.ts:862` | Termina con `consecutivePasses >= players.length` (1 ronda). Estándar: 6 pases consecutivos (o 2 rondas). Con 2 jugadores, **dos timeouts seguidos terminan la partida**. |
 | L5 ✅ | Timeout cuenta como pase | `:657` | Debería ser un pase "forzado" pero con aviso claro; combinado con L4 es letal. |
-| L6 | Intercambio sin regla de bolsa ≥ 7 | `:541` | Estándar: solo se puede cambiar si la bolsa tiene ≥ 7 fichas. |
-| L7 | Fichas del jugador removido se pierden | `removePlayer` (`:74-109`) | No vuelven a la bolsa. |
-| L8 | Primer jugador no aleatorio | `:135` | Siempre el primero en entrar. |
-| L9 | Comodín sin validación server-side | `:773` | `assignedLetter` se acepta tal cual; debería validarse contra el alfabeto. |
-| L10 | Sin límite de jugadores | `addPlayer` | Estándar 2–4. |
-| L11 | Sin "desafío" ni pista de palabras válidas | — | Aceptable omitirlo (validación automática), pero documentarlo en las reglas. |
-| L12 | Score clamp a 0 al final | `:177` | No estándar; decidir y documentar. |
+| L6 ✅ | Intercambio sin regla de bolsa ≥ 7 | `:541` | Estándar: solo se puede cambiar si la bolsa tiene ≥ 7 fichas. |
+| L7 ✅ | Fichas del jugador removido se pierden | `removePlayer` (`:74-109`) | No vuelven a la bolsa. |
+| L8 ✅ | Primer jugador no aleatorio | `:135` | Siempre el primero en entrar. |
+| L9 ✅ | Comodín sin validación server-side | `:773` | `assignedLetter` se acepta tal cual; debería validarse contra el alfabeto. |
+| L10 ✅ | Sin límite de jugadores | `addPlayer` | Estándar 2–4. |
+| L11 ✅ | Sin "desafío" ni pista de palabras válidas | — | Aceptable omitirlo (validación automática), pero documentarlo en las reglas. |
+| L12 ✅ | Score clamp a 0 al final | `:177` | No estándar; decidir y documentar. |
 
 ### 2.3 Eventos socket actuales
 
@@ -300,14 +300,32 @@ Solo CSS: `@keyframes` + tokens `--animate-*` en `@theme` (`globals.css`) → ut
 No hecho (bajo valor / complejidad): FLIP real desde la posición del atril, animación de
 salida de toasts, stagger del podio.
 
-### Fase 5 — Reglas restantes (S)
+### Fase 5 — Reglas restantes (S) — ✅ HECHA
 
-- Intercambio solo con bolsa ≥ 7 (L6).
-- Devolver fichas del jugador removido a la bolsa (L7).
-- Primer jugador aleatorio o por sorteo de letra (L8).
-- Validar `assignedLetter` del comodín (L9).
-- Máximo 4 jugadores (L10).
-- Decidir política de score negativo (L12) y documentar en `ScrabbleInstructions`.
+- ✅ Intercambio solo con bolsa ≥ 7 (`SCRABBLE_MIN_BAG_FOR_EXCHANGE`); se rechaza selección vacía o duplicada (L6).
+- ✅ `removePlayer` devuelve atril **y fichas tentativas** a la bolsa y la mezcla; los comodines vuelven sin letra (L7).
+- ✅ Orden de turnos aleatorio (`shufflePlayerOrder`); `turn-changed` con `reason: "start"` (L8).
+- ✅ `placeTiles` reconstruye cada ficha desde el atril del server (antes aceptaba letra/valor
+  enviados por el cliente); el comodín exige una letra de `VALID_BLANK_LETTERS` (incl. CH/LL/RR/Ñ) (L9).
+- ✅ 2–4 jugadores y no se puede entrar con la partida empezada: `ScrabbleGame.canJoin()` +
+  hook `canJoin` en `sharedHandlers` → `join-failed {reason}` (L10).
+- ✅ Validación automática sin desafío, documentada en `ScrabbleInstructions` (L11).
+- ✅ Se permiten puntajes finales negativos (regla oficial) (L12).
+
+Bugs de servidor encontrados al cerrar la fase:
+
+- **Abandono:** si quedan < 2 jugadores durante la partida → `endGame("abandon")` sin ajuste de fichas.
+- **Turno saltado:** al quitar al jugador del turno actual con 3+ jugadores se salteaba a su sucesor.
+- **Timeout:** el auto-pase del timer no guardaba la sesión ni mandaba el atril privado al jugador
+  (sus fichas tentativas quedaban dibujadas). Ahora `ScrabbleGame.onAutoTurnEnd` lo resuelve el handler.
+- **Restaurar sesión:** tras reiniciar el server, el rejoin restauraba la partida sin timer → `resumeTurnTimer()`.
+
+Tiempo extra (pedido posterior a la fase):
+
+- El turno ya **no se pasa solo** al llegar a 0: el reloj sigue en negativo y los rivales ven
+  "Saltar turno de X" (`skip-turn` → `ScrabbleGame.skipTurn`, pase forzado tipo `timeout`).
+- `timeUsed`/`overtime` por jugador, persistidos en la sesión y mostrados en el modal de resultados.
+- E2E: el server de pruebas usa `SCRABBLE_TURN_TIME_LIMIT=15`; spec `scrabble-overtime.spec.ts`.
 
 ### Fase 6 — Calidad
 

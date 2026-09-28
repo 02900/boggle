@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { describeGameEnd, describeTurnChanged, describeTurnPlayed } from "../scrabble-messages";
+import {
+  describeGameEnd,
+  describeOvertime,
+  describePlayerTime,
+  describeTurnChanged,
+  describeTurnPlayed,
+} from "../scrabble-messages";
 
 const base = { playerId: "p1", playerName: "Bob" };
 
@@ -17,6 +23,12 @@ describe("describeTurnPlayed", () => {
     expect(describeTurnPlayed({ ...base, type: "disconnect" }, false)).toBe("Bob perdió el turno por desconexión");
   });
 
+  it("timeout skipped by another player names the skipper", () => {
+    const event = { ...base, type: "timeout" as const, skippedByName: "Ana" };
+    expect(describeTurnPlayed(event, false)).toBe("Ana saltó el turno de Bob");
+    expect(describeTurnPlayed(event, true)).toBe("Ana saltó tu turno (tiempo agotado)");
+  });
+
   it("exchange: pluralizes fichas", () => {
     expect(describeTurnPlayed({ ...base, type: "exchange", exchangedCount: 1 }, false)).toBe("Bob cambió 1 ficha");
     expect(describeTurnPlayed({ ...base, type: "exchange", exchangedCount: 3 }, true)).toBe("Cambiaste 3 fichas");
@@ -28,6 +40,20 @@ describe("describeTurnChanged", () => {
   it("addresses me directly when it's my turn", () => {
     expect(describeTurnChanged(event, true)).toBe("¡Tu turno!");
     expect(describeTurnChanged(event, false)).toBe("Turno de Bob");
+  });
+});
+
+describe("describeOvertime", () => {
+  it("tells others they can skip, and the late player that they can be skipped", () => {
+    expect(describeOvertime("Bob", false)).toBe("Se agotó el tiempo de Bob · puedes saltar su turno");
+    expect(describeOvertime("Bob", true)).toMatch(/pueden saltar tu turno/);
+  });
+});
+
+describe("describePlayerTime", () => {
+  it("shows total time and overtime only when there was any", () => {
+    expect(describePlayerTime(185, 0)).toBe("3:05 en total");
+    expect(describePlayerTime(185, 40)).toBe("3:05 en total · 0:40 de más");
   });
 });
 

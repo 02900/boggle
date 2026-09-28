@@ -77,6 +77,23 @@ describe("setupSharedHandlers", () => {
       expect(onPlayerJoined).toHaveBeenCalledWith(socket, "Alice");
     });
 
+    it("emits join-failed and does not add the player when canJoin rejects", () => {
+      const canJoin = vi.fn(() => ({ ok: false, reason: "La partida ya empezó" }));
+      setupSharedHandlers(io as any, socket as any, game as any, { canJoin });
+      socket._trigger("join-game", "Alice");
+
+      expect(socket.emit).toHaveBeenCalledWith("join-failed", { reason: "La partida ya empezó" });
+      expect(game.addPlayer).not.toHaveBeenCalled();
+      expect(socket.broadcast.emit).not.toHaveBeenCalled();
+    });
+
+    it("joins normally when canJoin accepts", () => {
+      setupSharedHandlers(io as any, socket as any, game as any, { canJoin: () => ({ ok: true }) });
+      socket._trigger("join-game", "Alice");
+
+      expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "Alice");
+    });
+
     it("works without hooks (no crash)", () => {
       setupSharedHandlers(io as any, socket as any, game as any);
 

@@ -2,6 +2,7 @@ import { debugLog } from "../../utils/debug";
 import { SCRABBLE_GRACE_PERIOD } from "../../config/scrabbleConstants";
 import { saveSession, loadSession, deleteSession } from "../../game/scrabble/gameSessionStore";
 import { ScrabbleGame } from "../../game/scrabble/ScrabbleGame";
+import type { GameStatus } from "../../src/interfaces/game";
 import type { ScrabbleTypedServer, ScrabbleTypedSocket } from "../../src/interfaces/server";
 
 const sessionCreatedAt = new Map<string, string>();
@@ -110,6 +111,23 @@ export function setupScrabbleHandlers(
     }
   });
 
+  socket.on("skip-turn", () => {
+    debugLog("EVENT: skip-turn", null, socket.id);
+
+    const result = game.skipTurn(socket.id);
+    if (!result.success || !result.skippedPlayerId) {
+      socket.emit("word-result", { valid: false, reason: result.reason });
+      return;
+    }
+
+    // The skipped player's tentative tiles were recalled: they need their private state
+    const skippedId = result.skippedPlayerId;
+    io.emit("game-state", game.getGameState());
+    io.sockets.sockets.get(skippedId)?.emit("game-state", game.getGameStateForPlayer(skippedId));
+    socket.emit("game-state", game.getGameStateForPlayer(socket.id));
+    autoSave(game, gameId);
+  });
+
   socket.on("exchange-tiles", (data) => {
     debugLog("EVENT: exchange-tiles", { count: data?.tileIds?.length }, socket.id);
 
@@ -170,7 +188,10 @@ export function setupScrabbleHandlers(
       game.playerRacks = restoredGame.playerRacks;
       game.currentTurnIndex = restoredGame.currentTurnIndex;
       game.tentativePlacements = restoredGame.tentativePlacements;
+      game.turnTimes = restoredGame.turnTimes;
       sessionCreatedAt.set(data.gameId, sessionData.createdAt);
+      // The restored turn's timer is not running yet (e.g. after a server restart)
+      game.resumeTurnTimer();
     }
 
     // Newest connection wins: on a page reload the new socket's rejoin can arrive
@@ -249,10 +270,15 @@ export function setupScrabbleHandlers(
       }
 
       game.removePlayer(socket.id);
-      io.emit("player-left", socket.id);
-      io.emit("game-state", game.getGameState());
       autoSave(game, gameId);
-      debugLog("SCRABBLE_GRACE_PERIOD_EXPIRED", { playerName });
+      // With fewer than 2 players left, removePlayer ended the game by abandon
+      // and game-ended already carries the final state.
+      // (cast: TS keeps the narrowing from the check above across the call)
+      if ((game.gameState as GameStatus) !== "finished") {
+        io.emit("player-left", socket.id);
+        io.emit("game-state", game.getGameState());
+      }
+      debugLog("SCRABBLE_GRACE_PERIOD_EXPIRED", { playerName, gameState: game.gameState });
     }, SCRABBLE_GRACE_PERIOD);
 
     graceTimers.set(playerName, timer);

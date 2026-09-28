@@ -70,4 +70,34 @@ test.describe("Scrabble - Starting a game", () => {
     await expect(p1.startButton).not.toBeVisible();
     await expect(p2.startButton).not.toBeVisible();
   });
+
+  test("a player arriving after the start is rejected with a message", async ({
+    browser,
+    player1Page,
+    player2Page,
+  }) => {
+    const p1 = new ScrabblePage(player1Page);
+    const p2 = new ScrabblePage(player2Page);
+
+    await p1.goto();
+    await p1.joinGame("Alice");
+    await p2.goto();
+    await p2.joinGame("Bob");
+    await p1.waitForPlayerVisible("Bob");
+    await p1.startGame();
+
+    const lateContext = await browser.newContext();
+    try {
+      const late = new ScrabblePage(await lateContext.newPage());
+      await late.goto();
+      await late.nameInput.fill("Carol");
+      await late.joinButton.click();
+
+      await expect(late.errorToast()).toContainText("La partida ya empezó");
+      await expect(late.nameInput).toBeVisible();
+      expect(await p1.getPlayerNames()).not.toContain("Carol");
+    } finally {
+      await lateContext.close();
+    }
+  });
 });

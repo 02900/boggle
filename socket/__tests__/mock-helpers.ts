@@ -138,6 +138,11 @@ export function createMockScrabbleGame() {
     players: new Map([["socket-1", { id: "socket-1", name: "Alice" }]]),
     gameState: "playing" as string,
     getCurrentTurnPlayerId: vi.fn((): string | null => null),
+    resumeTurnTimer: vi.fn(),
+    skipTurn: vi.fn((): { success: boolean; reason?: string; skippedPlayerId?: string } => ({
+      success: true,
+      skippedPlayerId: "socket-2",
+    })),
   };
 }
 

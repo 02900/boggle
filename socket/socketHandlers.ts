@@ -41,6 +41,7 @@ export function setupSocketHandlers(
             }
           : undefined,
       skipDisconnect: gameType === "scrabble",
+      canJoin: gameType === "scrabble" ? () => (game as ScrabbleGame).canJoin() : undefined,
     });
 
     if (gameType === "boggle") {
