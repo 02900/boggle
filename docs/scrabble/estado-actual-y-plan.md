@@ -257,27 +257,27 @@ Eventos server→cliente nuevos, tipados en `src/interfaces/scrabble.ts`:
 - E2E: page object 100 % sobre `data-testid` (`tile-rack`, `board`, `tile[data-letter]`,
   `player-score`) — ya no depende de clases Tailwind.
 
-### Fase 3 — Rediseño de pantallas (C)
+### Fase 3 — Rediseño de pantallas (C) — ✅ HECHA
 
-1. **Join**: card centrada, logo/wordmark, input con validación, estado de conexión discreto,
-   opción nombre aleatorio, link a reglas en modal.
-2. **Lobby**: pantalla propia sin tablero. Lista de jugadores con color asignado,
-   contador "2/4", "Esperando a más jugadores…" con indicador animado, botón Iniciar
-   habilitado ≥2. Transición animada a la mesa al iniciar.
-3. **Mesa (layout)**:
-   - Desktop: dos columnas — tablero (izq, cuadrado, `max(60vh)`) y panel (der): turno+timer,
-     jugadores con scores, historial, bolsa.
-   - Móvil: header compacto (turno+timer), tablero `100vw` cuadrado con zoom/pan opcional,
-     **atril + acciones fijos abajo** (sticky), jugadores/historial en drawer.
-4. **Tablero**: marco, coordenadas opcionales, celdas con `aspect-square`, etiquetas
-   legibles, casilla central diferenciada, highlight de celdas válidas al tener ficha
-   seleccionada, click en ficha tentativa la devuelve.
-5. **Atril**: ancho al contenido, fichas 44–48px (target táctil), slot vacío visible,
-   botón "Mezclar", drag para reordenar.
-6. **Acciones**: una barra con Confirmar (primario, muestra puntos estimados),
-   Devolver, Cambiar, Pasar (ghost/secundario). Deshabilitados con motivo en tooltip.
-7. **Fin de partida**: modal/pantalla de resultados con podio, motivo, desglose de
-   ajustes, palabras por jugador, mejor jugada, CTA.
+`ScrabbleGameMain` es ahora un router: **Join → Lobby (`waiting`) → Mesa (`playing`/`finished`)**.
+
+1. ✅ **Join**: card centrada, input con foco acentuado, reglas en `Modal`.
+2. ✅ **Lobby** (`ScrabbleLobby`): sin tablero. Jugadores con color de asiento estable
+   (`player-colors.ts`), contador `n/4`, huecos "Esperando jugador…", estado "Falta 1 jugador"
+   con pulso, Iniciar solo con ≥ 2.
+3. ✅ **Mesa** (`ScrabbleTable`): desktop en dos columnas (tablero + atril + acciones |
+   panel `PlayerPanel` con turno, fichas restantes, bolsa, e historial); móvil en una columna
+   con jugadores compactos bajo el header y **atril + acciones `sticky` al pie** con
+   `safe-area-inset`. El breakpoint se decide con `useMediaQuery` (no CSS `hidden`) para
+   no duplicar atril/controles/jugadores en el DOM.
+4. ✅ **Acciones**: Confirmar/Devolver/Cambiar/Pasar solo en tu turno; fuera de turno
+   "Esperando a Bob…" con indicador. Iniciar y Nueva Partida salieron de la barra
+   (viven en lobby y resultados).
+5. ✅ **Resultados** (`GameOverModal`): se abre solo al terminar; "¡Ganaste!"/"Ganó X",
+   motivo, ranking con medallas, palabras por jugador, ajuste por fichas restantes (+/-),
+   mejor jugada, CTA Nueva Partida y "Ver tablero" (reabrible desde el panel).
+6. Pendiente para Fase 4/6: puntos estimados en Confirmar, click en tentativa para devolverla,
+   botón Mezclar y drag en el atril, coordenadas del tablero.
 
 ### Fase 4 — Animaciones (C)
 

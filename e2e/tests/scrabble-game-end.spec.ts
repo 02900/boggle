@@ -58,9 +58,10 @@ test.describe("Scrabble - Game end", () => {
     await expect(first.gameEndHeading).toBeVisible({ timeout: 10_000 });
     await expect(second.gameEndHeading).toBeVisible({ timeout: 10_000 });
 
-    // Both should see player scores
-    await expect(first.page.locator("text=/Alice:.*puntos/")).toBeVisible();
-    await expect(first.page.locator("text=/Bob:.*puntos/")).toBeVisible();
+    // Both should see player results
+    await expect(first.resultRow("Alice")).toBeVisible();
+    await expect(first.resultRow("Bob")).toBeVisible();
+    await expect(second.resultRow("Alice")).toHaveAttribute("data-score", /\d+/);
   });
 
   test("'Nueva Partida' resets the game", async () => {

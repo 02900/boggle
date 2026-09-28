@@ -165,7 +165,7 @@ export class ScrabblePage {
     const count = await badges.count();
     const names: string[] = [];
     for (let i = 0; i < count; i++) {
-      const name = await badges.nth(i).locator("span.font-medium").textContent();
+      const name = await badges.nth(i).locator('[data-testid="player-name"]').textContent();
       if (name) names.push(name.trim());
     }
     return names;
@@ -184,6 +184,11 @@ export class ScrabblePage {
 
   errorToast(): Locator {
     return this.page.locator('[data-testid="toast"][data-kind="error"]');
+  }
+
+  /** Rows of the end-of-game results, in ranking order. */
+  resultRow(name: string): Locator {
+    return this.page.locator(`[data-testid="result-row"][data-player="${name}"]`);
   }
 
   async getTileBagCount(): Promise<number> {

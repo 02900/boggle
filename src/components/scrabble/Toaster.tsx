@@ -48,7 +48,7 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-3 z-50 flex flex-col items-center gap-2 px-3"
+      className="pointer-events-none fixed inset-x-0 top-16 z-50 flex flex-col items-center gap-2 px-3 lg:top-3"
     >
       {notifications.map((n) => (
         <div key={n.id} className="pointer-events-auto">

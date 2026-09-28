@@ -13,14 +13,12 @@ export function ScrabbleControls() {
   const selectedForExchange = useScrabbleGameStore((s) => s.selectedForExchange);
   const setExchangeMode = useScrabbleGameStore((s) => s.setExchangeMode);
   const clearExchangeSelection = useScrabbleGameStore((s) => s.clearExchangeSelection);
-  const { startGame, submitTurn, passTurn, recallTiles, exchangeTiles, resetGame } = useScrabbleSocket();
+  const { submitTurn, passTurn, recallTiles, exchangeTiles } = useScrabbleSocket();
 
   const isPlaying = gameState?.gameState === "playing";
-  const isWaiting = gameState?.gameState === "waiting";
-  const isFinished = gameState?.gameState === "finished";
   const isMyTurn = gameState?.currentTurnPlayerId === currentPlayerId;
   const hasPlacements = tentativePlacements.length > 0;
-  const playerCount = gameState?.players.length ?? 0;
+  const currentTurnPlayer = gameState?.players.find((p) => p.id === gameState.currentTurnPlayerId);
 
   const handleExchangeConfirm = () => {
     const tileIds = [...selectedForExchange];
@@ -39,11 +37,12 @@ export function ScrabbleControls() {
         <p className="text-center text-sm text-warning">Selecciona las fichas que quieres cambiar</p>
       )}
 
-      <div className="flex flex-wrap justify-center gap-2">
-        {isWaiting && playerCount >= 2 && (
-          <Button variant="primary" size="lg" onClick={startGame}>
-            Iniciar Juego
-          </Button>
+      <div className="flex min-h-10 flex-wrap items-center justify-center gap-2">
+        {isPlaying && !isMyTurn && (
+          <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+            <span aria-hidden className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
+            Esperando a {currentTurnPlayer?.name ?? "..."}…
+          </p>
         )}
 
         {isPlaying && isMyTurn && !exchangeMode && (
@@ -74,16 +73,7 @@ export function ScrabbleControls() {
           </>
         )}
 
-        {isFinished && (
-          <Button variant="primary" size="lg" onClick={resetGame}>
-            Nueva Partida
-          </Button>
-        )}
       </div>
-
-      {isPlaying && (
-        <p className="text-xs text-ink-faint">Fichas en bolsa: {gameState?.tileBagCount ?? 0}</p>
-      )}
     </div>
   );
 }
