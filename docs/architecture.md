@@ -73,3 +73,20 @@
 |------|---------|------------|
 | `clientSideValidation` | `true` | Validates words locally before sending to the server. Improves UX with immediate feedback. Re-validated server-side when the game ends. |
 | `eliminateCommonWords` | `true` | When the game ends, eliminates words found by 2+ players. |
+
+## Games and Routing
+
+The server hosts one instance per game in a `GameRegistry` (`server.ts`): `BoggleGame` and
+`ScrabbleGame`, both extending `game/shared/WordGame.ts` (players, names, dictionary). A client
+picks its game with the Socket.IO query `?game=boggle|scrabble`; `socket/socketHandlers.ts`
+wires the shared handlers (`join-game`, scoreboard) plus the game-specific ones.
+
+### Scrabble
+
+- Turn-based, 2–4 players, one shared table (`default-scrabble`). Routes: `/scrabble`.
+- The server is authoritative: racks are private (sent per player in `game-state`), tiles are
+  rebuilt from the server rack, and moves are validated by `game/scrabble/moveEvaluation.ts`
+  (pure rules also used by the client to preview the score).
+- Sessions are persisted to `data/scrabble-sessions/<gameId>.json` after each turn, so players
+  can rejoin after a reload (30s grace period) or a server restart.
+- Protocol and lifecycle: [scrabble/socket-events.md](./scrabble/socket-events.md).

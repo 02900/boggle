@@ -198,6 +198,17 @@ export class ScrabblePage {
     return match ? parseInt(match[1], 10) : 0;
   }
 
+  /** Needs the e2e server (SCRABBLE_E2E_HOOKS=1). Letters like "CH"; "" is a blank. */
+  async setRack(letters: string[]) {
+    await this.page.evaluate((l) => {
+      (window as unknown as { __SCRABBLE_SOCKET__: { emit(e: string, d: unknown): void } }).__SCRABBLE_SOCKET__.emit(
+        "e2e-set-rack",
+        { letters: l }
+      );
+    }, letters);
+    await expect(this.tileRack.locator("button")).toHaveCount(letters.length);
+  }
+
   async getTimerText(): Promise<string> {
     const timer = this.turnIndicator.locator('[role="timer"]');
     if (await timer.isVisible()) {

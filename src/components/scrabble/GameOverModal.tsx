@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
+import { useScrabbleGameStore, NO_PLAYERS, NO_MOVES } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { Button, Modal } from "@/components/ui";
 import { composeClasses } from "@/utils/compose-classes";
@@ -16,8 +16,8 @@ interface Props {
 }
 
 export function GameOverModal({ open, onClose }: Props) {
-  const players = useScrabbleGameStore((s) => s.gameState?.players ?? []);
-  const moveHistory = useScrabbleGameStore((s) => s.gameState?.moveHistory ?? []);
+  const players = useScrabbleGameStore((s) => s.gameState?.players ?? NO_PLAYERS);
+  const moveHistory = useScrabbleGameStore((s) => s.gameState?.moveHistory ?? NO_MOVES);
   const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
   const summary = useScrabbleGameStore((s) => s.gameEndSummary);
   const { resetGame } = useScrabbleSocket();

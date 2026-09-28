@@ -1,7 +1,8 @@
 // 2 minutos por turno. Al agotarse el reloj sigue en negativo y los rivales pueden saltar el turno.
 // Overridable por env para e2e (el cliente no lo usa).
 export const SCRABBLE_TURN_TIME_LIMIT = Number(process.env.SCRABBLE_TURN_TIME_LIMIT) || 120;
-export const SCRABBLE_GRACE_PERIOD = 30000; // 30 segundos de gracia para reconexión
+// 30 segundos de gracia para reconexión. Overridable por env para e2e (solo lo usa el server).
+export const SCRABBLE_GRACE_PERIOD = Number(process.env.SCRABBLE_GRACE_PERIOD_MS) || 30000;
 export const SCRABBLE_BOARD_SIZE = 15; // Tablero 15x15
 export const SCRABBLE_RACK_SIZE = 7; // 7 fichas por jugador
 export const SCRABBLE_BINGO_BONUS = 50; // Bonus por usar las 7 fichas

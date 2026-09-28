@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
+import { useScrabbleGameStore, NO_PLAYERS } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { Button, Card, Modal } from "@/components/ui";
 import { composeClasses } from "@/utils/compose-classes";
@@ -14,7 +14,7 @@ const MAX_PLAYERS = 4;
 
 /** Waiting room: who's here, how many are needed, start when ready. No board yet. */
 export function ScrabbleLobby() {
-  const players = useScrabbleGameStore((s) => s.gameState?.players ?? []);
+  const players = useScrabbleGameStore((s) => s.gameState?.players ?? NO_PLAYERS);
   const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
   const { startGame } = useScrabbleSocket();
   const [rulesOpen, setRulesOpen] = useState(false);

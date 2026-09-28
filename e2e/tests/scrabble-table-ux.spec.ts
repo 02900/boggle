@@ -60,7 +60,7 @@ test.describe("Scrabble - Table helpers", () => {
     await expect(active.tileRack.locator("button")).toHaveCount(6);
 
     const center = active.boardGrid.locator("> button").nth(7 * 15 + 7);
-    await expect(center).toHaveAttribute("aria-label", /^H8, ficha colocada/);
+    await expect(center).toHaveAttribute("aria-label", /^H8, \S+ colocada/);
     await center.click();
 
     await expect(active.tileRack.locator("button")).toHaveCount(7);

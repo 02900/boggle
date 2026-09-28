@@ -96,3 +96,34 @@ Form to enter the player name. Includes a button to generate a random name. Save
 - **ClientOnly** (`ClientOnly.tsx`) - Wrapper that renders only on the client (avoids hydration errors)
 - **DictionaryStatus** (`DictionaryStatus.tsx`) - Dictionary loading status indicator
 - **ClientValidationToggle** (`ClientValidationToggle.tsx`) - Toggle to enable/disable local validation
+
+## Scrabble
+
+Located in `src/components/scrabble/`; base UI primitives (`Button`, `Card`, `Badge`, `Modal`,
+`Timer`) in `src/components/ui/`.
+
+```
+ScrabbleGameMain (screen router + Toaster)
+├── JoinForm                 (name, rules, "← Juegos")
+├── ScrabbleLobby            (waiting room, 2–4 players, start)
+└── ScrabbleTable            (game screen; desktop two columns, mobile sticky rack)
+    ├── LeaveGameButton      ("← Juegos"; confirms before abandoning mid-game)
+    ├── TurnIndicator        (whose turn + Timer, negative in overtime)
+    ├── ConnectionBanner     (own reconnection / others' grace countdown)
+    ├── PlayerPanel          (scores, rack sizes, bag count)
+    ├── ScrabbleBoard        (15×15, coordinates, keyboard play, BlankTileModal)
+    ├── TileRack             (rack order, drag to reorder, shuffle)
+    ├── ScrabbleControls     (score preview, confirm/recall/exchange/pass, skip in overtime)
+    ├── MoveHistory
+    └── GameOverModal        (podium, adjustments, time per player)
+```
+
+- **ScrabbleBoard** renders memoized `BoardCell`s with narrow store selectors, so the turn
+  timer doesn't re-render the 225 cells. Roving tabindex: Tab lands on one cell, arrows move,
+  typing a letter places that rack tile and advances, Backspace takes it back
+  (`src/utils/board-keyboard.ts`). Clicking a tentative tile recalls it.
+- **ScrabbleControls** previews formed words and points with `evaluateMove` (same rules as the
+  server, no dictionary check).
+
+Component tests live in `src/components/scrabble/__tests__/` (Testing Library; socket actions
+are mocked through `useScrabbleSocket`).

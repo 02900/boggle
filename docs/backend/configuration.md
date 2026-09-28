@@ -55,3 +55,23 @@ File: `game/gameConfig.js` - function `calculateWordPoints(word)`
 
 - **Scoreboard**: `scoreboard.json` at the root. Top 50 scores with name, score, date, and player count.
 - **Win Streaks**: `data/player-streaks.json`. Win streaks per player in 6-hour windows. Automatically cleaned up upon expiration.
+
+## Scrabble
+
+File: `config/scrabbleConstants.ts` (tile distribution, premium squares and scoring in
+`game/scrabble/scrabbleConfig.ts`).
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `SCRABBLE_TURN_TIME_LIMIT` | 120 s | Turn clock; keeps running negative, then others may skip. Env: `SCRABBLE_TURN_TIME_LIMIT` |
+| `SCRABBLE_GRACE_PERIOD` | 30 000 ms | Reconnection window before a disconnected player is removed. Env: `SCRABBLE_GRACE_PERIOD_MS` |
+| `SCRABBLE_BOARD_SIZE` | 15 | 15×15 board |
+| `SCRABBLE_RACK_SIZE` | 7 | Tiles per rack |
+| `SCRABBLE_BINGO_BONUS` | 50 | Using all 7 tiles in one turn |
+| `SCRABBLE_MIN_WORD_LENGTH` | 2 | Shortest dictionary word |
+| `SCRABBLE_MAX_CONSECUTIVE_PASSES` | 6 | Scoreless turns in a row that end the game |
+| `SCRABBLE_MAX_PLAYERS` | 4 | Table size |
+| `SCRABBLE_MIN_BAG_FOR_EXCHANGE` | 7 | Tiles needed in the bag to exchange |
+
+The e2e server (`e2e/playwright.config.ts`) runs with 15 s turns, a 10 s grace period and
+`SCRABBLE_E2E_HOOKS=1`, which enables the test-only `e2e-set-rack` event.

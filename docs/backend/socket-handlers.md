@@ -56,3 +56,11 @@ Client disconnects
   -> broadcast: player-left to others
   -> player marked as disconnected in history
 ```
+
+## Scrabble
+
+Files: `socket/shared/sharedHandlers.ts` (`join-game`, scoreboard; Scrabble adds a `canJoin`
+admission check → `join-failed`) and `socket/scrabble/scrabbleHandlers.ts`.
+
+Scrabble sockets connect with `?game=scrabble`. Full event reference (turns, presence, grace
+period, reconnection): [../scrabble/socket-events.md](../scrabble/socket-events.md).

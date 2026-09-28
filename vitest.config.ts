@@ -8,7 +8,7 @@ export default defineConfig({
         test: {
           name: "client",
           environment: "jsdom",
-          include: ["src/**/__tests__/**/*.test.ts"],
+          include: ["src/**/__tests__/**/*.test.ts", "src/**/__tests__/**/*.test.tsx"],
           setupFiles: ["./src/__tests__/setup.ts"],
         },
         resolve: {
@@ -16,6 +16,8 @@ export default defineConfig({
             "@": path.resolve(import.meta.dirname, "./src"),
           },
         },
+        // tsconfig keeps JSX as-is for Next; component tests need it compiled
+        oxc: { jsx: { runtime: "automatic" } },
       },
       {
         test: {

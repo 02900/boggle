@@ -2,6 +2,7 @@ import { debugLog } from "../../utils/debug";
 import { SCRABBLE_GRACE_PERIOD } from "../../config/scrabbleConstants";
 import { saveSession, loadSession, deleteSession } from "../../game/scrabble/gameSessionStore";
 import { ScrabbleGame } from "../../game/scrabble/ScrabbleGame";
+import { LETTER_VALUES } from "../../game/scrabble/scrabbleConfig";
 import type { GameStatus } from "../../src/interfaces/game";
 import type { ScrabbleTypedServer, ScrabbleTypedSocket } from "../../src/interfaces/server";
 
@@ -261,6 +262,24 @@ export function setupScrabbleHandlers(
       io.emit("game-state", game.getGameState());
     }
   });
+
+  // Deterministic racks for e2e tests (a random rack rarely has a blank). Never
+  // registered unless the server was started with SCRABBLE_E2E_HOOKS=1.
+  if (process.env.SCRABBLE_E2E_HOOKS === "1") {
+    socket.on("e2e-set-rack", (data) => {
+      if (!game.players.has(socket.id) || !Array.isArray(data?.letters)) return;
+      game.playerRacks.set(
+        socket.id,
+        data.letters.map((letter, i) => ({
+          id: `e2e-${Date.now()}-${i}`,
+          letter,
+          value: letter ? LETTER_VALUES[letter] ?? 0 : 0,
+          isBlank: letter === "",
+        }))
+      );
+      socket.emit("game-state", game.getGameStateForPlayer(socket.id));
+    });
+  }
 
   // Grace period disconnect handler (overrides shared handler which is skipped for Scrabble)
   socket.on("disconnect", () => {

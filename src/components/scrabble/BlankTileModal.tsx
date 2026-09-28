@@ -1,12 +1,8 @@
 "use client";
 
 import { Button, Modal } from "@/components/ui";
-
-const SPANISH_LETTERS = [
-  "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
-  "K", "L", "M", "N", "\u00D1", "O", "P", "Q", "R", "S",
-  "T", "U", "V", "W", "X", "Y", "Z",
-];
+// Exactly the letters the server accepts for a blank (no K/W; CH, LL, RR included)
+import { BLANK_LETTER_CHOICES } from "../../../game/scrabble/scrabbleConfig";
 
 interface Props {
   open: boolean;
@@ -18,7 +14,7 @@ export function BlankTileModal({ open, onSelect, onCancel }: Props) {
   return (
     <Modal open={open} onClose={onCancel} title="Elige una letra para el comodín">
       <div className="mb-3 grid grid-cols-7 gap-1.5">
-        {SPANISH_LETTERS.map((letter) => (
+        {BLANK_LETTER_CHOICES.map((letter) => (
           <button
             key={letter}
             type="button"

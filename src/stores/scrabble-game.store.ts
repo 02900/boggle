@@ -36,6 +36,13 @@ export interface GameEndSummary {
   finalAdjustments: FinalAdjustment[];
 }
 
+/**
+ * Stable empty fallbacks for selectors: `s.gameState?.players ?? []` would return a
+ * new array on every read and re-render the component on every store change.
+ */
+export const NO_PLAYERS: ScrabbleGameState["players"] = [];
+export const NO_MOVES: NonNullable<ScrabbleGameState["moveHistory"]> = [];
+
 /** Oldest notifications are dropped beyond this many visible at once. */
 const MAX_NOTIFICATIONS = 4;
 

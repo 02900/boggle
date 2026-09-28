@@ -84,3 +84,27 @@ When the game ends, if `eliminateCommonWords` is enabled:
 - ~60,000 Spanish words
 - Filtered: only words with 3+ letters, no numbers, no problematic accents
 - Converted to lowercase for case-insensitive comparison
+
+## ScrabbleGame
+
+File: `game/scrabble/ScrabbleGame.ts` (rules shared with the client in `game/scrabble/moveEvaluation.ts`,
+board/tiles/scoring in `game/scrabble/scrabbleConfig.ts`).
+
+```
+waiting ──[start-game, 2–4 players]──> playing ──[game over]──> finished ──[reset-game]──> waiting
+```
+
+- **Start**: random turn order, fresh 100-tile Spanish bag (CH, LL, RR, Ñ, 2 blanks), 7 tiles each.
+  New players can't join a started game (`canJoin()`).
+- **Turn**: the player places tiles tentatively (`placeTiles`, taken from the server rack), then
+  `submitTurn` checks placement (one line, contiguous, center on the first move, connected
+  afterwards), finds main + cross words, checks the dictionary (2+ letters) and scores
+  (premiums only under new tiles, +50 bingo). Or `passTurn` / `exchangeTiles` (bag ≥ 7).
+- **Clock**: 2 minutes per turn that keeps running negative; another player can `skipTurn` once
+  it's ≤ 0 (a forced pass). Time used and overtime are tracked per player.
+- **Game over**: 6 consecutive passes, bag empty + a player out of tiles, or abandon (< 2 players
+  left). Remaining tile values are subtracted (scores may go negative) and given to whoever went out.
+- **Persistence**: `serialize` / `deserialize` for rejoin and server restarts; `reconnectPlayer`
+  remaps a player to a new socket id.
+
+Lifecycle events (`turn-played`, `turn-changed`, `game-ended`) are emitted by the class itself.

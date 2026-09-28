@@ -13,9 +13,11 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    // Short turns so the overtime/skip flow is testable (turns never auto-pass, so
-    // other specs are unaffected by the clock running out)
-    command: "cross-env PORT=3001 NEXT_DIST_DIR=.next-e2e SCRABBLE_TURN_TIME_LIMIT=15 pnpm dev",
+    // Short turns and grace period so overtime/skip and abandon-after-grace are
+    // testable (turns never auto-pass, so other specs don't notice the clock).
+    // SCRABBLE_E2E_HOOKS enables the e2e-set-rack event (deterministic racks).
+    command:
+      "cross-env PORT=3001 NEXT_DIST_DIR=.next-e2e SCRABBLE_TURN_TIME_LIMIT=15 SCRABBLE_GRACE_PERIOD_MS=10000 SCRABBLE_E2E_HOOKS=1 pnpm dev",
     port: 3001,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

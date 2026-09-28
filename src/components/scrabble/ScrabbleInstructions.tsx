@@ -41,6 +41,12 @@ export function ScrabbleInstructions() {
         Puedes mezclar el atril (⇄) o reordenarlo arrastrando las fichas.
       </Rule>
 
+      <Rule title="Teclado">
+        Con el tablero enfocado (Tab), muévete con las flechas y escribe una letra para colocar esa ficha de tu
+        atril; avanza sola en la dirección de la palabra. Retroceso devuelve la ficha, Enter coloca la ficha
+        seleccionada y Escape la deselecciona. Si no tienes la letra, se usa el comodín.
+      </Rule>
+
       <Rule title="Cambiar y pasar">
         En vez de jugar puedes cambiar fichas (solo si quedan al menos 7 en la bolsa) o pasar.
       </Rule>

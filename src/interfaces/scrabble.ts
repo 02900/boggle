@@ -202,4 +202,6 @@ export interface ScrabbleClientEvents {
   "rejoin-game": (data: { playerName: string; gameId: string }) => void;
   /** Leave on purpose (back to the menu): removed at once, no grace period. */
   "leave-game": () => void;
+  /** E2E only (server started with SCRABBLE_E2E_HOOKS=1): replace my rack; "" is a blank. */
+  "e2e-set-rack": (data: { letters: string[] }) => void;
 }

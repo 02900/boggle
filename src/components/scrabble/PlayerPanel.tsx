@@ -1,12 +1,12 @@
 "use client";
 
-import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
+import { useScrabbleGameStore, NO_PLAYERS } from "@/stores/scrabble-game.store";
 import { composeClasses } from "@/utils/compose-classes";
 import { playerColor } from "./player-colors";
 
 /** Scores and status of every seat. Used in the side panel (desktop) and under the header (mobile). */
 export function PlayerPanel({ compact = false }: { compact?: boolean }) {
-  const players = useScrabbleGameStore((s) => s.gameState?.players ?? []);
+  const players = useScrabbleGameStore((s) => s.gameState?.players ?? NO_PLAYERS);
   const currentTurnPlayerId = useScrabbleGameStore((s) => s.gameState?.currentTurnPlayerId);
   const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
   const tileBagCount = useScrabbleGameStore((s) => s.gameState?.tileBagCount ?? 0);

@@ -102,3 +102,18 @@ setCurrentWord("hello");
 // Updater function
 setCurrentWord((prev) => prev + "o");
 ```
+
+## Scrabble: useScrabbleGameStore
+
+`src/stores/scrabble-game.store.ts` — one store for the Scrabble page:
+
+| Group | Fields |
+|-------|--------|
+| Connection | `socket`, `connectionStatus`, `currentPlayerId`, `isJoined` |
+| Server state | `gameState` (public), `rack` (private), `disconnectedPlayers`, `gameEndSummary` |
+| Interaction | `selectedTile`, `tentativePlacements`, `rackOrder`, `exchangeMode`, `selectedForExchange` |
+| Feedback | `notifications` (max 4, auto-dismiss), `lastPlayedCells`, `invalidMoveAt` |
+
+The server's private `game-state` is the source of truth for `rack` and `tentativePlacements`.
+`rackOrder` is a client-only preference (`shuffleRack`, `moveRackTile`). The store is reset
+when `/scrabble` mounts. Use `NO_PLAYERS` / `NO_MOVES` as selector fallbacks instead of `[]`.

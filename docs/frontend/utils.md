@@ -76,3 +76,12 @@ Utility for composing CSS classes by filtering out falsy values:
 composeClasses("foo", condition && "bar", null, "baz")
 // => "foo bar baz" or "foo baz"
 ```
+
+## Scrabble utilities
+
+| File | Purpose |
+|------|---------|
+| `src/utils/scrabble-messages.ts` | Copy for turn/overtime/game-end toasts and per-player time |
+| `src/utils/rack-order.ts` | Client-side rack order: `orderRack`, `moveTile`, `shuffleIds` |
+| `src/utils/board-keyboard.ts` | Keyboard play: focus moves, letter → rack tile (exact, digraph, blank), word direction, next free cell |
+| `game/scrabble/moveEvaluation.ts` | Shared with the server: `validatePlacement`, `findFormedWords`, `evaluateMove` (score preview) |

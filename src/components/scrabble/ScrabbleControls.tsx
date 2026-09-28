@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { Button } from "@/components/ui";
@@ -13,8 +14,21 @@ import {
 import { evaluateMove, isBoardEmpty } from "../../../game/scrabble/moveEvaluation";
 
 export function ScrabbleControls() {
-  const gameState = useScrabbleGameStore((s) => s.gameState);
-  const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
+  // Only what this bar shows: the timer rewrites gameState every second, and
+  // isOvertime / bagTooSmall only flip once, so ticks don't re-render the bar.
+  const { isPlaying, isMyTurn, currentTurnName, isOvertime, bagTooSmall, board } = useScrabbleGameStore(
+    useShallow((s) => {
+      const gs = s.gameState;
+      return {
+        isPlaying: gs?.gameState === "playing",
+        isMyTurn: gs?.currentTurnPlayerId === s.currentPlayerId,
+        currentTurnName: gs?.players.find((p) => p.id === gs.currentTurnPlayerId)?.name,
+        isOvertime: (gs?.turnTimeLeft ?? 1) <= 0,
+        bagTooSmall: (gs?.tileBagCount ?? 0) < SCRABBLE_MIN_BAG_FOR_EXCHANGE,
+        board: gs?.board,
+      };
+    })
+  );
   const tentativePlacements = useScrabbleGameStore((s) => s.tentativePlacements);
   const rack = useScrabbleGameStore((s) => s.rack);
   const exchangeMode = useScrabbleGameStore((s) => s.exchangeMode);
@@ -23,15 +37,9 @@ export function ScrabbleControls() {
   const clearExchangeSelection = useScrabbleGameStore((s) => s.clearExchangeSelection);
   const { submitTurn, passTurn, recallTiles, exchangeTiles, skipTurn } = useScrabbleSocket();
 
-  const isPlaying = gameState?.gameState === "playing";
-  const isMyTurn = gameState?.currentTurnPlayerId === currentPlayerId;
   const hasPlacements = tentativePlacements.length > 0;
-  const currentTurnPlayer = gameState?.players.find((p) => p.id === gameState.currentTurnPlayerId);
-  const isOvertime = (gameState?.turnTimeLeft ?? 1) <= 0;
-  const bagTooSmall = (gameState?.tileBagCount ?? 0) < SCRABBLE_MIN_BAG_FOR_EXCHANGE;
 
   // Same rules and scoring as the server, minus the dictionary check (done on submit)
-  const board = gameState?.board;
   const preview = useMemo(
     () => (board && tentativePlacements.length > 0 ? evaluateMove(board, tentativePlacements, isBoardEmpty(board)) : null),
     [board, tentativePlacements]
@@ -74,13 +82,13 @@ export function ScrabbleControls() {
         {isPlaying && !isMyTurn && (
           <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
             <span aria-hidden className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-ink-faint" />
-            Esperando a {currentTurnPlayer?.name ?? "..."}…
+            Esperando a {currentTurnName ?? "..."}…
           </p>
         )}
 
         {isPlaying && !isMyTurn && isOvertime && (
           <Button variant="danger" size="sm" onClick={skipTurn} data-testid="skip-turn">
-            Saltar turno de {currentTurnPlayer?.name ?? "..."}
+            Saltar turno de {currentTurnName ?? "..."}
           </Button>
         )}
 
@@ -89,9 +97,12 @@ export function ScrabbleControls() {
             <Button variant="primary" onClick={submitTurn} disabled={!hasPlacements}>
               Confirmar
               {showPreview && preview.valid && (
-                <span data-testid="move-score" className="ml-1.5 font-mono tabular-nums">
-                  +{preview.score}
-                </span>
+                <>
+                  {/* a real space, so the accessible name reads "Confirmar +12" */}{" "}
+                  <span data-testid="move-score" className="ml-0.5 font-mono tabular-nums">
+                    +{preview.score}
+                  </span>
+                </>
               )}
             </Button>
             <Button onClick={recallTiles} disabled={!hasPlacements}>

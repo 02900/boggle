@@ -101,3 +101,11 @@ Registers a `resize` listener that updates `useViewportStore.isMobile` based on 
 ### useClientValidationPersistence
 
 Persists the client-side validation preference in `localStorage`. On mount, restores the saved preference and emits the toggle to the server.
+
+## Scrabble hooks
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useScrabbleSocketListeners` | `src/hooks/use-scrabble-socket-listeners.ts` | Creates the socket (`?game=scrabble`), maps server events to the store and toasts, auto-rejoins a saved session on `connect`. Mounted once by `ScrabbleGameMain`. |
+| `useScrabbleSocket` | `src/hooks/use-scrabble-socket.ts` | Actions: `joinGame`, `startGame`, `placeTiles`, `recallTile(s)`, `submitTurn`, `passTurn`, `exchangeTiles`, `skipTurn`, `leaveGame`, `resetGame`. |
+| `useMediaQuery` | `src/hooks/use-media-query.ts` | Reactive media query (`DESKTOP_QUERY` = Tailwind `lg`), used to pick the desktop/mobile layout. |

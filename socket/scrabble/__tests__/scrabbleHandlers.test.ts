@@ -351,6 +351,29 @@ describe("setupScrabbleHandlers", () => {
     });
   });
 
+  describe("e2e-set-rack (test hook)", () => {
+    it("is not registered unless SCRABBLE_E2E_HOOKS=1", () => {
+      const events = socket.on.mock.calls.map((call: unknown[]) => call[0]);
+      expect(events).not.toContain("e2e-set-rack");
+    });
+
+    it("with the hook enabled, replaces the player's rack (\"\" = blank)", () => {
+      vi.stubEnv("SCRABBLE_E2E_HOOKS", "1");
+      const s = createMockSocket("socket-1", "scrabble");
+      const racks = new Map();
+      setupScrabbleHandlers(io as any, s as any, { ...game, playerRacks: racks } as any);
+
+      s._trigger("e2e-set-rack", { letters: ["", "CH"] });
+
+      expect(racks.get("socket-1")).toEqual([
+        expect.objectContaining({ letter: "", value: 0, isBlank: true }),
+        expect.objectContaining({ letter: "CH", value: 5, isBlank: false }),
+      ]);
+      expect(s.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      vi.unstubAllEnvs();
+    });
+  });
+
   describe("handler registration", () => {
     it("registers all expected scrabble events", () => {
       const registeredEvents = socket.on.mock.calls.map((call: unknown[]) => call[0]);

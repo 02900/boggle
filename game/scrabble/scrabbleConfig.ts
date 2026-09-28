@@ -50,6 +50,11 @@ export const LETTER_VALUES: Record<string, number> = Object.fromEntries(
 /** Letters a blank tile may represent (every real tile letter, digraphs included). */
 export const VALID_BLANK_LETTERS: ReadonlySet<string> = new Set(Object.keys(LETTER_VALUES));
 
+/** The same letters in Spanish alphabetical order (CH after C, LL after L, Ñ after N, RR after R). */
+export const BLANK_LETTER_CHOICES: readonly string[] = Object.keys(LETTER_VALUES).sort((a, b) =>
+  a.localeCompare(b, "es")
+);
+
 // ---- Standard 15x15 Scrabble board multiplier layout ----
 // Only upper-left quadrant + center row/col defined, then mirrored for symmetry
 

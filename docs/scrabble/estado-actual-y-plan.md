@@ -331,16 +331,23 @@ Tiempo extra (pedido posterior a la fase):
 - `timeUsed`/`overtime` por jugador, persistidos en la sesión y mostrados en el modal de resultados.
 - E2E: el server de pruebas usa `SCRABBLE_TURN_TIME_LIMIT=15`; spec `scrabble-overtime.spec.ts`.
 
-### Fase 6 — Calidad
+### Fase 6 — Calidad — ✅ HECHA
 
-- Tests de componentes (Vitest + Testing Library) para `Board`, `Rack`, `Controls`, `Toaster`.
-- E2E: comodín, jugada inválida + resync, timeout, desconexión/gracia, viewport móvil.
-- Memoizar `ScrabbleTile`, `tentativeMap`, `displayRack`; `useShallow` en selectores del store.
-- Accesibilidad: `aria-label` en celdas/fichas, `aria-live` en toasts, `role="timer"`,
-  navegación por teclado básica.
-- Actualizar `docs/backend/socket-handlers.md` y `docs/frontend/components.md` con Scrabble.
-
----
+- ✅ Tests de componentes (Vitest + Testing Library, `src/components/scrabble/__tests__/`):
+  `ScrabbleBoard`, `TileRack`, `ScrabbleControls`, `Toaster`. Las acciones de socket se mockean
+  vía `useScrabbleSocket`. JSX compilado por Oxc (`oxc.jsx` en `vitest.config.ts`).
+- ✅ E2E: comodín (`scrabble-blank`), abandono tras la gracia (`scrabble-abandon`), viewport
+  móvil (`scrabble-mobile`). El server de e2e usa gracia de 10 s y `SCRABBLE_E2E_HOOKS=1`
+  (evento `e2e-set-rack` para atriles deterministas).
+- ✅ Rendimiento: el tablero ya no se suscribe al `gameState` entero (el reloj lo reescribía
+  cada segundo); `BoardCell` memoizado con handlers estables; `useShallow` en `ScrabbleControls`;
+  fallbacks estables `NO_PLAYERS` / `NO_MOVES` en vez de `?? []`.
+- ✅ Teclado: roving tabindex en el tablero, flechas/Home/End, escribir una letra coloca esa
+  ficha y avanza en la dirección de la palabra, Retroceso la devuelve, Escape deselecciona
+  (`src/utils/board-keyboard.ts`). Celdas con `aria-disabled` en vez de `disabled` (enfocables).
+- ✅ Docs generales (`docs/architecture.md`, `docs/backend/*`, `docs/frontend/*`) con sección Scrabble.
+- Bug encontrado: el selector del comodín ofrecía K/W (no existen en el Scrabble español y el
+  server las rechaza) y no CH/LL/RR → ahora usa `BLANK_LETTER_CHOICES` del server.
 
 ## 5. Orden sugerido de ejecución
 
