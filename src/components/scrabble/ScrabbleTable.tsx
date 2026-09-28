@@ -38,17 +38,19 @@ export function ScrabbleTable() {
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas text-ink">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-3 pt-3 sm:px-4">
+      <header className="mx-auto flex w-full max-w-[96rem] items-center justify-between gap-3 px-3 pt-3 sm:px-4">
         <h1 className="text-lg font-bold tracking-tight">Scrabble</h1>
         <TurnIndicator />
       </header>
 
-      <div className="mx-auto w-full max-w-6xl px-3 pt-2 sm:px-4">
+      <div className="mx-auto w-full max-w-[96rem] px-3 pt-2 sm:px-4">
         <ConnectionBanner />
       </div>
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-3 pb-3 pt-2 sm:px-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-        <section className="flex flex-col items-center gap-3">
+      {/* Desktop: board column (capped by the viewport height, see ScrabbleBoard) and the
+          side panel sit together, centered, instead of the panel drifting to the far edge */}
+      <main className="mx-auto flex w-full max-w-[96rem] flex-1 flex-col gap-4 px-3 pb-3 pt-2 sm:px-4 lg:flex-row lg:items-start lg:justify-center xl:gap-8">
+        <section className="flex flex-col items-center gap-3 lg:min-w-0 lg:max-w-[calc(100dvh-15rem)] lg:flex-1">
           {!isDesktop && (
             <div className="w-full">
               <PlayerPanel compact />
@@ -58,7 +60,7 @@ export function ScrabbleTable() {
           {isDesktop && <RackAndActions />}
         </section>
 
-        <aside className="flex flex-col gap-3">
+        <aside className="flex flex-col gap-3 lg:w-80 lg:shrink-0">
           {isDesktop && (
             <Card>
               <h2 className="mb-2 text-xs uppercase tracking-wide text-ink-faint">Jugadores</h2>

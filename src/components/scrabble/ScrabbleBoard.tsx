@@ -89,7 +89,11 @@ export function ScrabbleBoard() {
         // Re-keying on a rejected move replays the shake animation
         key={invalidMoveAt ?? "board"}
         className={composeClasses(
-          "inline-grid w-full max-w-[min(100%,34rem)] gap-px rounded-lg border-4 border-board-frame bg-board-frame p-0.5 shadow-2xl",
+          // As large as the screen allows: full width on phones, and on taller-than-needed
+          // screens capped by the height left after header + rack + actions (keep the
+          // offsets in sync with ScrabbleTable). Container units let text scale with cells.
+          "@container grid w-[min(100%,calc(100dvh-16rem))] lg:w-full",
+          "gap-px rounded-lg border-4 border-board-frame bg-board-frame p-0.5 shadow-2xl",
           invalidMoveAt !== null && "animate-shake ring-2 ring-danger/70"
         )}
         style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}
@@ -112,7 +116,7 @@ export function ScrabbleBoard() {
                 disabled={!canPlace || occupied}
                 className={composeClasses(
                   "relative flex aspect-square items-center justify-center rounded-[3px] p-px",
-                  "text-[0.55rem] font-semibold leading-none sm:text-[0.65rem]",
+                  "text-[max(0.5rem,2.1cqw)] font-semibold leading-none",
                   "transition-colors duration-100 disabled:cursor-default",
                   !occupied && MULTIPLIER_CLASSES[cell.multiplier],
                   !occupied && canPlace && "cursor-pointer hover:brightness-125 ring-inset hover:ring-1 hover:ring-accent/70",

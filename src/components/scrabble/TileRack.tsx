@@ -62,7 +62,11 @@ export function TileRack() {
         );
       })}
       {Array.from({ length: emptySlots }, (_, i) => (
-        <div key={`empty-${i}`} aria-hidden className="h-11 w-11 rounded-md border border-dashed border-rack-edge/80" />
+        <div
+          key={`empty-${i}`}
+          aria-hidden
+          className="h-11 w-11 rounded-md border border-dashed border-rack-edge/80 lg:h-14 lg:w-14"
+        />
       ))}
     </div>
   );

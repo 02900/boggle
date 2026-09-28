@@ -16,9 +16,9 @@ interface Props {
 }
 
 const SIZE = {
-  /** Fills its board cell */
-  sm: "h-full w-full text-[0.7rem] sm:text-sm",
-  md: "h-11 w-11 text-lg",
+  /** Fills its board cell; scales with the board (a cqw container) */
+  sm: "h-full w-full text-[max(0.65rem,3.4cqw)]",
+  md: "h-11 w-11 text-lg lg:h-14 lg:w-14 lg:text-2xl",
 };
 
 export const ScrabbleTile = memo(function ScrabbleTile({
