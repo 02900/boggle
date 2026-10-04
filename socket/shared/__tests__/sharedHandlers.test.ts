@@ -113,6 +113,14 @@ describe("setupSharedHandlers", () => {
 
       expect(socket.emit).toHaveBeenCalledWith("scoreboard-data", expect.anything());
     });
+
+    it("loads the scoreboard of the socket's game", async () => {
+      const { loadScoreboard } = await import("../../../utils/scoreboard");
+      setupSharedHandlers(io as any, socket as any, { ...game, gameType: "scrabble" } as any);
+      socket._trigger("get-scoreboard");
+
+      expect(loadScoreboard).toHaveBeenLastCalledWith("scrabble");
+    });
   });
 
   describe("toggle-client-side-validation", () => {

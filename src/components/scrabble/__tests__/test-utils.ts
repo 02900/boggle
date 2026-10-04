@@ -15,6 +15,7 @@ export const socketActions = {
   exchangeTiles: vi.fn(),
   skipTurn: vi.fn(),
   leaveGame: vi.fn(),
+  requestScoreboard: vi.fn(),
   resetGame: vi.fn(),
 };
 

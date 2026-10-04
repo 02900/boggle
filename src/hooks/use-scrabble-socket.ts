@@ -66,6 +66,12 @@ export const useScrabbleSocket = () => {
     socket?.emit("skip-turn");
   }, [socket]);
 
+  /** Asks for Scrabble's leaderboard; `scoreboard` is null until it arrives. */
+  const requestScoreboard = useCallback(() => {
+    useScrabbleGameStore.getState().setScoreboard(null);
+    socket?.emit("get-scoreboard");
+  }, [socket]);
+
   const resetGame = useCallback(() => {
     socket?.emit("reset-game");
   }, [socket]);
@@ -81,6 +87,7 @@ export const useScrabbleSocket = () => {
     skipTurn,
     recallTile,
     leaveGame,
+    requestScoreboard,
     resetGame,
   };
 };

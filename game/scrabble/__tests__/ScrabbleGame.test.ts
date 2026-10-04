@@ -1214,10 +1214,11 @@ describe("ScrabbleGame", () => {
       expect(game.players.get(p1)!.score).toBe(-7);
     });
 
-    it("calls updateScoreboard", () => {
+    it("records the result on the Scrabble scoreboard", () => {
       setupGameForPlay(game);
       game.endGame();
       expect(updateScoreboard).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(updateScoreboard).mock.calls[0][2]).toBe("scrabble");
     });
 
     it("emits game-ended with the reason and per-player final adjustments", () => {

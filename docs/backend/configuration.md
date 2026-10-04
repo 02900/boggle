@@ -53,7 +53,10 @@ File: `game/gameConfig.js` - function `calculateWordPoints(word)`
 
 ## Persistence
 
-- **Scoreboard**: `scoreboard.json` at the root. Top 50 scores with name, score, date, and player count.
+- **Scoreboards**: one per game, at the root (`SCOREBOARD_FILES` in `config/constants.ts`):
+  `scoreboard.json` (Boggle) and `scoreboard-scrabble.json` (Scrabble). Top 50 scores with name,
+  score, date, and player count. `utils/scoreboard.ts` takes the game type; each game class
+  declares its `gameType`.
 - **Win Streaks**: `data/player-streaks.json`. Win streaks per player in 6-hour windows. Automatically cleaned up upon expiration.
 
 ## Scrabble

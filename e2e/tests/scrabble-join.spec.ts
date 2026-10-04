@@ -58,4 +58,19 @@ test.describe("Scrabble - Joining a game", () => {
 
     await expect(scrabble.joinButton).toBeDisabled();
   });
+
+  test("shows Scrabble's own scoreboard from the join screen", async ({ player1Page }) => {
+    const scrabble = new ScrabblePage(player1Page);
+    await scrabble.goto();
+
+    await player1Page.getByRole("button", { name: "Mejores puntajes" }).click();
+    const dialog = player1Page.getByRole("dialog");
+    await expect(dialog).toContainText("Mejores puntajes de Scrabble");
+    // Loaded from the server (rows or the empty state), not stuck loading
+    await expect(dialog.getByText("Cargando puntajes…")).toHaveCount(0);
+    await expect(
+      dialog.getByTestId("scoreboard-row").first().or(dialog.getByText(/Todavía no hay puntajes de Scrabble/))
+    ).toBeVisible();
+  });
 });
+

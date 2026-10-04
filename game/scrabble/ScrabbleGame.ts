@@ -42,6 +42,7 @@ function withoutAssignedLetter(tile: ScrabbleTile): ScrabbleTile {
 }
 
 export class ScrabbleGame extends WordGame {
+  readonly gameType = "scrabble" as const;
   board: ScrabbleBoardCell[][];
   tileBag: ScrabbleTile[];
   playerRacks: Map<string, ScrabbleTile[]>;
@@ -264,7 +265,7 @@ export class ScrabbleGame extends WordGame {
       name: p.name,
       score: p.score,
     }));
-    updateScoreboard(playerScores, this.players.size);
+    updateScoreboard(playerScores, this.players.size, this.gameType);
 
     debugLog("SCRABBLE_GAME_ENDED", {
       reason,

@@ -305,6 +305,7 @@ describe("BoggleGame", () => {
       expect(updateScoreboard).toHaveBeenCalledTimes(1);
       const call = vi.mocked(updateScoreboard).mock.calls[0];
       expect(call[1]).toBe(game.gameHistory.size);
+      expect(call[2]).toBe("boggle");
     });
 
     it("records streak wins for winners when >1 participant and score > 0", () => {

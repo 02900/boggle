@@ -113,6 +113,7 @@ setCurrentWord((prev) => prev + "o");
 | Server state | `gameState` (public), `rack` (private), `disconnectedPlayers`, `gameEndSummary` |
 | Interaction | `selectedTile`, `tentativePlacements`, `rackOrder`, `exchangeMode`, `selectedForExchange` |
 | Feedback | `notifications` (max 4, auto-dismiss), `lastPlayedCells`, `invalidMoveAt` |
+| Leaderboard | `scoreboard` (Scrabble's own; `null` while loading), shown by `ScrabbleScoreboard` |
 
 The server's private `game-state` is the source of truth for `rack` and `tentativePlacements`.
 `rackOrder` is a client-only preference (`shuffleRack`, `moveRackTile`). The store is reset

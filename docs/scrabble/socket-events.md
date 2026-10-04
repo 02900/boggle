@@ -19,6 +19,7 @@ directamente `game/scrabble/ScrabbleGame.ts` vía `this.io`.
 | `exchange-tiles` | `{ tileIds }` | Requiere ≥ 1 ficha y bolsa con ≥ 7 fichas. |
 | `skip-turn` | — | Otro jugador salta el turno actual; solo con el reloj en ≤ 0. Pase forzado (`turn-played` tipo `timeout` con `skippedByName`). Si se rechaza, responde `word-result` inválido. |
 | `reset-game` | — | Vuelve a `waiting`, limpia sesión y timers de gracia. |
+| `get-scoreboard` | — | Compartido con Boggle; responde `scoreboard-data` con el ranking **de Scrabble** (`scoreboard-scrabble.json`). |
 | `leave-game` | — | Salir a propósito ("← Juegos"): se quita al jugador ya, sin período de gracia. En partida pasa el turno o termina por `abandon`. |
 
 ## Server → Cliente

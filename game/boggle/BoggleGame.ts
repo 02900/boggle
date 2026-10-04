@@ -13,6 +13,7 @@ import type {
 } from "../../src/interfaces/server";
 
 export class BoggleGame extends WordGame {
+  readonly gameType = "boggle" as const;
   board: Board;
   lastRotationTime: number;
   rotationCooldown: number;
@@ -184,7 +185,7 @@ export class BoggleGame extends WordGame {
       disconnectedPlayers: totalParticipants - this.players.size,
     });
 
-    updateScoreboard(allParticipantScores, totalParticipants);
+    updateScoreboard(allParticipantScores, totalParticipants, this.gameType);
 
     if (totalParticipants > 1) {
       const maxScore = Math.max(...allParticipantScores.map((p) => p.score));

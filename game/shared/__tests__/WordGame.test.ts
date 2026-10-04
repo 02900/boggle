@@ -12,6 +12,7 @@ import { WordGame, type WordGameConfig } from "../WordGame";
 
 // Concrete test subclass with minimal abstract method implementations
 class TestWordGame extends WordGame {
+  readonly gameType = "boggle" as const;
   startGameCalled = false;
   endGameCalled = false;
 

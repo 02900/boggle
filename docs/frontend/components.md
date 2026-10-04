@@ -104,8 +104,9 @@ Located in `src/components/scrabble/`; base UI primitives (`Button`, `Card`, `Ba
 
 ```
 ScrabbleGameMain (screen router + Toaster)
-├── JoinForm                 (name, rules, "← Juegos")
-├── ScrabbleLobby            (waiting room, 2–4 players, start)
+├── JoinForm                 (name, rules, scoreboard, "← Juegos")
+├── ScrabbleLobby            (waiting room, 2–4 players, start, scoreboard)
+├── ScrabbleScoreboard       (modal: Scrabble's top 50, filter by table size)
 └── ScrabbleTable            (game screen; desktop two columns, mobile sticky rack)
     ├── LeaveGameButton      ("← Juegos"; confirms before abandoning mid-game)
     ├── TurnIndicator        (whose turn + Timer, negative in overtime)

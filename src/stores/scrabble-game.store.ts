@@ -8,6 +8,7 @@ import type {
   GameEndReason,
   FinalAdjustment,
 } from "@/interfaces/scrabble";
+import type { ScoreboardEntry } from "@/interfaces/game";
 
 type GameStateUpdater =
   | ScrabbleGameState
@@ -66,6 +67,8 @@ interface ScrabbleGameStore {
   rack: ScrabbleTile[];
   disconnectedPlayers: Record<string, DisconnectedPlayer>;
   gameEndSummary: GameEndSummary | null;
+  /** Scrabble's leaderboard; null until requested data arrives */
+  scoreboard: ScoreboardEntry[] | null;
 
   // Client-side interaction state
   selectedTile: ScrabbleTile | null;
@@ -111,6 +114,7 @@ interface ScrabbleGameStore {
   markPlayerReconnected: (playerName: string) => void;
   clearDisconnectedPlayers: () => void;
   setGameEndSummary: (summary: GameEndSummary | null) => void;
+  setScoreboard: (scoreboard: ScoreboardEntry[] | null) => void;
   setExchangeMode: (mode: boolean) => void;
   toggleExchangeSelection: (tileId: string) => void;
   clearExchangeSelection: () => void;
@@ -129,6 +133,7 @@ const initialState = {
   rack: [] as ScrabbleTile[],
   disconnectedPlayers: {} as Record<string, DisconnectedPlayer>,
   gameEndSummary: null as GameEndSummary | null,
+  scoreboard: null as ScoreboardEntry[] | null,
   selectedTile: null as ScrabbleTile | null,
   tentativePlacements: [] as TilePlacement[],
   rackOrder: [] as string[],
@@ -204,6 +209,7 @@ export const useScrabbleGameStore = create<ScrabbleGameStore>((set) => ({
     })),
   clearDisconnectedPlayers: () => set({ disconnectedPlayers: {} }),
   setGameEndSummary: (gameEndSummary) => set({ gameEndSummary }),
+  setScoreboard: (scoreboard) => set({ scoreboard }),
   setExchangeMode: (exchangeMode) =>
     set({ exchangeMode, selectedForExchange: new Set<string>() }),
   toggleExchangeSelection: (tileId) =>

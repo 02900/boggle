@@ -160,6 +160,10 @@ export const useScrabbleSocketListeners = () => {
       get().notify("error", reason);
     });
 
+    newSocket.on("scoreboard-data", (scoreboard) => {
+      get().setScoreboard(scoreboard);
+    });
+
     newSocket.on("join-failed", ({ reason }) => {
       get().notify("error", `No puedes unirte: ${reason}`);
     });

@@ -4,7 +4,7 @@ import path from "path";
 
 vi.mock("fs");
 vi.mock("../../config/constants", () => ({
-  SCOREBOARD_FILE: "scoreboard.json",
+  SCOREBOARD_FILES: { boggle: "scoreboard.json", scrabble: "scoreboard-scrabble.json" },
 }));
 
 import {
@@ -27,7 +27,7 @@ describe("loadScoreboard", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(entries));
 
-    const result = loadScoreboard();
+    const result = loadScoreboard("boggle");
 
     expect(result).toEqual(entries);
   });
@@ -35,7 +35,7 @@ describe("loadScoreboard", () => {
   it("creates the file and returns [] when the file does not exist", () => {
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    const result = loadScoreboard();
+    const result = loadScoreboard("boggle");
 
     expect(result).toEqual([]);
     expect(fs.writeFileSync).toHaveBeenCalledWith(
@@ -48,7 +48,7 @@ describe("loadScoreboard", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue("not valid json{{{");
 
-    const result = loadScoreboard();
+    const result = loadScoreboard("boggle");
 
     expect(result).toEqual([]);
   });
@@ -64,7 +64,7 @@ describe("saveScoreboard", () => {
       { name: "Alice", score: 10, date: "2026-01-01", playerCount: 2 },
     ];
 
-    saveScoreboard(entries);
+    saveScoreboard("boggle", entries);
 
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.stringContaining("scoreboard.json"),
@@ -77,7 +77,7 @@ describe("saveScoreboard", () => {
       throw new Error("disk full");
     });
 
-    expect(() => saveScoreboard([])).not.toThrow();
+    expect(() => saveScoreboard("boggle", [])).not.toThrow();
   });
 });
 
@@ -99,7 +99,7 @@ describe("updateScoreboard", () => {
 
     const result = updateScoreboard(
       [{ name: "New", score: 8 }],
-      3
+      3, "boggle"
     );
 
     expect(result).toEqual(
@@ -116,7 +116,7 @@ describe("updateScoreboard", () => {
         { name: "Winner", score: 10 },
         { name: "Loser", score: 0 },
       ],
-      2
+      2, "boggle"
     );
 
     const names = result.map((e) => e.name);
@@ -131,7 +131,7 @@ describe("updateScoreboard", () => {
         { name: "High", score: 100 },
         { name: "Mid", score: 50 },
       ],
-      3
+      3, "boggle"
     );
 
     for (let i = 1; i < result.length; i++) {
@@ -154,7 +154,7 @@ describe("updateScoreboard", () => {
         { name: "Extra2", score: 199 },
         { name: "Extra3", score: 198 },
       ],
-      4
+      4, "boggle"
     );
 
     expect(result.length).toBeLessThanOrEqual(50);
@@ -163,7 +163,7 @@ describe("updateScoreboard", () => {
   it("adds date and playerCount fields to new entries", () => {
     const result = updateScoreboard(
       [{ name: "Alice", score: 15 }],
-      4
+      4, "boggle"
     );
 
     const alice = result.find((e) => e.name === "Alice");
@@ -173,3 +173,23 @@ describe("updateScoreboard", () => {
     expect(alice!.playerCount).toBe(4);
   });
 });
+
+describe("one scoreboard per game", () => {
+  beforeEach(() => {
+    vi.mocked(fs.existsSync).mockReset().mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReset().mockReturnValue("[]");
+    vi.mocked(fs.writeFileSync).mockReset();
+  });
+
+  it("Scrabble reads and writes its own file, Boggle keeps scoreboard.json", () => {
+    updateScoreboard([{ name: "Ana", score: 300 }], 2, "scrabble");
+    loadScoreboard("boggle");
+
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      expect.stringMatching(/scoreboard-scrabble\.json$/),
+      expect.stringContaining("Ana")
+    );
+    expect(fs.readFileSync).toHaveBeenLastCalledWith(expect.stringMatching(/[\\/]scoreboard\.json$/), "utf8");
+  });
+});
+

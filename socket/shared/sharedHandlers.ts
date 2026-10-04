@@ -61,7 +61,8 @@ export function setupSharedHandlers(
 
   socket.on("get-scoreboard", () => {
     debugLog("EVENT: get-scoreboard", null, socket.id);
-    const scoreboard = loadScoreboard();
+    // Each game has its own leaderboard
+    const scoreboard = loadScoreboard(game.gameType);
     debugLog("EMIT: scoreboard-data", { count: scoreboard.length }, socket.id);
     socket.emit("scoreboard-data", scoreboard);
   });

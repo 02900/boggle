@@ -3,6 +3,7 @@ import path from "path";
 import { RANDOM_NAMES } from "../../utils/names";
 import { debugLog } from "../../utils/debug";
 import type { GameStatus } from "../../src/interfaces/game";
+import type { GameType } from "../../config/constants";
 import type { PlayerData } from "../../src/interfaces/server";
 
 // Minimal IO interface — subclasses use game-specific typed servers
@@ -16,6 +17,8 @@ export interface WordGameConfig {
 }
 
 export abstract class WordGame {
+  /** Which game this is; selects its scoreboard, among other things. */
+  abstract readonly gameType: GameType;
   players: Map<string, PlayerData>;
   gameState: GameStatus;
   timeLeft: number;

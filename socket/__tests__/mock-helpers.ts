@@ -46,6 +46,7 @@ export type MockIO = ReturnType<typeof createMockIO>;
 
 export function createMockBoggleGame() {
   return {
+    gameType: "boggle" as const,
     addPlayer: vi.fn(),
     removePlayer: vi.fn(),
     getGameState: vi.fn(() => ({
@@ -96,6 +97,7 @@ export type MockBoggleGame = ReturnType<typeof createMockBoggleGame>;
 
 export function createMockScrabbleGame() {
   return {
+    gameType: "scrabble" as const,
     addPlayer: vi.fn(),
     removePlayer: vi.fn(),
     getGameState: vi.fn(() => ({

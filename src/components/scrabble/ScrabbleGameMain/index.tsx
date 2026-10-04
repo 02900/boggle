@@ -7,6 +7,7 @@ import { useScrabbleSocket } from "@/hooks/use-scrabble-socket";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { Button, Card, Modal } from "@/components/ui";
 import { ScrabbleInstructions } from "../ScrabbleInstructions";
+import { ScrabbleScoreboard } from "../ScrabbleScoreboard";
 import { ScrabbleLobby } from "../ScrabbleLobby";
 import { ScrabbleTable } from "../ScrabbleTable";
 import { Toaster } from "../Toaster";
@@ -16,6 +17,7 @@ function JoinForm() {
   const isConnected = useScrabbleGameStore((s) => s.isConnected);
   const [name, setName] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [scoresOpen, setScoresOpen] = useState(false);
 
   // Session auto-rejoin lives in useScrabbleSocketListeners (on socket connect)
   useEffect(() => {
@@ -57,11 +59,18 @@ function JoinForm() {
             {isConnected ? "Unirse" : "Conectando..."}
           </Button>
 
-          <Button variant="ghost" fullWidth onClick={() => setRulesOpen(true)}>
-            Ver reglas
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="ghost" fullWidth onClick={() => setRulesOpen(true)}>
+              Ver reglas
+            </Button>
+            <Button variant="ghost" fullWidth onClick={() => setScoresOpen(true)} disabled={!isConnected}>
+              Mejores puntajes
+            </Button>
+          </div>
         </div>
       </Card>
+
+      <ScrabbleScoreboard open={scoresOpen} onClose={() => setScoresOpen(false)} />
 
       <Modal open={rulesOpen} onClose={() => setRulesOpen(false)} title="Reglas" className="max-w-md">
         <ScrabbleInstructions />

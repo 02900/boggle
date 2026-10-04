@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 // Runtime data written by the game server (sessions, scoreboard, streaks). If the
 // dev watcher sees these change it recompiles and full-reloads every browser tab,
 // which breaks live games and makes e2e tests flaky.
-const RUNTIME_DATA_GLOBS = ["**/data/**", "**/scoreboard.json"];
-const RUNTIME_DATA_REGEX = /[\\/]data[\\/]|[\\/]scoreboard\.json$/;
+const RUNTIME_DATA_GLOBS = ["**/data/**", "**/scoreboard*.json"];
+const RUNTIME_DATA_REGEX = /[\\/]data[\\/]|[\\/]scoreboard[^\\/]*\.json$/;
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['*.ngrok-free.app'],

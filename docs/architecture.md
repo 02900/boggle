@@ -79,7 +79,8 @@
 The server hosts one instance per game in a `GameRegistry` (`server.ts`): `BoggleGame` and
 `ScrabbleGame`, both extending `game/shared/WordGame.ts` (players, names, dictionary). A client
 picks its game with the Socket.IO query `?game=boggle|scrabble`; `socket/socketHandlers.ts`
-wires the shared handlers (`join-game`, scoreboard) plus the game-specific ones.
+wires the shared handlers (`join-game`, scoreboard) plus the game-specific ones. Each game
+has its own leaderboard file (`scoreboard.json`, `scoreboard-scrabble.json`).
 
 ### Scrabble
 

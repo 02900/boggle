@@ -8,6 +8,7 @@ import { composeClasses } from "@/utils/compose-classes";
 import { ScrabbleInstructions } from "./ScrabbleInstructions";
 import { playerColor } from "./player-colors";
 import { LeaveGameButton } from "./LeaveGameButton";
+import { ScrabbleScoreboard } from "./ScrabbleScoreboard";
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
@@ -18,6 +19,7 @@ export function ScrabbleLobby() {
   const currentPlayerId = useScrabbleGameStore((s) => s.currentPlayerId);
   const { startGame } = useScrabbleSocket();
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [scoresOpen, setScoresOpen] = useState(false);
 
   const canStart = players.length >= MIN_PLAYERS;
   const missing = MIN_PLAYERS - players.length;
@@ -84,11 +86,18 @@ export function ScrabbleLobby() {
               Iniciar Juego
             </Button>
           )}
-          <Button variant="ghost" fullWidth onClick={() => setRulesOpen(true)}>
-            Ver reglas
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="ghost" fullWidth onClick={() => setRulesOpen(true)}>
+              Ver reglas
+            </Button>
+            <Button variant="ghost" fullWidth onClick={() => setScoresOpen(true)}>
+              Mejores puntajes
+            </Button>
+          </div>
         </div>
       </Card>
+
+      <ScrabbleScoreboard open={scoresOpen} onClose={() => setScoresOpen(false)} />
 
       <Modal open={rulesOpen} onClose={() => setRulesOpen(false)} title="Reglas" className="max-w-md">
         <ScrabbleInstructions />

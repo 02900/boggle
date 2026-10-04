@@ -13,7 +13,7 @@ Bidirectional communication protocol between client and server via Socket.IO.
 | `submit-word` | `{ word, path, rotationVersion }` | Submit a found word. `rotationVersion` prevents race conditions with rotations. |
 | `reset-game` | -- | Reset the game to `waiting` state. |
 | `rotate-board` | -- | Rotate the board 90 degrees (subject to 30s cooldown). |
-| `get-scoreboard` | -- | Request the historical leaderboard. |
+| `get-scoreboard` | -- | Request the historical leaderboard of the socket's game (Boggle or Scrabble). |
 | `get-max-score` | -- | Request all possible words for the current board. |
 | `toggle-eliminate-common-words` | `enabled: boolean` | Enable/disable common word elimination. |
 | `toggle-client-side-validation` | `enabled: boolean` | Enable/disable client-side validation. |
@@ -34,7 +34,7 @@ Bidirectional communication protocol between client and server via Socket.IO.
 | `player-scored` | `{ playerId, word, points }` | broadcast | Another player found a word. |
 | `board-rotated` | `{ board, cooldownTime, rotationVersion }` | all | Rotated board with new version. |
 | `rotation-error` | `{ message }` | sender | Error when rotating (cooldown active or game not started). |
-| `scoreboard-data` | `ScoreEntry[]` | sender | Historical top 50. |
+| `scoreboard-data` | `ScoreEntry[]` | sender | Historical top 50 of the socket's game. |
 | `max-score-data` | `MaxScoreData` | sender | All possible words for the board. |
 | `eliminate-common-words-changed` | `{ enabled, eliminateCommonWords }` | all | Configuration change. |
 | `client-side-validation-changed` | `{ enabled }` | all | Feature flag change. |
