@@ -1,5 +1,8 @@
-import { test, expect, resetServerGame } from "../fixtures/scrabble-fixture";
+import { test, expect } from "../fixtures/scrabble-fixture";
 import { ScrabblePage } from "../helpers/scrabble-page";
+
+/** Code of the room the test's first player created */
+let roomCode: string;
 
 // The e2e server runs with SCRABBLE_GRACE_PERIOD_MS=10000 (see playwright.config.ts)
 const E2E_GRACE_SECONDS = 10;
@@ -7,13 +10,12 @@ const E2E_GRACE_SECONDS = 10;
 test.describe("Scrabble - Abandon after the grace period", () => {
   test("a player who doesn't come back loses the game by abandon", async ({ player1Page, player2Page }) => {
     test.setTimeout(60_000);
-    await resetServerGame();
     const p1 = new ScrabblePage(player1Page);
     const p2 = new ScrabblePage(player2Page);
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
     await p1.waitForPlayerVisible("Bob");
     await p1.startGame();
     await expect(p2.turnIndicator).toBeVisible();

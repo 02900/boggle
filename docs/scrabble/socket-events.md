@@ -8,8 +8,8 @@ directamente `game/scrabble/ScrabbleGame.ts` vía `this.io`.
 
 | Evento | Payload | Notas |
 |---|---|---|
-| `join-game` | `playerName` | Compartido con Boggle (`socket/shared`). Scrabble lo rechaza con `join-failed` si la partida ya empezó o hay 4 jugadores. |
-| `rejoin-game` | `{ playerName, gameId }` | El cliente lo emite solo en `connect` si hay sesión en `localStorage`. |
+| `list-rooms` / `create-room` / `join-room` | ver [salas](../backend/socket-handlers.md#rooms-and-lobby-both-games) | Lobby compartido con Boggle. `join-room` se rechaza con `join-failed` si la partida ya empezó o hay 4 jugadores; la lista ya marca esas salas como no `joinable`. |
+| `rejoin-game` | `{ playerName, gameId }` | Evento de lobby; `gameId` es el **código de sala**. El cliente lo emite en `connect` si hay sesión en `localStorage`. Si el server se reinició, recrea la sala desde `data/scrabble-sessions/<código>.json`. |
 | `start-game` | — | Requiere ≥ 2 jugadores. Mezcla el orden de turnos. |
 | `place-tiles` | `{ placements: TilePlacement[] }` | Colocación tentativa; el server quita las fichas del atril. Solo se usan `tile.id`, la posición y `tile.assignedLetter` (obligatorio para comodines); letra y valor salen del atril del server. |
 | `recall-tiles` | — | Devuelve las tentativas al atril. |
@@ -29,11 +29,11 @@ directamente `game/scrabble/ScrabbleGame.ts` vía `this.io`.
 | Evento | Payload | Destino | Cuándo |
 |---|---|---|---|
 | `game-state` | `ScrabbleGameState` (público) o `ScrabblePlayerGameState` (+ `rack`, `tentativePlacements`) | broadcast / socket | Tras cualquier acción. El privado es la **fuente de verdad** del atril y las tentativas del jugador, y se envía también cuando `submit-turn`/`place-tiles` fallan. |
-| `game-started` | `ScrabbleGameState & { gameId }` | todos | El cliente guarda `{gameId, playerName}` para reconectar. |
+| `game-started` | `ScrabbleGameState & { gameId }` | sala | `gameId` = código de sala. El cliente guarda `{gameId, playerName}` para reconectar. |
 | `start-failed` | `{ reason }` | socket | |
-| `game-ended` | `GameEndedEvent` = estado + `reason` + `finalAdjustments[]` | todos | `reason`: `passes` (6 pases seguidos), `bag-empty`, `abandon` (quedan < 2 jugadores; sin ajuste de fichas). Los puntajes finales pueden ser negativos. |
-| `game-reset` | `ScrabbleGameState` | todos | |
-| `turn-timer-update` | `number` (segundos) | todos | Cada segundo. **Sigue en negativo** al agotarse el tiempo: el turno no se pasa solo. |
+| `game-ended` | `GameEndedEvent` = estado + `reason` + `finalAdjustments[]` | sala | `reason`: `passes` (6 pases seguidos), `bag-empty`, `abandon` (quedan < 2 jugadores; sin ajuste de fichas). Los puntajes finales pueden ser negativos. |
+| `game-reset` | `ScrabbleGameState` | sala | |
+| `turn-timer-update` | `number` (segundos) | sala | Cada segundo. **Sigue en negativo** al agotarse el tiempo: el turno no se pasa solo. |
 
 ### Ciclo de turno
 

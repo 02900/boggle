@@ -3,8 +3,9 @@ import path from "path";
 import { SCOREBOARD_FILES, type GameType } from "../config/constants";
 import type { ScoreboardEntry } from "../src/interfaces/server";
 
+// SCOREBOARD_DIR lets the e2e server keep test games out of the real leaderboards
 const getScoreboardPath = (gameType: GameType): string =>
-  path.join(process.cwd(), SCOREBOARD_FILES[gameType]);
+  path.join(process.env.SCOREBOARD_DIR || process.cwd(), SCOREBOARD_FILES[gameType]);
 
 export function loadScoreboard(gameType: GameType): ScoreboardEntry[] {
   try {

@@ -11,7 +11,8 @@ import { useHighlightManager } from "@/hooks/use-highlight-manager";
 export const useBoggleGameMain = () => {
   const { isSelecting, setMessage } = useGameLogicStore();
   const { 
-    joinGame, 
+    createRoom,
+    joinRoom,
     submitWord, 
     playErrorSound, 
     playSuccessSound, 
@@ -32,7 +33,7 @@ export const useBoggleGameMain = () => {
 
   const { setSelectedPath } = useGameLogicStore();
 
-  const { gameState, setIsJoined } = useBoggleGameMainStore();
+  const { gameState, setJoinError } = useBoggleGameMainStore();
 
   // Función para calcular el puntaje de una palabra
   const getWordScore = (word: string): number => {
@@ -45,9 +46,15 @@ export const useBoggleGameMain = () => {
     return 11; // 8+ letras
   };
 
-  const handleJoinGame = (playerName: string) => {
-    joinGame(playerName);
-    setIsJoined(true);
+  // The join screen switches to the game on `join-confirmed`, or shows `join-failed`
+  const handleCreateRoom = (playerName: string) => {
+    setJoinError(null);
+    createRoom(playerName);
+  };
+
+  const handleJoinRoom = (code: string, playerName: string) => {
+    setJoinError(null);
+    joinRoom(code, playerName);
   };
 
   const handleCellMouseDownWrapper = (row: number, col: number) => {
@@ -263,7 +270,8 @@ export const useBoggleGameMain = () => {
   };
 
   return {
-    handleJoinGame,
+    handleCreateRoom,
+    handleJoinRoom,
     getWordScore,
     handleCellMouseEnterWrapper,
     handleMouseUpWrapper,

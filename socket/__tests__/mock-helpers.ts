@@ -1,7 +1,18 @@
 import { vi } from "vitest";
 
+/** One recorded emitter per Socket.IO room name, so tests can assert where a broadcast went. */
+function roomEmitters() {
+  const emitters = new Map<string, { emit: ReturnType<typeof vi.fn> }>();
+  return (key: string) => {
+    if (!emitters.has(key)) emitters.set(key, { emit: vi.fn() });
+    return emitters.get(key)!;
+  };
+}
+
 export function createMockSocket(id: string, gameType = "boggle") {
   const handlers = new Map<string, Function>();
+  const rooms = new Set<string>();
+  const toRoom = roomEmitters();
   return {
     id,
     handshake: { query: { game: gameType } },
@@ -9,7 +20,17 @@ export function createMockSocket(id: string, gameType = "boggle") {
       handlers.set(event, handler);
     }),
     emit: vi.fn(),
+    /** Global broadcast: handlers must never use it now that games live in rooms */
     broadcast: { emit: vi.fn() },
+    rooms,
+    join: vi.fn((key: string) => {
+      rooms.add(key);
+    }),
+    leave: vi.fn((key: string) => {
+      rooms.delete(key);
+    }),
+    /** socket.to(room).emit — everyone in the room but this socket */
+    to: vi.fn((key: string) => toRoom(key)),
     disconnect: vi.fn(),
     _trigger: (event: string, ...args: unknown[]) => {
       const h = handlers.get(event);
@@ -22,14 +43,16 @@ export type MockSocket = ReturnType<typeof createMockSocket>;
 
 export function createMockIO() {
   let connectionHandler: Function | null = null;
-  const toEmit = vi.fn();
+  const toRoom = roomEmitters();
   const connectedSockets = new Map<string, MockSocket>();
   return {
     on: vi.fn((event: string, handler: Function) => {
       if (event === "connection") connectionHandler = handler;
     }),
+    /** Global broadcast: handlers must never use it now that games live in rooms */
     emit: vi.fn(),
-    to: vi.fn(() => ({ emit: toEmit })),
+    /** io.to(room).emit — memoized per room name */
+    to: vi.fn((key: string) => toRoom(key)),
     sockets: { sockets: connectedSockets },
     _simulateConnection: (socket: MockSocket) => {
       connectedSockets.set(socket.id, socket);
@@ -38,15 +61,16 @@ export function createMockIO() {
     _addSocket: (socket: MockSocket) => {
       connectedSockets.set(socket.id, socket);
     },
-    _toEmit: toEmit,
   };
 }
 
 export type MockIO = ReturnType<typeof createMockIO>;
 
 export function createMockBoggleGame() {
-  return {
+  const game = {
     gameType: "boggle" as const,
+    gameState: "waiting" as string,
+    notifyStatusChange: vi.fn(),
     addPlayer: vi.fn(),
     removePlayer: vi.fn(),
     getGameState: vi.fn(() => ({
@@ -58,7 +82,10 @@ export function createMockBoggleGame() {
       rotationVersion: 0,
     })),
     getRandomName: vi.fn(() => "TestPlayer"),
-    startGame: vi.fn(() => ({ success: true, diceRolls: [] })),
+    startGame: vi.fn(() => {
+      game.gameState = "playing";
+      return { success: true, diceRolls: [] };
+    }),
     submitWord: vi.fn(
       (): { valid: boolean; points?: number; word?: string; reason?: string } => ({
         valid: true,
@@ -91,6 +118,7 @@ export function createMockBoggleGame() {
     ],
     players: new Map(),
   };
+  return game;
 }
 
 export type MockBoggleGame = ReturnType<typeof createMockBoggleGame>;
@@ -98,6 +126,7 @@ export type MockBoggleGame = ReturnType<typeof createMockBoggleGame>;
 export function createMockScrabbleGame() {
   return {
     gameType: "scrabble" as const,
+    notifyStatusChange: vi.fn(),
     addPlayer: vi.fn(),
     removePlayer: vi.fn(),
     getGameState: vi.fn(() => ({
@@ -151,13 +180,44 @@ export function createMockScrabbleGame() {
 
 export type MockScrabbleGame = ReturnType<typeof createMockScrabbleGame>;
 
-export function createMockRegistry(game: unknown, gameType = "boggle") {
-  return {
-    getGame: vi.fn((type: string) => (type === gameType ? game : undefined)),
-    hasGame: vi.fn((type: string) => type === gameType),
-    getGameTypes: vi.fn(() => [gameType]),
-    registerGame: vi.fn(),
-  };
+export const TEST_ROOM_CODE = "TEST";
+
+/** A room around a mock game, shaped like RoomManager's Room. */
+export function mockRoom<G>(game: G, gameType: "boggle" | "scrabble" = "scrabble", code = TEST_ROOM_CODE) {
+  return { code, gameType, key: `${gameType}:${code}`, game, hostName: "Host", createdAt: 0, cleanupTimer: null };
 }
 
-export type MockRegistry = ReturnType<typeof createMockRegistry>;
+
+/**
+ * A light stand-in for BoggleGame / ScrabbleGame inside a real RoomManager: keeps a
+ * players map and fires onStatusChange like WordGame, plus the mocks handlers call.
+ */
+export function createFakeRoomGame(gameType: "boggle" | "scrabble") {
+  const base = gameType === "boggle" ? createMockBoggleGame() : createMockScrabbleGame();
+  const game = {
+    ...base,
+    gameType,
+    gameState: "waiting" as string,
+    players: new Map<string, { id: string; name: string; isConnected: boolean }>(),
+    onStatusChange: null as (() => void) | null,
+    io: null as unknown,
+    setIO: vi.fn((io: unknown) => {
+      game.io = io;
+    }),
+    clearTimers: vi.fn(),
+    canJoin: vi.fn((): { ok: boolean; reason?: string } => ({ ok: true })),
+    eliminateCommonWords: true,
+    notifyStatusChange: vi.fn(() => game.onStatusChange?.()),
+    addPlayer: vi.fn((id: string, name: string) => {
+      game.players.set(id, { id, name, isConnected: true });
+      game.onStatusChange?.();
+    }),
+    removePlayer: vi.fn((id: string) => {
+      game.players.delete(id);
+      game.onStatusChange?.();
+    }),
+  };
+  return game;
+}
+
+export type FakeRoomGame = ReturnType<typeof createFakeRoomGame>;

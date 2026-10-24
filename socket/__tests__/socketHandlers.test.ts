@@ -1,404 +1,205 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { setupSocketHandlers } from "../socketHandlers";
-import {
-  createMockSocket,
-  createMockIO,
-  createMockBoggleGame,
-  createMockRegistry,
-  type MockSocket,
-  type MockIO,
-  type MockBoggleGame,
-  type MockRegistry,
-} from "./mock-helpers";
+import { RoomManager } from "../../game/rooms/RoomManager";
+import { rejoinScrabble } from "../scrabble/scrabbleHandlers";
+import { loadScoreboard } from "../../utils/scoreboard";
+import { loadSession } from "../../game/scrabble/gameSessionStore";
+import { createMockSocket, createMockIO, type FakeRoomGame, type MockIO, type MockSocket } from "./mock-helpers";
 
 vi.mock("../../utils/debug", () => ({ debugLog: vi.fn() }));
 vi.mock("../../utils/scoreboard", () => ({ loadScoreboard: vi.fn(() => []) }));
+vi.mock("../../game/scrabble/gameSessionStore", () => ({
+  loadSession: vi.fn(() => null),
+  saveSession: vi.fn(),
+  deleteSession: vi.fn(),
+}));
+// Real rooms and handlers, light fake games
+vi.mock("../../game/boggle/BoggleGame", async () => {
+  const { createFakeRoomGame } = await import("./mock-helpers");
+  return { BoggleGame: vi.fn(function () { return createFakeRoomGame("boggle"); }) };
+});
+vi.mock("../../game/scrabble/ScrabbleGame", async () => {
+  const { createFakeRoomGame } = await import("./mock-helpers");
+  return { ScrabbleGame: vi.fn(function () { return createFakeRoomGame("scrabble"); }) };
+});
+vi.mock("../scrabble/scrabbleHandlers", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../scrabble/scrabbleHandlers")>()),
+  rejoinScrabble: vi.fn(() => true),
+}));
 
-describe("setupSocketHandlers", () => {
+const lastCall = (socket: MockSocket, event: string) =>
+  socket.emit.mock.calls.filter((c: unknown[]) => c[0] === event).at(-1)?.[1];
+
+describe("setupSocketHandlers (lobby and rooms)", () => {
   let io: MockIO;
-  let socket: MockSocket;
-  let game: MockBoggleGame;
-  let registry: MockRegistry;
+  let rooms: RoomManager;
+  let sockets: MockSocket[];
+
+  const connect = (id: string, game: string = "boggle") => {
+    const socket = createMockSocket(id, game);
+    io._simulateConnection(socket);
+    sockets.push(socket);
+    return socket;
+  };
+
+  /** Creates a room from a fresh socket and returns its code. */
+  const createRoom = (game: "boggle" | "scrabble", name = "Ana", id = `host-${sockets.length}`) => {
+    const host = connect(id, game);
+    host._trigger("create-room", { playerName: name });
+    return { host, code: lastCall(host, "join-confirmed").roomCode as string };
+  };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     io = createMockIO();
-    socket = createMockSocket("socket-1");
-    game = createMockBoggleGame();
-    registry = createMockRegistry(game);
-    setupSocketHandlers(io as any, registry as any);
-    io._simulateConnection(socket);
+    rooms = new RoomManager(io as any);
+    sockets = [];
+    setupSocketHandlers(io as any, rooms);
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    // Rooms: nothing may ever be broadcast server-wide
+    expect(io.emit).not.toHaveBeenCalled();
+    for (const s of sockets) expect(s.broadcast.emit).not.toHaveBeenCalled();
+    rooms.dispose();
+  });
+
+  it("disconnects sockets for unknown game types", () => {
+    const socket = connect("x", "chess");
+    expect(socket.disconnect).toHaveBeenCalled();
+    expect(socket.on).not.toHaveBeenCalled();
+  });
+
+  it("list-rooms subscribes to the game's lobby and answers with its rooms", () => {
+    createRoom("scrabble", "Ana");
+    const socket = connect("viewer", "boggle");
+
+    socket._trigger("list-rooms");
+
+    expect(socket.join).toHaveBeenCalledWith("boggle:lobby");
+    expect(lastCall(socket, "rooms-list")).toEqual([]); // Scrabble rooms aren't listed for Boggle
+  });
+
+  it("create-room makes a room, puts the creator in it and updates the lobby", () => {
+    const viewer = connect("viewer");
+    viewer._trigger("list-rooms");
+
+    const { host, code } = createRoom("boggle", "Ana");
+
+    expect(code).toMatch(/^[A-HJ-NP-Z2-9]{4}$/);
+    expect(host.join).toHaveBeenCalledWith(`boggle:${code}`);
+    expect(lastCall(host, "join-confirmed")).toEqual({ playerId: host.id, playerName: "Ana", roomCode: code });
+    const updates = io.to("boggle:lobby").emit.mock.calls.filter((c: unknown[]) => c[0] === "rooms-updated");
+    expect(updates.at(-1)?.[1]).toEqual([
+      expect.objectContaining({ code, hostName: "Ana", playerCount: 1, status: "waiting", joinable: true }),
+    ]);
+  });
+
+  it("join-room puts a second player in the same room (code is case-insensitive)", () => {
+    const { code } = createRoom("boggle");
+    const guest = connect("guest");
+
+    guest._trigger("join-room", { code: code.toLowerCase(), playerName: "Bob" });
+
+    expect(guest.join).toHaveBeenCalledWith(`boggle:${code}`);
+    expect(guest.leave).toHaveBeenCalledWith("boggle:lobby");
+    expect(lastCall(guest, "join-confirmed")).toMatchObject({ playerName: "Bob", roomCode: code });
+    const game = rooms.getRoom("boggle", code)!.game as unknown as FakeRoomGame;
+    expect([...game.players.values()].map((p) => p.name)).toEqual(["Ana", "Bob"]);
+    // Game handlers are registered only now
+    expect(guest.on).toHaveBeenCalledWith("start-game", expect.any(Function));
+  });
+
+  it("join-room with an unknown code fails and leaves the socket in the lobby", () => {
+    const socket = connect("lost");
+
+    socket._trigger("join-room", { code: "ZZZZ", playerName: "Bob" });
+
+    expect(lastCall(socket, "join-failed")).toEqual({ reason: "La sala no existe" });
+    expect(socket.join).not.toHaveBeenCalled();
+    expect(socket.on).not.toHaveBeenCalledWith("start-game", expect.anything());
+  });
+
+  it("a Scrabble room that can't take players rejects before the socket enters it", () => {
+    const { code } = createRoom("scrabble");
+    const game = rooms.getRoom("scrabble", code)!.game as unknown as FakeRoomGame;
+    game.canJoin.mockReturnValue({ ok: false, reason: "La partida ya empezó" });
+    const late = connect("late", "scrabble");
+
+    late._trigger("join-room", { code, playerName: "Carol" });
+
+    expect(lastCall(late, "join-failed")).toEqual({ reason: "La partida ya empezó" });
+    expect(late.join).not.toHaveBeenCalled();
+    expect(game.addPlayer).toHaveBeenCalledTimes(1); // only the host
+  });
+
+  it("a socket can only be in one room", () => {
+    const { host } = createRoom("boggle");
+    const other = createRoom("boggle", "Bob");
+
+    host._trigger("join-room", { code: other.code, playerName: "Ana" });
+
+    expect(lastCall(host, "join-failed")).toEqual({ reason: "Ya estás en una sala" });
+  });
+
+  it("rooms are isolated: one room's broadcasts never reach another", () => {
+    vi.useFakeTimers();
+    const a = createRoom("boggle", "Ana");
+    const b = createRoom("boggle", "Bob");
+    io.to(`boggle:${b.code}`).emit.mockClear();
+
+    a.host._trigger("start-game");
+    vi.advanceTimersByTime(3000);
+
+    expect(io.to(`boggle:${a.code}`).emit).toHaveBeenCalledWith("dice-rolling", expect.anything());
+    expect(io.to(`boggle:${b.code}`).emit).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
-  // ── Setup ──────────────────────────────────────────────────────────
+  it("get-scoreboard works from the lobby and uses the socket's game", () => {
+    const socket = connect("viewer", "scrabble");
 
-  describe("setup", () => {
-    it("registers a 'connection' handler on io", () => {
-      expect(io.on).toHaveBeenCalledWith("connection", expect.any(Function));
-    });
+    socket._trigger("get-scoreboard");
 
-    it("registers socket event handlers when a connection fires", () => {
-      const expectedEvents = [
-        "join-game",
-        "start-game",
-        "submit-word",
-        "reset-game",
-        "rotate-board",
-        "get-scoreboard",
-        "get-max-score",
-        "toggle-eliminate-common-words",
-        "toggle-client-side-validation",
-        "disconnect",
-      ];
-      for (const event of expectedEvents) {
-        expect(socket.on).toHaveBeenCalledWith(event, expect.any(Function));
-      }
-    });
+    expect(loadScoreboard).toHaveBeenCalledWith("scrabble");
+    expect(socket.emit).toHaveBeenCalledWith("scoreboard-data", []);
   });
 
-  // ── join-game ──────────────────────────────────────────────────────
-
-  describe("join-game", () => {
-    it("uses the provided player name when it is non-empty", () => {
-      socket._trigger("join-game", "  Alice  ");
-
-      expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "Alice");
-    });
-
-    it("falls back to game.getRandomName() when name is empty", () => {
-      socket._trigger("join-game", "");
-
-      expect(game.getRandomName).toHaveBeenCalled();
-      expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "TestPlayer");
-    });
-
-    it("emits game-state, join-confirmed, and eliminate-common-words-changed to the socket", () => {
-      socket._trigger("join-game", "Alice");
-
-      expect(socket.emit).toHaveBeenCalledWith(
-        "game-state",
-        game.getGameState()
+  describe("Scrabble rejoin by room code", () => {
+    it("restores a room that only exists on disk and enters it on success", () => {
+      // Only the restore lookup finds a saved game for this code
+      vi.mocked(loadSession).mockImplementation((code) =>
+        code === "K7QF" ? ({ gameState: "playing", players: [{ name: "Ana" }] } as any) : null
       );
-      expect(socket.emit).toHaveBeenCalledWith("join-confirmed", {
-        playerId: "socket-1",
-        playerName: "Alice",
+      const socket = connect("back", "scrabble");
+
+      socket._trigger("rejoin-game", { playerName: "Ana", gameId: "k7qf" });
+
+      expect(rooms.getRoom("scrabble", "K7QF")).toBeDefined();
+      expect(rejoinScrabble).toHaveBeenCalledWith(io, socket, expect.objectContaining({ code: "K7QF" }), {
+        playerName: "Ana",
+        gameId: "K7QF",
       });
-      expect(socket.emit).toHaveBeenCalledWith(
-        "eliminate-common-words-changed",
-        {
-          enabled: true,
-          eliminateCommonWords: true,
-        }
-      );
+      expect(socket.join).toHaveBeenCalledWith("scrabble:K7QF");
     });
 
-    it("broadcasts player-joined to other sockets", () => {
-      socket._trigger("join-game", "Alice");
+    it("fails for codes with no room and no saved game", () => {
+      const socket = connect("back", "scrabble");
 
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-joined", {
-        playerId: "socket-1",
-        playerName: "Alice",
-      });
-    });
-  });
+      socket._trigger("rejoin-game", { playerName: "Ana", gameId: "default-scrabble" });
 
-  // ── start-game ─────────────────────────────────────────────────────
-
-  describe("start-game", () => {
-    it("calls game.startGame()", () => {
-      socket._trigger("start-game");
-
-      expect(game.startGame).toHaveBeenCalled();
+      expect(socket.emit).toHaveBeenCalledWith("rejoin-failed", { reason: "Sesión no encontrada" });
+      expect(socket.join).not.toHaveBeenCalled();
     });
 
-    it("emits dice-rolling to all clients on success", () => {
-      socket._trigger("start-game");
+    it("stays in the lobby when the rejoin itself is refused", () => {
+      const { code } = createRoom("scrabble");
+      vi.mocked(rejoinScrabble).mockReturnValueOnce(false);
+      const socket = connect("stranger", "scrabble");
 
-      expect(io.emit).toHaveBeenCalledWith("dice-rolling", []);
-    });
+      socket._trigger("rejoin-game", { playerName: "Zoe", gameId: code });
 
-    it("emits game-started to all clients after 3 seconds", () => {
-      vi.useFakeTimers();
-
-      socket._trigger("start-game");
-
-      expect(io.emit).not.toHaveBeenCalledWith(
-        "game-started",
-        expect.anything()
-      );
-
-      vi.advanceTimersByTime(3000);
-
-      expect(io.emit).toHaveBeenCalledWith(
-        "game-started",
-        game.getGameState()
-      );
-    });
-  });
-
-  // ── submit-word ────────────────────────────────────────────────────
-
-  describe("submit-word", () => {
-    it("emits word-result error when rotationVersion is not a number", () => {
-      socket._trigger("submit-word", {
-        word: "casa",
-        path: [[0, 0]],
-        rotationVersion: undefined,
-      });
-
-      expect(socket.emit).toHaveBeenCalledWith("word-result", {
-        valid: false,
-        reason: "Error de sincronización del tablero",
-      });
-      expect(game.submitWord).not.toHaveBeenCalled();
-    });
-
-    it("emits word-result to socket when server validation mode is active", () => {
-      game.getClientSideValidation.mockReturnValue(false);
-
-      socket._trigger("submit-word", {
-        word: "casa",
-        path: [[0, 0]],
-        rotationVersion: 0,
-      });
-
-      expect(socket.emit).toHaveBeenCalledWith("word-result", {
-        valid: true,
-        points: 1,
-        word: "casa",
-      });
-    });
-
-    it("broadcasts player-scored for a valid word", () => {
-      socket._trigger("submit-word", {
-        word: "casa",
-        path: [[0, 0]],
-        rotationVersion: 0,
-      });
-
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-scored", {
-        playerId: "socket-1",
-        word: "casa",
-        points: 1,
-      });
-    });
-
-    it("emits game-state to all clients for a valid word", () => {
-      socket._trigger("submit-word", {
-        word: "casa",
-        path: [[0, 0]],
-        rotationVersion: 0,
-      });
-
-      expect(io.emit).toHaveBeenCalledWith("game-state", game.getGameState());
-    });
-
-    it("does NOT emit word-result when client-side validation is active", () => {
-      game.getClientSideValidation.mockReturnValue(true);
-
-      socket._trigger("submit-word", {
-        word: "casa",
-        path: [[0, 0]],
-        rotationVersion: 0,
-      });
-
-      expect(socket.emit).not.toHaveBeenCalledWith(
-        "word-result",
-        expect.anything()
-      );
-    });
-
-    it("does NOT broadcast player-scored for an invalid word", () => {
-      game.submitWord.mockReturnValue({
-        valid: false,
-        reason: "Palabra no encontrada",
-      });
-
-      socket._trigger("submit-word", {
-        word: "xyz",
-        path: [[0, 0]],
-        rotationVersion: 0,
-      });
-
-      expect(socket.broadcast.emit).not.toHaveBeenCalledWith(
-        "player-scored",
-        expect.anything()
-      );
-    });
-  });
-
-  // ── reset-game ─────────────────────────────────────────────────────
-
-  describe("reset-game", () => {
-    it("calls game.resetGame()", () => {
-      socket._trigger("reset-game");
-
-      expect(game.resetGame).toHaveBeenCalled();
-    });
-
-    it("emits game-reset with game state to all clients", () => {
-      socket._trigger("reset-game");
-
-      expect(io.emit).toHaveBeenCalledWith(
-        "game-reset",
-        game.getGameState()
-      );
-    });
-  });
-
-  // ── rotate-board ───────────────────────────────────────────────────
-
-  describe("rotate-board", () => {
-    it("emits board-rotated to all clients on success", () => {
-      socket._trigger("rotate-board");
-
-      expect(io.emit).toHaveBeenCalledWith("board-rotated", {
-        board: game.board,
-        cooldownTime: 30,
-        rotationVersion: 1,
-      });
-    });
-
-    it("emits rotation-error to socket only on failure", () => {
-      game.rotateBoard.mockReturnValue({
-        success: false,
-        reason: "Cooldown activo",
-      });
-
-      socket._trigger("rotate-board");
-
-      expect(socket.emit).toHaveBeenCalledWith("rotation-error", {
-        message: "Cooldown activo",
-      });
-      expect(io.emit).not.toHaveBeenCalledWith(
-        "board-rotated",
-        expect.anything()
-      );
-    });
-  });
-
-  // ── get-scoreboard ─────────────────────────────────────────────────
-
-  describe("get-scoreboard", () => {
-    it("emits scoreboard-data to the requesting socket", () => {
-      socket._trigger("get-scoreboard");
-
-      expect(socket.emit).toHaveBeenCalledWith("scoreboard-data", []);
-    });
-  });
-
-  // ── get-max-score ──────────────────────────────────────────────────
-
-  describe("get-max-score", () => {
-    it("emits max-score-data from findAllPossibleWords when board is valid", () => {
-      socket._trigger("get-max-score");
-
-      expect(game.findAllPossibleWords).toHaveBeenCalled();
-      expect(socket.emit).toHaveBeenCalledWith("max-score-data", {
-        words: [],
-        maxScore: 0,
-        totalWords: 0,
-      });
-    });
-
-    it("emits empty max-score-data when board is not valid", () => {
-      game.board = [];
-
-      socket._trigger("get-max-score");
-
-      expect(game.findAllPossibleWords).not.toHaveBeenCalled();
-      expect(socket.emit).toHaveBeenCalledWith("max-score-data", {
-        words: [],
-        maxScore: 0,
-        totalWords: 0,
-      });
-    });
-  });
-
-  // ── toggle events ──────────────────────────────────────────────────
-
-  describe("toggle events", () => {
-    it("toggle-eliminate-common-words calls setter and emits to all", () => {
-      socket._trigger("toggle-eliminate-common-words", true);
-
-      expect(game.setEliminateCommonWords).toHaveBeenCalledWith(true);
-      expect(io.emit).toHaveBeenCalledWith(
-        "eliminate-common-words-changed",
-        {
-          enabled: true,
-          eliminateCommonWords: game.eliminateCommonWords,
-        }
-      );
-    });
-
-    it("toggle-client-side-validation calls setter and emits to all", () => {
-      socket._trigger("toggle-client-side-validation", true);
-
-      expect(game.setClientSideValidation).toHaveBeenCalledWith(true);
-      expect(io.emit).toHaveBeenCalledWith(
-        "client-side-validation-changed",
-        { enabled: true }
-      );
-    });
-  });
-
-  // ── disconnect ─────────────────────────────────────────────────────
-
-  describe("disconnect", () => {
-    it("calls game.removePlayer with the socket id", () => {
-      socket._trigger("disconnect");
-
-      expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
-    });
-
-    it("broadcasts player-left to other sockets", () => {
-      socket._trigger("disconnect");
-
-      expect(socket.broadcast.emit).toHaveBeenCalledWith(
-        "player-left",
-        "socket-1"
-      );
-    });
-  });
-
-  // ── Game routing ─────────────────────────────────────────────────
-
-  describe("game routing", () => {
-    it("defaults to boggle when no game query param", () => {
-      const noQuerySocket = createMockSocket("socket-2");
-      delete (noQuerySocket.handshake.query as any).game;
-      io._simulateConnection(noQuerySocket);
-
-      noQuerySocket._trigger("join-game", "Alice");
-      expect(game.addPlayer).toHaveBeenCalledWith("socket-2", "Alice");
-    });
-
-    it("routes to boggle when game=boggle", () => {
-      const boggleSocket = createMockSocket("socket-3", "boggle");
-      io._simulateConnection(boggleSocket);
-
-      boggleSocket._trigger("join-game", "Bob");
-      expect(game.addPlayer).toHaveBeenCalledWith("socket-3", "Bob");
-    });
-
-    it("disconnects socket for unknown game type", () => {
-      const unknownSocket = createMockSocket("socket-4", "chess");
-      io._simulateConnection(unknownSocket);
-
-      expect(unknownSocket.disconnect).toHaveBeenCalled();
-    });
-
-    it("does not register handlers for unknown game type", () => {
-      const unknownSocket = createMockSocket("socket-5", "chess");
-      io._simulateConnection(unknownSocket);
-
-      // join-game should not be registered since the socket was disconnected
-      unknownSocket._trigger("join-game", "Test");
-      expect(game.addPlayer).not.toHaveBeenCalledWith("socket-5", expect.anything());
+      expect(socket.join).not.toHaveBeenCalled();
     });
   });
 });

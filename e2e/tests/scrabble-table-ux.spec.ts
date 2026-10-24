@@ -1,5 +1,10 @@
-import { test, expect, resetServerGame } from "../fixtures/scrabble-fixture";
+import { test, expect } from "../fixtures/scrabble-fixture";
 import { ScrabblePage } from "../helpers/scrabble-page";
+
+/** Code of the room the test's first player created */
+let roomCode: string;
+
+const RACK = ["E", "S", "A", "L", "O", "R", "T"];
 
 test.describe("Scrabble - Table helpers", () => {
   let p1: ScrabblePage;
@@ -8,15 +13,14 @@ test.describe("Scrabble - Table helpers", () => {
   let waiting: ScrabblePage;
 
   test.beforeEach(async ({ player1Page, player2Page }) => {
-    await resetServerGame();
 
     p1 = new ScrabblePage(player1Page);
     p2 = new ScrabblePage(player2Page);
 
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
     await p1.waitForPlayerVisible("Bob");
     await p1.startGame();
     await expect(p2.turnIndicator).toBeVisible();
@@ -24,38 +28,33 @@ test.describe("Scrabble - Table helpers", () => {
     const p1IsActive = await p1.isMyTurn();
     active = p1IsActive ? p1 : p2;
     waiting = p1IsActive ? p2 : p1;
+
+    // Known racks with distinct letters and no blank (a blank opens the letter picker)
+    await active.setRack(RACK);
+    await waiting.setRack(RACK);
   });
 
-  /** Rack indices of non-blank tiles (a blank would open the letter picker). */
-  async function plainTileIndices(page: ScrabblePage): Promise<number[]> {
-    const tiles = page.tileRack.locator("button");
-    const indices: number[] = [];
-    for (let i = 0; i < (await tiles.count()); i++) {
-      if (await tiles.nth(i).getAttribute("data-letter")) indices.push(i);
-    }
-    return indices;
-  }
+  const tile = (page: ScrabblePage, letter: string) =>
+    page.tileRack.getByRole("button", { name: new RegExp(`^Ficha ${letter},`) });
 
   test("shows the estimated score before confirming, or why the move is invalid", async () => {
-    const [first] = await plainTileIndices(active);
-    await active.selectRackTile(first);
+    await tile(active, "E").click();
     await active.clickBoardCell(7, 7);
 
     const hint = active.page.getByTestId("move-hint");
     await expect(hint).toHaveText("No se formó ninguna palabra válida");
     await expect(active.page.getByTestId("move-score")).not.toBeVisible();
 
-    const [second] = await plainTileIndices(active);
-    await active.selectRackTile(second);
+    await tile(active, "S").click();
     await active.clickBoardCell(7, 8);
 
-    await expect(active.page.getByTestId("move-score")).toHaveText(/^\+\d+$/);
-    await expect(hint).toHaveText(/^[A-ZÑ]{2,} \d+$/);
+    // ES through the center (double word): (1 + 1) × 2
+    await expect(active.page.getByTestId("move-score")).toHaveText("+4");
+    await expect(hint).toHaveText("ES 4");
   });
 
   test("clicking a placed tile returns it to the rack", async () => {
-    const [first] = await plainTileIndices(active);
-    await active.selectRackTile(first);
+    await tile(active, "E").click();
     await active.clickBoardCell(7, 7);
     await expect(active.tileRack.locator("button")).toHaveCount(6);
 

@@ -11,6 +11,19 @@ export interface GameIO {
   emit(event: string, ...args: unknown[]): void;
 }
 
+/**
+ * Parsed dictionaries shared by every game instance, keyed by minimum word length
+ * (Boggle 3, Scrabble 2). The source file is ~640k lines read synchronously, so with
+ * rooms each new game would otherwise block the event loop and hold its own copy.
+ * The sets are never mutated.
+ */
+const dictionaryCache = new Map<number, Set<string>>();
+
+/** For tests that load different dictionaries (or a missing file) across cases. */
+export function clearDictionaryCache(): void {
+  dictionaryCache.clear();
+}
+
 export interface WordGameConfig {
   timeLimit: number;
   minWordLength?: number;
@@ -55,6 +68,16 @@ export abstract class WordGame {
     this.io = io;
   }
 
+  /**
+   * Set by the room that owns this game: fired when what the lobby shows about the
+   * room (players, connection, status) may have changed, and to track empty rooms.
+   */
+  onStatusChange: (() => void) | null = null;
+
+  notifyStatusChange(): void {
+    this.onStatusChange?.();
+  }
+
   clearTimers(): void {
     this.clearInternalTimer();
     this.clearUpdateTimer();
@@ -75,11 +98,17 @@ export abstract class WordGame {
   }
 
   initializeDictionary(): void {
+    const minWordLength = this.config.minWordLength ?? 3;
+    const cached = dictionaryCache.get(minWordLength);
+    if (cached) {
+      this.words = cached;
+      return;
+    }
+
     try {
       const dictionaryPath = path.join(process.cwd(), "file-2017.txt");
       const fileContent = fs.readFileSync(dictionaryPath, "utf8");
 
-      const minWordLength = this.config.minWordLength ?? 3;
       const allWords = fileContent
         .split("\n")
         .map((word) => word.trim().toLowerCase())
@@ -92,6 +121,8 @@ export abstract class WordGame {
         });
 
       this.words = new Set(allWords);
+      // Only a successful load is cached, so a missing file is retried next time
+      dictionaryCache.set(minWordLength, this.words);
       console.log(`Diccionario cargado: ${this.words.size} palabras válidas`);
     } catch (error) {
       console.error("Error al cargar el diccionario:", error);
@@ -146,6 +177,7 @@ export abstract class WordGame {
       connectedPlayers: this.players.size,
       totalParticipants: this.gameHistory.size,
     });
+    this.notifyStatusChange();
   }
 
   removePlayer(playerId: string): void {
@@ -174,6 +206,7 @@ export abstract class WordGame {
 
       this.releaseName(player.name);
       this.players.delete(playerId);
+      this.notifyStatusChange();
     }
   }
 
@@ -200,6 +233,7 @@ export abstract class WordGame {
       connectedPlayers: this.players.size,
       totalParticipants: this.gameHistory.size,
     });
+    this.notifyStatusChange();
   }
 
   setClientSideValidation(enabled: boolean): void {

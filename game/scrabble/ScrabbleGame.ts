@@ -168,6 +168,7 @@ export class ScrabbleGame extends WordGame {
     }
 
     this.gameState = "playing";
+    this.notifyStatusChange();
     this.shufflePlayerOrder();
     this.currentTurnIndex = 0;
 
@@ -193,6 +194,7 @@ export class ScrabbleGame extends WordGame {
 
   endGame(reason: GameEndReason = "passes"): void {
     this.gameState = "finished";
+    this.notifyStatusChange();
     this.clearTimers();
     this.clearTurnTimer();
 
@@ -1080,6 +1082,7 @@ export class ScrabbleGame extends WordGame {
       newSocketId,
       isCurrentTurn: this.getCurrentTurnPlayerId() === newSocketId,
     });
+    this.notifyStatusChange();
 
     return true;
   }

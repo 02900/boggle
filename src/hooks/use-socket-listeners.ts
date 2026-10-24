@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { io } from "socket.io-client";
 import { useBoggleGameMainStore } from "@/components/boggle/BoggleGameMain/boogle-game-main.store";
 import { useGameLogic } from "@/hooks/useGameLogic";
@@ -11,6 +11,7 @@ import { getLastSubmittedRefGlobal } from "@/stores/last-submitted-ref.store";
 import { useSocketsStore } from "@/stores/sockets.store";
 import { useScoreboardStore } from "@/stores/scoreboard.store";
 import { useMaxScoreStore } from "@/stores/max-score.store";
+import { writeRoomCodeToUrl } from "@/utils/room-url";
 
 // listeners must be instatiate only once
 export const useSocketListeners = () => {
@@ -19,8 +20,6 @@ export const useSocketListeners = () => {
     useSocket();
 
   // Referencias para manejar la reconexión automática
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isReconnectingRef = useRef(false);
 
   const { resetSelection, addFoundWord, resetFoundWords } = useGameLogic();
   const { showHighlight } = useHighlightManager();
@@ -56,6 +55,15 @@ export const useSocketListeners = () => {
       if (newSocket.id) {
         setCurrentPlayerId(newSocket.id);
       }
+      // A reconnect is a new socket, back in the lobby: return to the same room.
+      // (Boggle has no seat to restore: the player rejoins as new, like before.)
+      const { isJoined, roomCode } = useBoggleGameMainStore.getState();
+      if (isJoined && roomCode) {
+        newSocket.emit("join-room", {
+          code: roomCode,
+          playerName: localStorage.getItem("boggle-player-name") ?? "",
+        });
+      }
     });
 
     newSocket.on("disconnect", () => {
@@ -86,25 +94,6 @@ export const useSocketListeners = () => {
 
     newSocket.on("game-state", (state: GameState) => {
       setGameState(state);
-      // Si estábamos en proceso de reconexión automática y recibimos un estado válido,
-      // significa que la reconexión fue exitosa
-      if (isReconnectingRef.current) {
-        isReconnectingRef.current = false;
-
-        // Limpiar el timeout de respaldo
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
-
-        // Mostrar mensaje de reconexión exitosa
-        setMessage("¡Reconexión exitosa! Continuando partida...");
-
-        // Limpiar el mensaje después de un momento
-        setTimeout(() => {
-          setMessage("");
-        }, 3000);
-      }
     });
 
     newSocket.on("game-started", (state: GameState) => {
@@ -155,41 +144,14 @@ export const useSocketListeners = () => {
         );
 
         if (result.reason === "Jugador no encontrado") {
-          // Sesión perdida - intentar reconectar automáticamente
-          setMessage("Sesión perdida. Reconectando automáticamente...");
-          isReconnectingRef.current = true;
-
-          // Configurar timeout de respaldo (si no se reconecta en 5 segundos, ir al formulario)
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (isReconnectingRef.current) {
-              isReconnectingRef.current = false;
-              setMessage(
-                "No se pudo reconectar. Redirigiendo al menú principal..."
-              );
-              setTimeout(() => {
-                setIsJoined(false);
-                resetFoundWords();
-                resetSelection();
-              }, 2000);
-            }
-          }, 5000);
-
-          // Intentar reconexión automática con nombre aleatorio
+          // The server no longer has this player in the room: back to the room picker
+          setMessage("Perdiste tu lugar en la sala. Vuelve a unirte.");
           setTimeout(() => {
-            if (newSocket && newSocket.connected && isReconnectingRef.current) {
-              newSocket.emit("join-game", ""); // Nombre vacío = servidor asigna nombre aleatorio
-            } else if (isReconnectingRef.current) {
-              // Si no hay conexión, limpiar el estado de reconexión y ir al formulario
-              isReconnectingRef.current = false;
-              if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
-                reconnectTimeoutRef.current = null;
-              }
-              setIsJoined(false);
-              resetFoundWords();
-              resetSelection();
-            }
-          }, 1000); // Reducir delay para reconexión más rápida
+            setIsJoined(false);
+            useBoggleGameMainStore.getState().setRoomCode(null);
+            resetFoundWords();
+            resetSelection();
+          }, 2000);
         } else if (result.reason === "Palabra ya encontrada") {
           // Palabra repetida - mostrar en naranja
           setMessage(`"${currentWordToShow}" - ${result.reason}`);
@@ -210,10 +172,26 @@ export const useSocketListeners = () => {
       }
     });
 
-    newSocket.on("join-confirmed", ({ playerName }) => {
+    newSocket.on("join-confirmed", ({ playerName, roomCode }) => {
       // Guardar el nombre asignado (aleatorio o personalizado) en localStorage
       localStorage.setItem("boggle-player-name", playerName);
-      console.log("JOIN_CONFIRMED: Nombre guardado en localStorage", { playerName });
+      const store = useBoggleGameMainStore.getState();
+      store.setRoomCode(roomCode);
+      store.setJoinError(null);
+      setIsJoined(true);
+      writeRoomCodeToUrl(roomCode);
+    });
+
+    newSocket.on("join-failed", ({ reason }) => {
+      const store = useBoggleGameMainStore.getState();
+      // Coming back after a reconnect to a room that no longer exists
+      if (store.isJoined) {
+        setIsJoined(false);
+        store.setRoomCode(null);
+        resetFoundWords();
+        resetSelection();
+      }
+      store.setJoinError(reason);
     });
 
     newSocket.on("player-joined", ({ playerName }) => {
@@ -278,12 +256,6 @@ export const useSocketListeners = () => {
     });
 
     return () => {
-      // Limpiar timeouts de reconexión al desmontar
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      isReconnectingRef.current = false;
-
       newSocket.close();
     };
   }, []);

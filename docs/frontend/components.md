@@ -6,7 +6,7 @@ Frontend React components. Located in `src/components/`.
 
 ```
 BoggleGameMain (orchestrator)
-├── JoinGameForm            (join form)
+├── JoinGameForm            (name + rooms: list, create, join by code / invite link)
 ├── DiceRollingAnimation    (dice animation)
 ├── ViewDesktop / ViewMobile (responsive layouts)
 │   ├── GameBoard           (interactive 4x4 board)
@@ -80,9 +80,12 @@ List of words found by the current player with points. Eliminated (common) words
 
 ### JoinGameForm
 
-`src/components/JoinGameForm.tsx`
+`src/components/boggle/JoinGameForm.tsx`
 
-Form to enter the player name. Includes a button to generate a random name. Saves the name in localStorage.
+Room picker: random or custom name (saved in localStorage), live list of open rooms
+(`useRoomList`), "Crear sala", join by code, and an invite box when the URL has `?sala=CODE`.
+The game view appears on `join-confirmed`; `join-failed` shows its reason. `BoggleRoomCode`
+shows the room code with "Copiar link" in the game header.
 
 ### Modals
 
@@ -104,7 +107,8 @@ Located in `src/components/scrabble/`; base UI primitives (`Button`, `Card`, `Ba
 
 ```
 ScrabbleGameMain (screen router + Toaster)
-├── JoinForm                 (name, rules, scoreboard, "← Juegos")
+├── ScrabbleRoomPicker       (name, live room list, create, join by code / invite link)
+├── RoomCodeBadge            ("Sala K7QF · Copiar link", in lobby and table header)
 ├── ScrabbleLobby            (waiting room, 2–4 players, start, scoreboard)
 ├── ScrabbleScoreboard       (modal: Scrabble's top 50, filter by table size)
 └── ScrabbleTable            (game screen; desktop two columns, mobile sticky rack)

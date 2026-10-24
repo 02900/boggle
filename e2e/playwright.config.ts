@@ -2,7 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  timeout: 30_000,
+  // The first test after the dev server boots also waits for Next to compile the page
+  timeout: 45_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
@@ -16,8 +17,10 @@ export default defineConfig({
     // Short turns and grace period so overtime/skip and abandon-after-grace are
     // testable (turns never auto-pass, so other specs don't notice the clock).
     // SCRABBLE_E2E_HOOKS enables the e2e-set-rack event (deterministic racks).
+    // SCOREBOARD_DIR: test rooms are abandoned (and scored) after each test; keep
+    // those results out of the real leaderboards.
     command:
-      "cross-env PORT=3001 NEXT_DIST_DIR=.next-e2e SCRABBLE_TURN_TIME_LIMIT=15 SCRABBLE_GRACE_PERIOD_MS=10000 SCRABBLE_E2E_HOOKS=1 pnpm dev",
+      "cross-env PORT=3001 NEXT_DIST_DIR=.next-e2e SCRABBLE_TURN_TIME_LIMIT=15 SCRABBLE_GRACE_PERIOD_MS=10000 SCRABBLE_E2E_HOOKS=1 SCOREBOARD_DIR=.next-e2e pnpm dev",
     port: 3001,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

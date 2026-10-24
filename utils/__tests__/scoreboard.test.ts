@@ -193,3 +193,15 @@ describe("one scoreboard per game", () => {
   });
 });
 
+describe("SCOREBOARD_DIR", () => {
+  it("puts the leaderboards in another directory (e2e keeps them out of the real ones)", () => {
+    vi.stubEnv("SCOREBOARD_DIR", "/tmp/e2e");
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue("[]");
+
+    loadScoreboard("scrabble");
+
+    expect(fs.readFileSync).toHaveBeenLastCalledWith(path.join("/tmp/e2e", "scoreboard-scrabble.json"), "utf8");
+    vi.unstubAllEnvs();
+  });
+});

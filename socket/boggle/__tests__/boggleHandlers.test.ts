@@ -4,12 +4,15 @@ import {
   createMockSocket,
   createMockIO,
   createMockBoggleGame,
+  mockRoom,
   type MockSocket,
   type MockIO,
   type MockBoggleGame,
 } from "../../__tests__/mock-helpers";
 
 vi.mock("../../../utils/debug", () => ({ debugLog: vi.fn() }));
+
+const ROOM = "boggle:TEST";
 
 describe("setupBoggleHandlers", () => {
   let io: MockIO;
@@ -21,10 +24,13 @@ describe("setupBoggleHandlers", () => {
     io = createMockIO();
     socket = createMockSocket("socket-1");
     game = createMockBoggleGame();
-    setupBoggleHandlers(io as any, socket as any, game as any);
+    setupBoggleHandlers(io as any, socket as any, mockRoom(game, "boggle") as any);
   });
 
   afterEach(() => {
+    // Rooms: nothing may ever be broadcast server-wide
+    expect(io.emit).not.toHaveBeenCalled();
+    expect(socket.broadcast.emit).not.toHaveBeenCalled();
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -34,24 +40,33 @@ describe("setupBoggleHandlers", () => {
       socket._trigger("start-game");
 
       expect(game.startGame).toHaveBeenCalled();
-      expect(io.emit).toHaveBeenCalledWith("dice-rolling", []);
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("dice-rolling", []);
     });
 
     it("emits game-started after 3 seconds", () => {
       socket._trigger("start-game");
 
       // Should not have emitted game-started yet
-      const gameStartedCalls = io.emit.mock.calls.filter(
+      const gameStartedCalls = io.to(ROOM).emit.mock.calls.filter(
         (call: unknown[]) => call[0] === "game-started"
       );
       expect(gameStartedCalls).toHaveLength(0);
 
       vi.advanceTimersByTime(3000);
 
-      const gameStartedCallsAfter = io.emit.mock.calls.filter(
+      const gameStartedCallsAfter = io.to(ROOM).emit.mock.calls.filter(
         (call: unknown[]) => call[0] === "game-started"
       );
       expect(gameStartedCallsAfter).toHaveLength(1);
+    });
+
+    it("does not announce the start if the round was reset during the dice animation", () => {
+      socket._trigger("start-game");
+      game.gameState = "waiting";
+
+      vi.advanceTimersByTime(3000);
+
+      expect(io.to(ROOM).emit).not.toHaveBeenCalledWith("game-started", expect.anything());
     });
   });
 
@@ -108,7 +123,7 @@ describe("setupBoggleHandlers", () => {
         rotationVersion: 0,
       });
 
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-scored", {
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("player-scored", {
         playerId: "socket-1",
         word: "casa",
         points: 1,
@@ -122,7 +137,7 @@ describe("setupBoggleHandlers", () => {
         rotationVersion: 0,
       });
 
-      expect(io.emit).toHaveBeenCalledWith(
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith(
         "game-state",
         expect.anything()
       );
@@ -140,7 +155,7 @@ describe("setupBoggleHandlers", () => {
         rotationVersion: 0,
       });
 
-      const playerScoredCalls = io.emit.mock.calls.filter(
+      const playerScoredCalls = io.to(ROOM).emit.mock.calls.filter(
         (call: unknown[]) => call[0] === "player-scored"
       );
       expect(playerScoredCalls).toHaveLength(0);
@@ -152,7 +167,7 @@ describe("setupBoggleHandlers", () => {
       socket._trigger("reset-game");
 
       expect(game.resetGame).toHaveBeenCalled();
-      expect(io.emit).toHaveBeenCalledWith(
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith(
         "game-reset",
         expect.anything()
       );
@@ -164,7 +179,7 @@ describe("setupBoggleHandlers", () => {
       socket._trigger("rotate-board");
 
       expect(game.rotateBoard).toHaveBeenCalled();
-      expect(io.emit).toHaveBeenCalledWith("board-rotated", {
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("board-rotated", {
         board: game.board,
         cooldownTime: 30,
         rotationVersion: 1,
@@ -213,7 +228,7 @@ describe("setupBoggleHandlers", () => {
       socket._trigger("toggle-eliminate-common-words", true);
 
       expect(game.setEliminateCommonWords).toHaveBeenCalledWith(true);
-      expect(io.emit).toHaveBeenCalledWith(
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith(
         "eliminate-common-words-changed",
         expect.anything()
       );

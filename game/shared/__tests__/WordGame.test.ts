@@ -8,7 +8,10 @@ vi.mocked(fs.readFileSync).mockReturnValue(
   "casa\nmesa\nsilla\nagua\nfuego\ngato\nperro\ntierra\naire\namor\ntiempo\nlugar\ncosa\npersona\nanimal\nplanta\ncomida\n"
 );
 
-import { WordGame, type WordGameConfig } from "../WordGame";
+import { WordGame, clearDictionaryCache, type WordGameConfig } from "../WordGame";
+
+// The dictionary is cached per module; each test loads (or fails to load) its own
+beforeEach(() => clearDictionaryCache());
 
 // Concrete test subclass with minimal abstract method implementations
 class TestWordGame extends WordGame {
@@ -238,5 +241,19 @@ describe("WordGame", () => {
       game.setIO(mockIO as any);
       expect(game.io).toBe(mockIO);
     });
+  });
+});
+
+describe("dictionary cache", () => {
+  it("parses the dictionary file once per minimum word length, shared by instances", () => {
+    vi.mocked(fs.readFileSync).mockClear();
+
+    const a = new TestWordGame();
+    const b = new TestWordGame();
+    const scrabbleLike = new TestWordGame({ timeLimit: 100, minWordLength: 2 });
+
+    expect(fs.readFileSync).toHaveBeenCalledTimes(2);
+    expect(b.words).toBe(a.words);
+    expect(scrabbleLike.words).not.toBe(a.words);
   });
 });

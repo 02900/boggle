@@ -4,6 +4,7 @@ import React from "react";
 import { useSocket } from "@/hooks/useSocket";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useBoggleGameMainStore } from "../boogle-game-main.store";
+import { BoggleRoomCode } from "../../BoggleRoomCode";
 
 export const MobileHeader = () => {
   const { setModalType } = useModalStore();
@@ -15,7 +16,11 @@ export const MobileHeader = () => {
   return (
     <div className="bg-white shadow-sm p-3">
       <div className="flex justify-between items-center">
-        <div className="text-lg font-bold text-gray-800">🎲 Boggle</div>
+        <div className="flex items-center gap-2">
+          <div className="text-lg font-bold text-gray-800">🎲 Boggle</div>
+          {/* While waiting, so players can share it before starting */}
+          {gameState.gameState === "waiting" && <BoggleRoomCode />}
+        </div>
 
         {/* Tiempo restante */}
         <div className="flex items-center space-x-4">

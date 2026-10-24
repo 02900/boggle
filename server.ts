@@ -3,9 +3,7 @@ import { networkInterfaces } from "os";
 import next from "next";
 import { Server } from "socket.io";
 
-import { BoggleGame } from "./game/boggle/BoggleGame";
-import { ScrabbleGame } from "./game/scrabble/ScrabbleGame";
-import { GameRegistry } from "./game/GameRegistry";
+import { RoomManager } from "./game/rooms/RoomManager";
 import { setupSocketHandlers } from "./socket/socketHandlers";
 import type { TypedServer } from "./src/interfaces/server";
 import type { GameEvents, ClientEvents } from "./src/interfaces/game";
@@ -35,18 +33,9 @@ app.prepare().then(() => {
   const httpServer = createServer(handler);
   const io: TypedServer = new Server<ClientEvents & ScrabbleClientEvents, GameEvents & ScrabbleGameEvents>(httpServer);
 
-  // Register game instances
-  const registry = new GameRegistry();
-
-  const boggleGame = new BoggleGame();
-  boggleGame.setIO(io);
-  registry.registerGame("boggle", boggleGame);
-
-  const scrabbleGame = new ScrabbleGame();
-  scrabbleGame.setIO(io);
-  registry.registerGame("scrabble", scrabbleGame);
-
-  setupSocketHandlers(io, registry);
+  // Every game lives in a room; rooms are created on demand from each game's lobby
+  const rooms = new RoomManager(io);
+  setupSocketHandlers(io, rooms);
 
   httpServer
     .once("error", (err: Error) => {

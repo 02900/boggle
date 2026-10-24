@@ -1,12 +1,17 @@
 import { debugLog } from "../../utils/debug";
 import type { BoggleGame } from "../../game/boggle/BoggleGame";
+import type { Room } from "../../game/rooms/RoomManager";
 import type { BoggleTypedServer, BoggleTypedSocket } from "../../src/interfaces/server";
 
+/** Boggle events for a socket inside `room`; broadcasts go to that room only. */
 export function setupBoggleHandlers(
   io: BoggleTypedServer,
   socket: BoggleTypedSocket,
-  game: BoggleGame
+  room: Room
 ): void {
+  const game = room.game as BoggleGame;
+  const toRoom = () => io.to(room.key);
+
   socket.on("start-game", () => {
     debugLog("EVENT: start-game", null, socket.id);
 
@@ -16,10 +21,11 @@ export function setupBoggleHandlers(
         diceCount: result.diceRolls.length,
       });
 
-      io.emit("dice-rolling", result.diceRolls);
+      toRoom().emit("dice-rolling", result.diceRolls);
 
       setTimeout(() => {
-        io.emit("game-started", game.getGameState());
+        // Skip if the round was reset (or the room emptied) during the dice animation
+        if (game.gameState === "playing") toRoom().emit("game-started", game.getGameState());
       }, 3000);
     }
   });
@@ -71,21 +77,21 @@ export function setupBoggleHandlers(
         word: result.word,
         points: result.points,
       });
-      socket.broadcast.emit("player-scored", {
+      socket.to(room.key).emit("player-scored", {
         playerId: socket.id,
         word: result.word!,
         points: result.points!,
       });
 
       debugLog("EMIT: game-state (after valid word)");
-      io.emit("game-state", game.getGameState());
+      toRoom().emit("game-state", game.getGameState());
     }
   });
 
   socket.on("reset-game", () => {
     debugLog("EVENT: reset-game", null, socket.id);
     game.resetGame();
-    io.emit("game-reset", game.getGameState());
+    toRoom().emit("game-reset", game.getGameState());
   });
 
   socket.on("rotate-board", () => {
@@ -97,7 +103,7 @@ export function setupBoggleHandlers(
         cooldownTime: result.cooldownTime,
         newRotationVersion: result.rotationVersion,
       });
-      io.emit("board-rotated", {
+      toRoom().emit("board-rotated", {
         board: game.board,
         cooldownTime: result.cooldownTime!,
         rotationVersion: result.rotationVersion!,
@@ -137,7 +143,7 @@ export function setupBoggleHandlers(
       enabled,
       eliminateCommonWords: game.eliminateCommonWords,
     });
-    io.emit("eliminate-common-words-changed", {
+    toRoom().emit("eliminate-common-words-changed", {
       enabled,
       eliminateCommonWords: game.eliminateCommonWords,
     });

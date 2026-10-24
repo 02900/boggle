@@ -45,6 +45,13 @@ interface BoggleGameMainStore {
 
   isJoined: boolean;
   setIsJoined: (isJoined: boolean | ((prev: boolean) => boolean)) => void;
+
+  /** Code of the room this player is in (also in the URL as ?sala=) */
+  roomCode: string | null;
+  setRoomCode: (roomCode: string | null) => void;
+  /** Why the last create/join attempt was rejected, shown on the join screen */
+  joinError: string | null;
+  setJoinError: (joinError: string | null) => void;
 }
 
 export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
@@ -139,4 +146,9 @@ export const useBoggleGameMainStore = create<BoggleGameMainStore>((set) => ({
       isJoined:
         typeof isJoined === "function" ? isJoined(state.isJoined) : isJoined,
     })),
+
+  roomCode: null,
+  setRoomCode: (roomCode: string | null) => set({ roomCode }),
+  joinError: null,
+  setJoinError: (joinError: string | null) => set({ joinError }),
 }));

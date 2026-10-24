@@ -69,9 +69,16 @@ export const useSocket = () => {
     }
   }, []);
 
-  const joinGame = (playerName: string) => {
+  /** Creates a room and joins it; an empty name gets a random one from the server. */
+  const createRoom = (playerName: string) => {
     if (socket) {
-      socket.emit("join-game", playerName);
+      socket.emit("create-room", { playerName });
+    }
+  };
+
+  const joinRoom = (code: string, playerName: string) => {
+    if (socket) {
+      socket.emit("join-room", { code, playerName });
     }
   };
 
@@ -122,7 +129,8 @@ export const useSocket = () => {
 
   return {
     connectSocket,
-    joinGame,
+    createRoom,
+    joinRoom,
     startGame,
     submitWord,
     resetGame,

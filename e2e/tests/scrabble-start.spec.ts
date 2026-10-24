@@ -1,15 +1,15 @@
-import { test, expect, resetServerGame } from "../fixtures/scrabble-fixture";
+import { test, expect } from "../fixtures/scrabble-fixture";
 import { ScrabblePage } from "../helpers/scrabble-page";
 
+/** Code of the room the test's first player created */
+let roomCode: string;
+
 test.describe("Scrabble - Starting a game", () => {
-  test.beforeEach(async () => {
-    await resetServerGame();
-  });
 
   test("start button does not appear with only 1 player", async ({ player1Page }) => {
     const p1 = new ScrabblePage(player1Page);
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
 
     await expect(p1.startButton).not.toBeVisible();
   });
@@ -22,10 +22,10 @@ test.describe("Scrabble - Starting a game", () => {
     const p2 = new ScrabblePage(player2Page);
 
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
 
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
 
     // Wait for socket propagation so both see 2 players
     await p1.waitForPlayerVisible("Bob");
@@ -44,9 +44,9 @@ test.describe("Scrabble - Starting a game", () => {
     const p2 = new ScrabblePage(player2Page);
 
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
     await p1.waitForPlayerVisible("Bob");
 
     await p1.startGame();
@@ -80,9 +80,9 @@ test.describe("Scrabble - Starting a game", () => {
     const p2 = new ScrabblePage(player2Page);
 
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
     await p1.waitForPlayerVisible("Bob");
     await p1.startGame();
 
@@ -91,8 +91,15 @@ test.describe("Scrabble - Starting a game", () => {
       const late = new ScrabblePage(await lateContext.newPage());
       await late.goto();
       await late.nameInput.fill("Carol");
-      await late.joinButton.click();
 
+      // The list shows the game as started and doesn't offer to join it
+      const row = late.page.locator(`[data-testid="room-row"][data-code="${roomCode}"]`);
+      await expect(row).toContainText("En juego");
+      await expect(row.getByRole("button", { name: "Unirse" })).toBeDisabled();
+
+      // Forcing it with the code is rejected by the server
+      await late.roomCodeInput.fill(roomCode);
+      await late.joinByCodeButton.click();
       await expect(late.errorToast()).toContainText("La partida ya empezó");
       await expect(late.nameInput).toBeVisible();
       expect(await p1.getPlayerNames()).not.toContain("Carol");

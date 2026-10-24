@@ -9,6 +9,7 @@ import { ScrabbleInstructions } from "./ScrabbleInstructions";
 import { playerColor } from "./player-colors";
 import { LeaveGameButton } from "./LeaveGameButton";
 import { ScrabbleScoreboard } from "./ScrabbleScoreboard";
+import { RoomCodeBadge } from "./RoomCodeBadge";
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
@@ -33,6 +34,7 @@ export function ScrabbleLobby() {
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-bold tracking-tight">Scrabble</h1>
           <p className="mt-1 text-sm text-ink-muted">Sala de espera</p>
+          <RoomCodeBadge className="mt-3" />
         </div>
 
         <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wide text-ink-faint">

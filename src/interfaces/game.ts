@@ -39,7 +39,37 @@ export type { BoggleGameState as GameState } from "./boggle";
 
 import type { DiceRoll, BoggleGameState, MaxScoreData } from "./boggle";
 
-export interface GameEvents {
+// ---- Rooms (shared by every game) ----
+
+/** What the room list shows about one room. */
+export interface RoomSummary {
+  code: string;
+  hostName: string;
+  /** Players currently connected */
+  playerCount: number;
+  /** null = no limit (Boggle) */
+  maxPlayers: number | null;
+  status: GameStatus;
+  /** Whether a new player can join right now (not started, not full) */
+  joinable: boolean;
+}
+
+/** Lobby events every game's socket understands, before and instead of joining a room. */
+export interface RoomServerEvents {
+  "rooms-list": (rooms: RoomSummary[]) => void;
+  "rooms-updated": (rooms: RoomSummary[]) => void;
+  "join-confirmed": (data: { playerName: string; playerId: string; roomCode: string }) => void;
+  "join-failed": (data: { reason: string }) => void;
+}
+
+export interface RoomClientEvents {
+  /** Subscribes to live updates of this game's room list */
+  "list-rooms": () => void;
+  "create-room": (data: { playerName: string }) => void;
+  "join-room": (data: { code: string; playerName: string }) => void;
+}
+
+export interface GameEvents extends RoomServerEvents {
   "game-state": (state: BoggleGameState) => void;
   "game-started": (state: BoggleGameState) => void;
   "dice-rolling": (diceRolls: DiceRoll[]) => void;
@@ -53,15 +83,13 @@ export interface GameEvents {
   "eliminate-common-words-changed": (data: { enabled: boolean; eliminateCommonWords: boolean }) => void;
   "client-side-validation-changed": (data: { enabled: boolean }) => void;
   "words-revalidated": (data: { totalWordsRemoved: number; affectedPlayers: number; summary: string }) => void;
-  "join-confirmed": (data: { playerName: string; playerId: string }) => void;
   "board-rotated": (data: { board: string[][]; cooldownTime: number; rotationVersion: number }) => void;
   "rotation-error": (data: { message: string }) => void;
   "scoreboard-data": (data: ScoreboardEntry[]) => void;
   "max-score-data": (data: MaxScoreData) => void;
 }
 
-export interface ClientEvents {
-  "join-game": (playerName: string) => void;
+export interface ClientEvents extends RoomClientEvents {
   "start-game": () => void;
   "submit-word": (data: { word: string; path: [number, number][]; rotationVersion: number }) => void;
   "reset-game": () => void;

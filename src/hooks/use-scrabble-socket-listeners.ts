@@ -5,6 +5,7 @@ import { io, type Socket } from "socket.io-client";
 import { useScrabbleGameStore } from "@/stores/scrabble-game.store";
 import { describeGameEnd, describeOvertime, describeTurnChanged, describeTurnPlayed } from "@/utils/scrabble-messages";
 import type { ScrabbleGameEvents, ScrabbleClientEvents } from "@/interfaces/scrabble";
+import { writeRoomCodeToUrl } from "@/utils/room-url";
 
 type ScrabbleSocket = Socket<ScrabbleGameEvents, ScrabbleClientEvents>;
 
@@ -79,6 +80,9 @@ export const useScrabbleSocketListeners = () => {
       s.setCurrentPlayerId(data.playerId);
       s.setIsJoined(true);
       s.setPlayerName(data.playerName);
+      // The room code is the game id (persisted for rejoin) and goes in the URL to share
+      s.setGameId(data.roomCode);
+      writeRoomCodeToUrl(data.roomCode);
       if (typeof window !== "undefined") {
         localStorage.setItem("scrabble-player-name", data.playerName);
       }
@@ -236,6 +240,7 @@ export const useScrabbleSocketListeners = () => {
       s.setTentativePlacements(state.tentativePlacements);
       if (state.gameId) s.setGameId(state.gameId);
       s.setIsJoined(true);
+      writeRoomCodeToUrl(get().gameId);
       s.notify("success", "Reconectado a la partida");
       saveSession(state.gameId ?? s.gameId, s.playerName);
     });

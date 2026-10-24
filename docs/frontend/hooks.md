@@ -108,4 +108,5 @@ Persists the client-side validation preference in `localStorage`. On mount, rest
 |------|------|---------|
 | `useScrabbleSocketListeners` | `src/hooks/use-scrabble-socket-listeners.ts` | Creates the socket (`?game=scrabble`), maps server events to the store and toasts, auto-rejoins a saved session on `connect`. Mounted once by `ScrabbleGameMain`. |
 | `useScrabbleSocket` | `src/hooks/use-scrabble-socket.ts` | Actions: `joinGame`, `startGame`, `placeTiles`, `recallTile(s)`, `submitTurn`, `passTurn`, `exchangeTiles`, `skipTurn`, `leaveGame`, `resetGame`. |
+| `useRoomList` | `src/hooks/use-room-list.ts` | Live room list for either game's socket: `list-rooms` on (re)connect, follows `rooms-updated`. |
 | `useMediaQuery` | `src/hooks/use-media-query.ts` | Reactive media query (`DESKTOP_QUERY` = Tailwind `lg`), used to pick the desktop/mobile layout. |

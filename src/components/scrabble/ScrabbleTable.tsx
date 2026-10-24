@@ -13,6 +13,7 @@ import { ConnectionBanner } from "./ConnectionBanner";
 import { PlayerPanel } from "./PlayerPanel";
 import { GameOverModal } from "./GameOverModal";
 import { LeaveGameButton } from "./LeaveGameButton";
+import { RoomCodeBadge } from "./RoomCodeBadge";
 
 function RackAndActions() {
   return (
@@ -43,6 +44,8 @@ export function ScrabbleTable() {
         <div className="flex items-center gap-2">
           <LeaveGameButton />
           <h1 className="text-lg font-bold tracking-tight">Scrabble</h1>
+          {/* Phones: no room next to the turn badge; the code is on the lobby screen */}
+          <RoomCodeBadge className="hidden sm:block" />
         </div>
         <TurnIndicator />
       </header>

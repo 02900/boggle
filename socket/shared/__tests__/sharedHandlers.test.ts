@@ -1,53 +1,56 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { setupSharedHandlers } from "../sharedHandlers";
+import { joinPlayer, setupSharedHandlers } from "../sharedHandlers";
 import {
   createMockSocket,
   createMockIO,
   createMockBoggleGame,
+  mockRoom,
   type MockSocket,
   type MockIO,
   type MockBoggleGame,
 } from "../../__tests__/mock-helpers";
 
 vi.mock("../../../utils/debug", () => ({ debugLog: vi.fn() }));
-vi.mock("../../../utils/scoreboard", () => ({ loadScoreboard: vi.fn(() => []) }));
 
-describe("setupSharedHandlers", () => {
+const ROOM = "boggle:TEST";
+
+describe("shared room handlers", () => {
   let io: MockIO;
   let socket: MockSocket;
   let game: MockBoggleGame;
+  let room: ReturnType<typeof mockRoom<MockBoggleGame>>;
 
   beforeEach(() => {
     io = createMockIO();
     socket = createMockSocket("socket-1");
     game = createMockBoggleGame();
+    room = mockRoom(game, "boggle");
   });
 
   afterEach(() => {
+    // Rooms: nothing may ever be broadcast server-wide
+    expect(io.emit).not.toHaveBeenCalled();
+    expect(socket.broadcast.emit).not.toHaveBeenCalled();
     vi.restoreAllMocks();
-    vi.useRealTimers();
   });
 
-  describe("join-game", () => {
+  describe("joinPlayer", () => {
     it("uses the provided name after trimming whitespace", () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
-      socket._trigger("join-game", "  Alice  ");
+      joinPlayer(socket as any, room as any, "  Alice  ");
 
       expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "Alice");
       expect(game.getRandomName).not.toHaveBeenCalled();
     });
 
     it("falls back to getRandomName when name is empty", () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
-      socket._trigger("join-game", "   ");
+      joinPlayer(socket as any, room as any, "   ");
 
       expect(game.getRandomName).toHaveBeenCalled();
       expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "TestPlayer");
     });
 
-    it("emits game-state and join-confirmed to the socket", () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
-      socket._trigger("join-game", "Alice");
+    it("sends the joiner the state and a confirmation with the room code", () => {
+      expect(joinPlayer(socket as any, room as any, "Alice")).toBe(true);
 
       expect(socket.emit).toHaveBeenCalledWith(
         "game-state",
@@ -56,14 +59,15 @@ describe("setupSharedHandlers", () => {
       expect(socket.emit).toHaveBeenCalledWith("join-confirmed", {
         playerId: "socket-1",
         playerName: "Alice",
+        roomCode: "TEST",
       });
     });
 
-    it("broadcasts player-joined to other clients", () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
-      socket._trigger("join-game", "Alice");
+    it("announces the new player to the rest of the room only", () => {
+      joinPlayer(socket as any, room as any, "Alice");
 
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-joined", {
+      expect(socket.to).toHaveBeenCalledWith(ROOM);
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("player-joined", {
         playerId: "socket-1",
         playerName: "Alice",
       });
@@ -71,81 +75,46 @@ describe("setupSharedHandlers", () => {
 
     it("calls onPlayerJoined hook when provided", () => {
       const onPlayerJoined = vi.fn();
-      setupSharedHandlers(io as any, socket as any, game as any, { onPlayerJoined });
-      socket._trigger("join-game", "Alice");
+      joinPlayer(socket as any, room as any, "Alice", { onPlayerJoined });
 
       expect(onPlayerJoined).toHaveBeenCalledWith(socket, "Alice");
     });
 
-    it("emits join-failed and does not add the player when canJoin rejects", () => {
+    it("rejects with join-failed and does not add the player when canJoin says no", () => {
       const canJoin = vi.fn(() => ({ ok: false, reason: "La partida ya empezó" }));
-      setupSharedHandlers(io as any, socket as any, game as any, { canJoin });
-      socket._trigger("join-game", "Alice");
+
+      expect(joinPlayer(socket as any, room as any, "Alice", { canJoin })).toBe(false);
 
       expect(socket.emit).toHaveBeenCalledWith("join-failed", { reason: "La partida ya empezó" });
       expect(game.addPlayer).not.toHaveBeenCalled();
-      expect(socket.broadcast.emit).not.toHaveBeenCalled();
-    });
-
-    it("joins normally when canJoin accepts", () => {
-      setupSharedHandlers(io as any, socket as any, game as any, { canJoin: () => ({ ok: true }) });
-      socket._trigger("join-game", "Alice");
-
-      expect(game.addPlayer).toHaveBeenCalledWith("socket-1", "Alice");
-    });
-
-    it("works without hooks (no crash)", () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
-
-      expect(() => {
-        socket._trigger("join-game", "Alice");
-      }).not.toThrow();
-    });
-  });
-
-  describe("get-scoreboard", () => {
-    it("emits scoreboard-data to the socket", async () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
-      socket._trigger("get-scoreboard");
-
-      // loadScoreboard may be async, allow microtasks to flush
-      await vi.dynamicImportSettled?.() ?? Promise.resolve();
-
-      expect(socket.emit).toHaveBeenCalledWith("scoreboard-data", expect.anything());
-    });
-
-    it("loads the scoreboard of the socket's game", async () => {
-      const { loadScoreboard } = await import("../../../utils/scoreboard");
-      setupSharedHandlers(io as any, socket as any, { ...game, gameType: "scrabble" } as any);
-      socket._trigger("get-scoreboard");
-
-      expect(loadScoreboard).toHaveBeenLastCalledWith("scrabble");
+      expect(socket.to).not.toHaveBeenCalled();
     });
   });
 
   describe("toggle-client-side-validation", () => {
-    it("calls setClientSideValidation and emits to all clients", () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
+    it("updates the game and tells the room", () => {
+      setupSharedHandlers(io as any, socket as any, room as any);
       socket._trigger("toggle-client-side-validation", true);
 
       expect(game.setClientSideValidation).toHaveBeenCalledWith(true);
-      expect(io.emit).toHaveBeenCalledWith(
-        "client-side-validation-changed",
-        expect.anything()
-      );
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("client-side-validation-changed", { enabled: true });
     });
   });
 
   describe("disconnect", () => {
-    it("calls removePlayer and broadcasts player-left", () => {
-      setupSharedHandlers(io as any, socket as any, game as any);
+    it("removes the player and tells the rest of the room", () => {
+      setupSharedHandlers(io as any, socket as any, room as any);
       socket._trigger("disconnect");
 
       expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
-      expect(socket.broadcast.emit).toHaveBeenCalledWith(
-        "player-left",
-        "socket-1"
-      );
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("player-left", "socket-1");
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
+    });
+
+    it("is left to the game when skipDisconnect is set (Scrabble's grace period)", () => {
+      setupSharedHandlers(io as any, socket as any, room as any, { skipDisconnect: true });
+
+      expect(socket.on).not.toHaveBeenCalledWith("disconnect", expect.anything());
     });
   });
 });

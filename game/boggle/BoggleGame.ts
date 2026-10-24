@@ -149,12 +149,14 @@ export class BoggleGame extends WordGame {
       }, 1000);
     }
 
+    this.notifyStatusChange();
     return { success: true, diceRolls };
   }
 
   endGame(): void {
     this.gameState = "finished";
     this.clearTimers();
+    this.notifyStatusChange();
 
     if (this.clientSideValidation) {
       this.revalidateClientWords();

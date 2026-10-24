@@ -5,7 +5,8 @@ import { createEmptyBoard } from "../../../../game/scrabble/scrabbleConfig";
 
 /** Socket actions the components call; tests assert on these instead of a real socket. */
 export const socketActions = {
-  joinGame: vi.fn(),
+  createRoom: vi.fn(),
+  joinRoom: vi.fn(),
   startGame: vi.fn(),
   placeTiles: vi.fn(),
   recallTiles: vi.fn(),

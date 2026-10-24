@@ -8,9 +8,17 @@ import { clearSession } from "./use-scrabble-socket-listeners";
 export const useScrabbleSocket = () => {
   const { socket } = useScrabbleGameStore();
 
-  const joinGame = useCallback(
+  /** Creates a new room and joins it as its first player. */
+  const createRoom = useCallback(
     (playerName: string) => {
-      socket?.emit("join-game", playerName);
+      socket?.emit("create-room", { playerName });
+    },
+    [socket]
+  );
+
+  const joinRoom = useCallback(
+    (code: string, playerName: string) => {
+      socket?.emit("join-room", { code, playerName });
     },
     [socket]
   );
@@ -77,7 +85,8 @@ export const useScrabbleSocket = () => {
   }, [socket]);
 
   return {
-    joinGame,
+    createRoom,
+    joinRoom,
     startGame,
     placeTiles,
     recallTiles,

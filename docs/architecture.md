@@ -76,18 +76,31 @@
 
 ## Games and Routing
 
-The server hosts one instance per game in a `GameRegistry` (`server.ts`): `BoggleGame` and
-`ScrabbleGame`, both extending `game/shared/WordGame.ts` (players, names, dictionary). A client
-picks its game with the Socket.IO query `?game=boggle|scrabble`; `socket/socketHandlers.ts`
-wires the shared handlers (`join-game`, scoreboard) plus the game-specific ones. Each game
-has its own leaderboard file (`scoreboard.json`, `scoreboard-scrabble.json`).
+Games are played in **rooms**, so any number of Boggle and Scrabble games run at once.
+`game/rooms/RoomManager.ts` (created in `server.ts`) owns them: each room has a 4-character
+code (no 0/O/1/I), one game instance (`BoggleGame` or `ScrabbleGame`, both extending
+`game/shared/WordGame.ts`) and a Socket.IO room `"<game>:<code>"`. The game's `io` is
+`io.to(thatRoom)`, so everything it emits (clocks, turns, game end) stays in the room, and the
+handlers broadcast with `io.to(room)` / `socket.to(room)` — never server-wide.
+
+Flow (`socket/socketHandlers.ts`): a client connects with `?game=boggle|scrabble` and lands in
+that game's **lobby** (`"<game>:lobby"`): `list-rooms` returns the open rooms and subscribes to
+`rooms-updated`; `create-room` / `join-room { code }` put the socket in a room, and only then are
+the game's handlers registered (one room per socket; switching rooms is a new connection).
+Rooms with nobody connected are deleted after 10 minutes (`ROOM_IDLE_TTL_MS`). Invite links:
+`/<game>?sala=CODE`.
+
+The dictionary (~640k words) is parsed once per word-length rule and shared by all games.
+Each game has its own leaderboard file (`scoreboard.json`, `scoreboard-scrabble.json`), shared
+by all its rooms.
 
 ### Scrabble
 
-- Turn-based, 2–4 players, one shared table (`default-scrabble`). Routes: `/scrabble`.
+- Turn-based, 2–4 players per room. Route: `/scrabble` (invite: `/scrabble?sala=CODE`).
 - The server is authoritative: racks are private (sent per player in `game-state`), tiles are
   rebuilt from the server rack, and moves are validated by `game/scrabble/moveEvaluation.ts`
   (pure rules also used by the client to preview the score).
-- Sessions are persisted to `data/scrabble-sessions/<gameId>.json` after each turn, so players
-  can rejoin after a reload (30s grace period) or a server restart.
+- Sessions are persisted to `data/scrabble-sessions/<roomCode>.json` after each turn, so players
+  can rejoin after a reload (30s grace period) or a server restart (the room is recreated from
+  the file with the same code).
 - Protocol and lifecycle: [scrabble/socket-events.md](./scrabble/socket-events.md).

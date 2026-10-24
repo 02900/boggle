@@ -1,26 +1,33 @@
-import { test, expect, resetServerGame } from "../fixtures/scrabble-fixture";
+import { test, expect } from "../fixtures/scrabble-fixture";
 import { ScrabblePage } from "../helpers/scrabble-page";
 import { findPlayableWord, getFirstTurnPositions } from "../helpers/tile-helpers";
+
+/** Code of the room the test's first player created */
+let roomCode: string;
 
 test.describe("Scrabble - Turns", () => {
   let p1: ScrabblePage;
   let p2: ScrabblePage;
 
   test.beforeEach(async ({ player1Page, player2Page }) => {
-    await resetServerGame();
 
     p1 = new ScrabblePage(player1Page);
     p2 = new ScrabblePage(player2Page);
 
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
     await p1.waitForPlayerVisible("Bob");
     await p1.startGame();
 
     // Wait for turn indicator on p2 as well
     await expect(p2.turnIndicator).toBeVisible();
+
+    // Known racks, no blanks: these tests click the first tile, and a blank would open
+    // the letter picker instead of landing. CASA is always playable.
+    await p1.setRack(["C", "A", "S", "A", "E", "L", "O"]);
+    await p2.setRack(["C", "A", "S", "A", "E", "L", "O"]);
   });
 
   test("only the current player sees action buttons", async () => {
@@ -103,16 +110,13 @@ test.describe("Scrabble - Turns", () => {
     const activePlayer = (await p1.isMyTurn()) ? p1 : p2;
     const tilesBefore = await activePlayer.getRackTileCount();
 
-    // A single tile alone is never a valid play (either no word is formed, or a
-    // digraph tile like "RR"/"LL"/"CH" isn't in the dictionary) → server rejects and recalls it
+    // A single tile alone never forms a word → server rejects and recalls it
     await activePlayer.selectRackTile(0);
     await activePlayer.clickBoardCell(7, 7);
     await expect(activePlayer.tileRack.locator("button")).toHaveCount(tilesBefore - 1);
     await activePlayer.submitTurn();
 
-    await expect(activePlayer.errorToast()).toContainText(
-      /No se formó ninguna palabra|no está en el diccionario/
-    );
+    await expect(activePlayer.errorToast()).toContainText("No se formó ninguna palabra");
     // Client must resync with the server: rack restored, board cell empty, still my turn
     await expect(activePlayer.tileRack.locator("button")).toHaveCount(tilesBefore);
     const centerCell = activePlayer.boardGrid.locator("> button").nth(7 * 15 + 7);

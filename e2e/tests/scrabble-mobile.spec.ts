@@ -1,6 +1,9 @@
-import { test, expect, resetServerGame } from "../fixtures/scrabble-fixture";
+import { test, expect } from "../fixtures/scrabble-fixture";
 import { ScrabblePage } from "../helpers/scrabble-page";
 import type { Browser } from "@playwright/test";
+
+/** Code of the room the test's first player created */
+let roomCode: string;
 
 const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
 
@@ -11,14 +14,13 @@ async function phonePage(browser: Browser) {
 
 test.describe("Scrabble - Phone viewport", () => {
   test("the table fits the screen and can be played by tapping", async ({ browser }) => {
-    await resetServerGame();
     const a = await phonePage(browser);
     const b = await phonePage(browser);
     try {
       await a.page.goto();
-      await a.page.joinGame("Alice");
+      roomCode = await a.page.joinGame("Alice");
       await b.page.goto();
-      await b.page.joinGame("Bob");
+      await b.page.joinGame("Bob", roomCode);
       await a.page.waitForPlayerVisible("Bob");
       await a.page.startGame();
       await expect(b.page.turnIndicator).toBeVisible();

@@ -5,7 +5,9 @@ export class ScrabblePage {
 
   // Locators
   readonly nameInput: Locator;
-  readonly joinButton: Locator;
+  readonly createRoomButton: Locator;
+  readonly roomCodeInput: Locator;
+  readonly joinByCodeButton: Locator;
   readonly startButton: Locator;
   readonly confirmButton: Locator;
   readonly recallButton: Locator;
@@ -28,7 +30,9 @@ export class ScrabblePage {
   constructor(page: Page) {
     this.page = page;
     this.nameInput = page.locator('input[placeholder="Tu nombre"]');
-    this.joinButton = page.getByRole("button", { name: "Unirse" });
+    this.createRoomButton = page.getByRole("button", { name: "+ Crear sala" });
+    this.roomCodeInput = page.getByRole("textbox", { name: "Código de sala" });
+    this.joinByCodeButton = page.getByRole("button", { name: "Unirse con código" });
     this.startButton = page.getByRole("button", { name: "Iniciar Juego" });
     // Shows the estimated score once the move is valid, e.g. "Confirmar +12"
     this.confirmButton = page.getByRole("button", { name: /^Confirmar( \+\d+)?$/ });
@@ -51,20 +55,34 @@ export class ScrabblePage {
     this.tileBagCount = page.locator("text=/Fichas en bolsa:/");
   }
 
-  async goto() {
-    await this.page.goto("/scrabble");
-    await this.joinButton.or(this.page.getByRole("button", { name: "Conectando..." })).waitFor({ state: "visible" });
-    // Wait for socket connection (button changes from "Conectando..." to "Unirse")
-    await this.joinButton.waitFor({ state: "visible", timeout: 15_000 });
+  /** Opens the room picker (optionally through an invite link) and waits for the socket. */
+  async goto(roomCode?: string) {
+    await this.page.goto(roomCode ? `/scrabble?sala=${roomCode}` : "/scrabble");
+    // Connected once the room list has loaded
+    await this.page.getByText("Salas abiertas", { exact: true }).waitFor({ state: "visible" });
+    await this.page.getByText("Buscando salas…").waitFor({ state: "hidden", timeout: 15_000 });
+    await this.createRoomButton.waitFor({ state: "visible" });
   }
 
-  async joinGame(name: string) {
+  /**
+   * Without a code: creates a room and returns its code. With one: joins that room.
+   * Either way it waits until the player is in the room's lobby.
+   */
+  async joinGame(name: string, roomCode?: string): Promise<string> {
     await this.nameInput.fill(name);
-    await this.joinButton.click();
-    // Wait for GameView to appear (heading "Scrabble" in game view)
-    await this.page.locator("h1:has-text('Scrabble')").waitFor({ state: "visible" });
-    // Wait for player name to appear in player list
-    await this.page.locator(`text=${name}`).first().waitFor({ state: "visible" });
+    if (roomCode) {
+      await this.roomCodeInput.fill(roomCode);
+      await this.joinByCodeButton.click();
+    } else {
+      await this.createRoomButton.click();
+    }
+    await this.page.locator('[data-testid="player-badge"]', { hasText: name }).first().waitFor({ state: "visible" });
+    return this.roomCode();
+  }
+
+  /** The current room's code, from the "Sala K7QF" badge. */
+  async roomCode(): Promise<string> {
+    return (await this.page.locator('[data-testid="room-code"]').first().getAttribute("data-code"))!;
   }
 
   async waitForPlayerVisible(name: string, timeout = 10_000) {

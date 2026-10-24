@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { setupScrabbleHandlers } from "../scrabbleHandlers";
+import { rejoinScrabble, setupScrabbleHandlers } from "../scrabbleHandlers";
 import {
   createMockSocket,
   createMockIO,
   createMockScrabbleGame,
+  mockRoom,
   type MockSocket,
   type MockIO,
   type MockScrabbleGame,
@@ -16,6 +17,8 @@ vi.mock("../../../game/scrabble/gameSessionStore", () => ({
   deleteSession: vi.fn(),
 }));
 
+const ROOM = "scrabble:TEST";
+
 describe("setupScrabbleHandlers", () => {
   let io: MockIO;
   let socket: MockSocket;
@@ -26,10 +29,13 @@ describe("setupScrabbleHandlers", () => {
     socket = createMockSocket("socket-1", "scrabble");
     game = createMockScrabbleGame();
     io._addSocket(socket);
-    setupScrabbleHandlers(io as any, socket as any, game as any);
+    setupScrabbleHandlers(io as any, socket as any, mockRoom(game) as any);
   });
 
   afterEach(() => {
+    // Rooms: nothing may ever be broadcast server-wide
+    expect(io.emit).not.toHaveBeenCalled();
+    expect(socket.broadcast.emit).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
 
@@ -38,7 +44,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("start-game");
 
       expect(game.startGame).toHaveBeenCalled();
-      expect(io.emit).toHaveBeenCalledWith("game-started", expect.anything());
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("game-started", expect.anything());
       // Also sends per-player game-state with rack
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
@@ -46,9 +52,9 @@ describe("setupScrabbleHandlers", () => {
     it("includes the gameId in game-started so clients can persist the session", () => {
       socket._trigger("start-game");
 
-      expect(io.emit).toHaveBeenCalledWith(
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith(
         "game-started",
-        expect.objectContaining({ gameId: "default-scrabble" })
+        expect.objectContaining({ gameId: "TEST" })
       );
     });
 
@@ -56,7 +62,7 @@ describe("setupScrabbleHandlers", () => {
       game.startGame.mockReturnValue(false as any);
       socket._trigger("start-game");
 
-      expect(io.emit).not.toHaveBeenCalledWith("game-started", expect.anything());
+      expect(io.to(ROOM).emit).not.toHaveBeenCalledWith("game-started", expect.anything());
       expect(socket.emit).toHaveBeenCalledWith("start-failed", { reason: "Se necesitan al menos 2 jugadores" });
     });
   });
@@ -67,7 +73,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("place-tiles", { placements });
 
       expect(game.placeTiles).toHaveBeenCalledWith("socket-1", placements);
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
@@ -82,7 +88,7 @@ describe("setupScrabbleHandlers", () => {
       });
       // The player still gets their authoritative state so the UI can resync
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
-      expect(socket.broadcast.emit).not.toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).not.toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("rejects invalid data", () => {
@@ -98,7 +104,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("recall-tiles");
 
       expect(game.recallTiles).toHaveBeenCalledWith("socket-1");
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
   });
@@ -108,7 +114,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("recall-tile", { tileId: "t1" });
 
       expect(game.recallTile).toHaveBeenCalledWith("socket-1", "t1");
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.objectContaining({ rack: [] }));
     });
 
@@ -143,7 +149,7 @@ describe("setupScrabbleHandlers", () => {
     it("broadcasts public state and sends private state to submitter on valid submission", () => {
       socket._trigger("submit-turn");
 
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
@@ -171,7 +177,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("pass-turn");
 
       expect(game.passTurn).toHaveBeenCalledWith("socket-1");
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
@@ -191,7 +197,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("exchange-tiles", { tileIds: ["t1", "t2"] });
 
       expect(game.exchangeTiles).toHaveBeenCalledWith("socket-1", ["t1", "t2"]);
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
       expect(socket.emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
@@ -218,7 +224,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("reset-game");
 
       expect(game.resetGame).toHaveBeenCalled();
-      expect(io.emit).toHaveBeenCalledWith("game-reset", expect.anything());
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("game-reset", expect.anything());
     });
   });
 
@@ -230,7 +236,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("disconnect");
 
       expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-left", "socket-1");
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("player-left", "socket-1");
     });
 
     it("during a game marks the player disconnected and broadcasts player-disconnected with the grace period", () => {
@@ -242,13 +248,13 @@ describe("setupScrabbleHandlers", () => {
 
       expect(game.removePlayer).not.toHaveBeenCalled();
       expect(player.isConnected).toBe(false);
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-disconnected", {
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("player-disconnected", {
         playerId: "socket-1",
         playerName: "Alice",
         graceSeconds: 30,
       });
-      expect(socket.broadcast.emit).not.toHaveBeenCalledWith("player-left", expect.anything());
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).not.toHaveBeenCalledWith("player-left", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("after the grace period force-passes the turn and announces player-left", () => {
@@ -263,7 +269,7 @@ describe("setupScrabbleHandlers", () => {
 
       expect(game.passTurn).toHaveBeenCalledWith("socket-1", "disconnect");
       expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
-      expect(io.emit).toHaveBeenCalledWith("player-left", "socket-1");
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("player-left", "socket-1");
       vi.useRealTimers();
     });
 
@@ -280,7 +286,7 @@ describe("setupScrabbleHandlers", () => {
       vi.advanceTimersByTime(30_000);
 
       expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
-      expect(io.emit).not.toHaveBeenCalledWith("player-left", expect.anything());
+      expect(io.to(ROOM).emit).not.toHaveBeenCalledWith("player-left", expect.anything());
       vi.useRealTimers();
     });
 
@@ -291,7 +297,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("disconnect");
 
       expect(game.removePlayer).not.toHaveBeenCalled();
-      expect(socket.broadcast.emit).not.toHaveBeenCalled();
+      expect(socket.to(ROOM).emit).not.toHaveBeenCalled();
     });
   });
 
@@ -304,7 +310,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("skip-turn");
 
       expect(game.skipTurn).toHaveBeenCalledWith("socket-1");
-      expect(io.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
       expect(game.getGameStateForPlayer).toHaveBeenCalledWith("socket-2");
       expect(skipped.emit).toHaveBeenCalledWith("game-state", expect.objectContaining({ rack: [] }));
       expect(saveSession).toHaveBeenCalled();
@@ -316,7 +322,7 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("skip-turn");
 
       expect(socket.emit).toHaveBeenCalledWith("word-result", { valid: false, reason: "Todavía le queda tiempo" });
-      expect(io.emit).not.toHaveBeenCalledWith("game-state", expect.anything());
+      expect(io.to(ROOM).emit).not.toHaveBeenCalledWith("game-state", expect.anything());
     });
   });
 
@@ -327,8 +333,8 @@ describe("setupScrabbleHandlers", () => {
       socket._trigger("leave-game");
 
       expect(game.removePlayer).toHaveBeenCalledWith("socket-1");
-      expect(io.emit).toHaveBeenCalledWith("player-left", "socket-1");
-      expect(io.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("player-left", "socket-1");
+      expect(io.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("does not announce player-left when leaving ended the game", () => {
@@ -339,7 +345,7 @@ describe("setupScrabbleHandlers", () => {
 
       socket._trigger("leave-game");
 
-      expect(io.emit).not.toHaveBeenCalledWith("player-left", expect.anything());
+      expect(io.to(ROOM).emit).not.toHaveBeenCalledWith("player-left", expect.anything());
     });
 
     it("ignores sockets that aren't in the game", () => {
@@ -361,7 +367,7 @@ describe("setupScrabbleHandlers", () => {
       vi.stubEnv("SCRABBLE_E2E_HOOKS", "1");
       const s = createMockSocket("socket-1", "scrabble");
       const racks = new Map();
-      setupScrabbleHandlers(io as any, s as any, { ...game, playerRacks: racks } as any);
+      setupScrabbleHandlers(io as any, s as any, mockRoom({ ...game, playerRacks: racks }) as any);
 
       s._trigger("e2e-set-rack", { letters: ["", "CH"] });
 
@@ -386,8 +392,8 @@ describe("setupScrabbleHandlers", () => {
       expect(registeredEvents).toContain("reset-game");
       // submit-word should NOT be registered for Scrabble
       expect(registeredEvents).not.toContain("submit-word");
-      // rejoin-game should be registered
-      expect(registeredEvents).toContain("rejoin-game");
+      // rejoin-game is a lobby event now (socketHandlers), not a room one
+      expect(registeredEvents).not.toContain("rejoin-game");
     });
   });
 
@@ -396,7 +402,7 @@ describe("setupScrabbleHandlers", () => {
       const { loadSession } = await import("../../../game/scrabble/gameSessionStore");
       vi.mocked(loadSession).mockReturnValue(null);
 
-      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "no-exist" });
+      rejoinScrabble(io as any, socket as any, mockRoom(game) as any, { playerName: "Alice", gameId: "no-exist" });
 
       expect(socket.emit).toHaveBeenCalledWith("rejoin-failed", {
         reason: "Sesión no encontrada",
@@ -420,7 +426,7 @@ describe("setupScrabbleHandlers", () => {
         isFirstTurn: false,
       });
 
-      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+      rejoinScrabble(io as any, socket as any, mockRoom(game) as any, { playerName: "Alice", gameId: "g1" });
 
       expect(socket.emit).toHaveBeenCalledWith("rejoin-failed", {
         reason: "No estás en este juego",
@@ -444,7 +450,7 @@ describe("setupScrabbleHandlers", () => {
         isFirstTurn: false,
       });
 
-      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+      rejoinScrabble(io as any, socket as any, mockRoom(game) as any, { playerName: "Alice", gameId: "g1" });
 
       expect(game.reconnectPlayer).toHaveBeenCalledWith("Alice", "socket-1");
       expect(socket.emit).toHaveBeenCalledWith("rejoin-success", expect.anything());
@@ -467,14 +473,14 @@ describe("setupScrabbleHandlers", () => {
         isFirstTurn: false,
       });
 
-      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+      rejoinScrabble(io as any, socket as any, mockRoom(game) as any, { playerName: "Alice", gameId: "g1" });
 
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("player-reconnected", {
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("player-reconnected", {
         playerId: "socket-1",
         playerName: "Alice",
       });
-      expect(socket.broadcast.emit).not.toHaveBeenCalledWith("player-joined", expect.anything());
-      expect(socket.broadcast.emit).toHaveBeenCalledWith("game-state", expect.anything());
+      expect(socket.to(ROOM).emit).not.toHaveBeenCalledWith("player-joined", expect.anything());
+      expect(socket.to(ROOM).emit).toHaveBeenCalledWith("game-state", expect.anything());
     });
 
     it("kicks a stale still-connected socket with the same name before reconnecting (newest wins)", async () => {
@@ -499,7 +505,7 @@ describe("setupScrabbleHandlers", () => {
       const stalePlayer = { id: "old-socket", name: "Alice", isConnected: true };
       game.players = new Map([["old-socket", stalePlayer]]) as any;
 
-      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+      rejoinScrabble(io as any, socket as any, mockRoom(game) as any, { playerName: "Alice", gameId: "g1" });
 
       expect(staleSocket.disconnect).toHaveBeenCalledWith(true);
       expect(stalePlayer.isConnected).toBe(false);
@@ -525,13 +531,13 @@ describe("setupScrabbleHandlers", () => {
       });
       game.gameState = "waiting";
 
-      socket._trigger("rejoin-game", { playerName: "Alice", gameId: "g1" });
+      rejoinScrabble(io as any, socket as any, mockRoom(game) as any, { playerName: "Alice", gameId: "g1" });
 
       expect(game.resumeTurnTimer).toHaveBeenCalled();
     });
 
     it("emits rejoin-failed when data is missing", () => {
-      socket._trigger("rejoin-game", {});
+      rejoinScrabble(io as any, socket as any, mockRoom(game) as any, {} as any);
 
       expect(socket.emit).toHaveBeenCalledWith("rejoin-failed", {
         reason: "Datos inválidos para reconexión",

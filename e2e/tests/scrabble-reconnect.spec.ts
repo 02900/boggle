@@ -1,10 +1,10 @@
-import { test, expect, resetServerGame } from "../fixtures/scrabble-fixture";
+import { test, expect } from "../fixtures/scrabble-fixture";
 import { ScrabblePage } from "../helpers/scrabble-page";
 
+/** Code of the room the test's first player created */
+let roomCode: string;
+
 test.describe("Scrabble - Reconnection", () => {
-  test.beforeEach(async () => {
-    await resetServerGame();
-  });
 
   test("player can rejoin after page refresh", async ({
     player1Page,
@@ -14,9 +14,9 @@ test.describe("Scrabble - Reconnection", () => {
     const p2 = new ScrabblePage(player2Page);
 
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
     await p1.waitForPlayerVisible("Bob");
     await p1.startGame();
 
@@ -52,9 +52,9 @@ test.describe("Scrabble - Reconnection", () => {
     const p2 = new ScrabblePage(player2Page);
 
     await p1.goto();
-    await p1.joinGame("Alice");
+    roomCode = await p1.joinGame("Alice");
     await p2.goto();
-    await p2.joinGame("Bob");
+    await p2.joinGame("Bob", roomCode);
     await p1.waitForPlayerVisible("Bob");
     await p1.startGame();
 

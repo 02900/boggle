@@ -154,7 +154,7 @@ export interface SerializedScrabbleGame {
 
 // ---- Scrabble socket events ----
 
-import type { WordResult, ScoreboardEntry } from "./game";
+import type { WordResult, ScoreboardEntry, RoomServerEvents, RoomClientEvents } from "./game";
 
 /** Private per-player view: includes the rack and the player's own tentative placements. */
 export interface ScrabblePlayerGameState extends ScrabbleGameState {
@@ -162,17 +162,15 @@ export interface ScrabblePlayerGameState extends ScrabbleGameState {
   tentativePlacements: TilePlacement[];
 }
 
-export interface ScrabbleGameEvents {
+export interface ScrabbleGameEvents extends RoomServerEvents {
   "game-state": (state: ScrabbleGameState | ScrabblePlayerGameState) => void;
   "game-started": (state: ScrabbleGameState & { gameId?: string }) => void;
   "start-failed": (data: { reason: string }) => void;
-  "join-failed": (data: { reason: string }) => void;
   "game-ended": (state: GameEndedEvent) => void;
   "game-reset": (state: ScrabbleGameState) => void;
   "word-result": (result: WordResult) => void;
   "turn-played": (data: TurnPlayedEvent) => void;
   "turn-changed": (data: TurnChangedEvent) => void;
-  "join-confirmed": (data: { playerName: string; playerId: string }) => void;
   "player-joined": (data: { playerName: string; playerId: string }) => void;
   "player-left": (playerId: string) => void;
   "player-disconnected": (data: PlayerDisconnectedEvent) => void;
@@ -184,8 +182,7 @@ export interface ScrabbleGameEvents {
   "rejoin-failed": (data: { reason: string }) => void;
 }
 
-export interface ScrabbleClientEvents {
-  "join-game": (playerName: string) => void;
+export interface ScrabbleClientEvents extends RoomClientEvents {
   "start-game": () => void;
   "reset-game": () => void;
   "toggle-client-side-validation": (enabled: boolean) => void;

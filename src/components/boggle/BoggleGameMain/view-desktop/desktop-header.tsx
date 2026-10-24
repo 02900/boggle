@@ -3,6 +3,7 @@
 import React from "react";
 import { ModalType, useModalStore } from "@/stores/modal.store";
 import { useBoggleGameMainStore } from "../boogle-game-main.store";
+import { BoggleRoomCode } from "../../BoggleRoomCode";
 
 export const DesktopHeader = () => {
   const { setModalType } = useModalStore();
@@ -10,9 +11,12 @@ export const DesktopHeader = () => {
 
   return (
     <div className="flex items-center justify-between mb-6">
-      <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center space-x-2">
-        🎲 Boggle
-      </h1>
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-4xl font-bold text-center text-gray-800 flex items-center justify-center space-x-2">
+          🎲 Boggle
+        </h1>
+        <BoggleRoomCode />
+      </div>
 
       {/* Botón de puntuación máxima */}
       <div className="flex space-x-3">

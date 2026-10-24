@@ -349,6 +349,15 @@ Tiempo extra (pedido posterior a la fase):
 - Bug encontrado: el selector del comodín ofrecía K/W (no existen en el Scrabble español y el
   server las rechaza) y no CH/LL/RR → ahora usa `BLANK_LETTER_CHOICES` del server.
 
+### Salas (post-Fase 6) — ✅ HECHA
+
+Varias partidas a la vez en Boggle y Scrabble: `game/rooms/RoomManager.ts` (código de 4
+caracteres, sala de Socket.IO por partida, borrado tras 10 min vacía), lobby con
+`list-rooms`/`create-room`/`join-room`, links `?sala=CODE`, sesión de Scrabble = código de sala.
+Se corrigió de paso que todos los `io.emit` eran globales (eventos de Scrabble llegaban a
+Boggle y viceversa). Diccionario compartido entre instancias. Ver
+`docs/backend/socket-handlers.md` y `docs/architecture.md`.
+
 ## 5. Orden sugerido de ejecución
 
 ```

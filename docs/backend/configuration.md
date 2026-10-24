@@ -76,5 +76,8 @@ File: `config/scrabbleConstants.ts` (tile distribution, premium squares and scor
 | `SCRABBLE_MAX_PLAYERS` | 4 | Table size |
 | `SCRABBLE_MIN_BAG_FOR_EXCHANGE` | 7 | Tiles needed in the bag to exchange |
 
+Rooms (`game/rooms/RoomManager.ts`): `ROOM_IDLE_TTL_MS` (env, default 10 min) is how long a
+room with nobody connected survives; codes use `ROOM_CODE_ALPHABET` (no 0/O/1/I), length 4.
+
 The e2e server (`e2e/playwright.config.ts`) runs with 15 s turns, a 10 s grace period and
 `SCRABBLE_E2E_HOOKS=1`, which enables the test-only `e2e-set-rack` event.

@@ -40,27 +40,48 @@ Bidirectional communication protocol between client and server via Socket.IO.
 | `client-side-validation-changed` | `{ enabled }` | all | Feature flag change. |
 | `words-revalidated` | `{ totalWordsRemoved, affectedPlayers, summary }` | all | Revalidation result at the end of the game. |
 
+## Rooms and Lobby (both games)
+
+File: `socket/socketHandlers.ts`. Every broadcast in the tables above goes **to the player's
+room only** (`io.to(room)` / `socket.to(room)`); nothing is sent server-wide.
+
+| Event | Direction | Payload | Description |
+|-------|-----------|---------|-------------|
+| `list-rooms` | C→S | -- | Join this game's lobby; answered with `rooms-list`, then live `rooms-updated`. |
+| `create-room` | C→S | `{ playerName }` | New room (random 4-char code); the creator joins it. Empty name = random. |
+| `join-room` | C→S | `{ code, playerName }` | Join by code (case-insensitive). |
+| `get-scoreboard` | C→S | -- | Works from the lobby too; returns the socket's game leaderboard. |
+| `rooms-list` / `rooms-updated` | S→C | `RoomSummary[]` | `{ code, hostName, playerCount, maxPlayers, status, joinable }`, newest first. |
+| `join-confirmed` | S→C | `{ playerId, playerName, roomCode }` | In the room; the client puts `?sala=CODE` in the URL. |
+| `join-failed` | S→C | `{ reason }` | Unknown room, game started/full (Scrabble), or already in a room. |
+
 ## Connection Flow
 
 ```
-Client connects
-  -> connection (server registers socket)
-  -> join-game("Juan")
-  <- join-confirmed({ playerId: "abc", playerName: "Juan" })
+Client connects (?game=boggle)
+  -> list-rooms                    (lobby)
+  <- rooms-list([...]), later rooms-updated([...])
+  -> create-room({ playerName })   or join-room({ code, playerName })
   <- game-state(current state)
+  <- join-confirmed({ playerId, playerName, roomCode })
   <- eliminate-common-words-changed(current config)
-  -> broadcast: player-joined to others
+  -> room: player-joined, game-state
 
 Client disconnects
   -> disconnect
-  -> broadcast: player-left to others
+  -> room: player-left, game-state
   -> player marked as disconnected in history
+  -> nobody left connected: the room is deleted 10 min later
+
+Client reconnects (network drop)
+  -> new socket in the lobby; the client re-sends join-room with its room code
 ```
 
 ## Scrabble
 
-Files: `socket/shared/sharedHandlers.ts` (`join-game`, scoreboard; Scrabble adds a `canJoin`
-admission check → `join-failed`) and `socket/scrabble/scrabbleHandlers.ts`.
+Files: `socket/shared/sharedHandlers.ts` (`joinPlayer`; Scrabble adds a `canJoin` admission
+check → `join-failed`) and `socket/scrabble/scrabbleHandlers.ts` (`setupScrabbleHandlers`,
+`rejoinScrabble`). `rejoin-game { gameId: roomCode }` is a lobby event.
 
 Scrabble sockets connect with `?game=scrabble`. Full event reference (turns, presence, grace
 period, reconnection): [../scrabble/socket-events.md](../scrabble/socket-events.md).
